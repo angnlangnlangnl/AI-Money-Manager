@@ -619,7 +619,6 @@
         .settings-overlay.show {
             display: flex;
         }
-        /* 设置面板头部（返回键 + 标题） */
         .settings-header {
             display: flex;
             align-items: center;
@@ -657,9 +656,8 @@
             color: #e8e8f0;
             flex: 1;
             text-align: center;
-            margin-right: 40px; /* 平衡返回键 */
+            margin-right: 40px;
         }
-        /* 设置面板内容（滚动） */
         .settings-body {
             flex: 1;
             overflow-y: auto;
@@ -821,6 +819,140 @@
         .toggle-switch input:checked + .slider::before {
             transform: translateX(20px);
             background: #fff;
+        }
+
+        /* ===== 返利卡片样式 ===== */
+        .rebate-dashboard {
+            background: linear-gradient(135deg, #1a2a3a, #0f1a2a);
+            border: 1px solid #2a3a4a;
+            border-radius: 16px;
+            padding: 20px;
+            margin: 12px 0 4px 0;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+        }
+        .rebate-dashboard:hover {
+            border-color: #3a4a5a;
+            box-shadow: 0 8px 30px rgba(59, 130, 246, 0.2);
+        }
+        .rebate-dashboard::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.1), transparent);
+            pointer-events: none;
+        }
+        .rebate-dashboard::after {
+            content: '💰';
+            position: absolute;
+            bottom: -10px;
+            right: -10px;
+            font-size: 60px;
+            opacity: 0.05;
+            pointer-events: none;
+        }
+        .rebate-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            position: relative;
+            z-index: 1;
+        }
+        .rebate-item {
+            flex: 1;
+        }
+        .rebate-item-left {
+            text-align: left;
+        }
+        .rebate-item-right {
+            text-align: right;
+        }
+        .rebate-label {
+            font-size: 12px;
+            color: #8a8a9a;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .rebate-label-left {
+            justify-content: flex-start;
+        }
+        .rebate-label-right {
+            justify-content: flex-end;
+        }
+        .rebate-total-amount {
+            font-size: 32px;
+            font-weight: 800;
+            color: #10b981;
+            text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+            line-height: 1;
+            animation: rebatePulse 3s ease-in-out infinite;
+        }
+        .rebate-pending-amount {
+            font-size: 22px;
+            font-weight: 700;
+            color: #f59e0b;
+            line-height: 1;
+        }
+        @keyframes rebatePulse {
+            0%,
+            100% {
+                text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+            }
+            50% {
+                text-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
+            }
+        }
+        .rebate-divider {
+            border-top: 1px solid rgba(42, 58, 74, 0.6);
+            margin: 12px 0;
+            position: relative;
+            z-index: 1;
+        }
+        .rebate-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: #8a8a9a;
+            position: relative;
+            z-index: 1;
+        }
+        .rebate-stat {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .rebate-stat-icon {
+            font-size: 14px;
+        }
+        .rebate-stat-value {
+            color: #e8e8f0;
+            font-weight: 700;
+        }
+        .rebate-rate-badge {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            color: #10b981;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        @media (max-width: 360px) {
+            .rebate-total-amount {
+                font-size: 24px;
+            }
+            .rebate-pending-amount {
+                font-size: 18px;
+            }
         }
 
         /* 语音波纹动画 */
@@ -1135,10 +1267,9 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 设置面板（满屏 + 左上角返回键） -->
+    <!-- 设置面板（满屏 + 左上角返回键 + 返利卡片） -->
     <!-- ============================================================ -->
     <div class="settings-overlay" id="settingsOverlay">
-        <!-- 头部：返回键 + 标题 -->
         <div class="settings-header">
             <div class="back-btn" onclick="closeSettings()" title="返回">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -1148,7 +1279,6 @@
             <span class="title">⚙️ 设置</span>
         </div>
 
-        <!-- 内容 -->
         <div class="settings-body">
             <!-- 用户信息 -->
             <div class="settings-section">
@@ -1195,6 +1325,36 @@
                         </div>
                     </div>
                     <button onclick="openFullDashboard()" class="settings-btn-secondary">📈 查看完整看板</button>
+                </div>
+            </div>
+
+            <!-- ===== 新增：返利卡片 ===== -->
+            <div class="rebate-dashboard" id="rebateDashboard">
+                <div class="rebate-header">
+                    <div class="rebate-item rebate-item-left">
+                        <div class="rebate-label rebate-label-left">
+                            <span>💰</span>
+                            <span>累计返利</span>
+                        </div>
+                        <div class="rebate-total-amount" id="totalRebate">$0.00</div>
+                    </div>
+                    <div class="rebate-item rebate-item-right">
+                        <div class="rebate-label rebate-label-right">
+                            <span>⏳</span>
+                            <span>待结算</span>
+                        </div>
+                        <div class="rebate-pending-amount" id="pendingRebate">$0.00</div>
+                    </div>
+                </div>
+                <div class="rebate-divider"></div>
+                <div class="rebate-footer">
+                    <div class="rebate-stat">
+                        <span class="rebate-stat-icon">👥</span>
+                        <span>推广用户：</span>
+                        <span class="rebate-stat-value" id="totalUsers">0</span>
+                        <span>人</span>
+                    </div>
+                    <div class="rebate-rate-badge">💎 返利比例：2%</div>
                 </div>
             </div>
 
@@ -1454,6 +1614,7 @@
             document.getElementById('settingsOverlay').classList.add('show');
             document.body.style.overflow = 'hidden';
             loadSettingsData();
+            loadRebateData();
         }
 
         function closeSettings() {
@@ -1510,6 +1671,76 @@
 
         function openFullDashboard() {
             alert('📊 完整看板功能开发中...\n\n当前数据：\n交易笔数：0\n总交易额：$0\n预估返利：$0');
+        }
+
+        // ============================================================
+        //  返利卡片功能
+        // ============================================================
+        let rebateData = {
+            totalRebate: 0,
+            pendingRebate: 0,
+            totalUsers: 0
+        };
+
+        function loadRebateData() {
+            const saved = localStorage.getItem('rebate_data');
+            if (saved) {
+                try {
+                    rebateData = JSON.parse(saved);
+                } catch (e) {
+                    console.error('读取返利数据失败', e);
+                }
+            }
+            updateRebateDisplay();
+        }
+
+        function saveRebateData() {
+            localStorage.setItem('rebate_data', JSON.stringify(rebateData));
+        }
+
+        function updateRebateDisplay() {
+            document.getElementById('totalRebate').textContent = '$' + rebateData.totalRebate.toFixed(2);
+            document.getElementById('pendingRebate').textContent = '$' + rebateData.pendingRebate.toFixed(2);
+            document.getElementById('totalUsers').textContent = rebateData.totalUsers;
+        }
+
+        function addRebate(amount, userId) {
+            rebateData.totalRebate += amount;
+            rebateData.pendingRebate += amount;
+            rebateData.totalUsers += 1;
+            saveRebateData();
+            updateRebateDisplay();
+            animateRebateUpdate();
+        }
+
+        function settleRebate(amount) {
+            if (amount <= rebateData.pendingRebate) {
+                rebateData.pendingRebate -= amount;
+                saveRebateData();
+                updateRebateDisplay();
+                return true;
+            }
+            return false;
+        }
+
+        function resetRebate() {
+            rebateData = {
+                totalRebate: 0,
+                pendingRebate: 0,
+                totalUsers: 0
+            };
+            saveRebateData();
+            updateRebateDisplay();
+        }
+
+        function animateRebateUpdate() {
+            const totalElement = document.getElementById('totalRebate');
+            totalElement.style.transform = 'scale(1.2)';
+            totalElement.style.color = '#34d399';
+            setTimeout(() => {
+                totalElement.style.transform = 'scale(1)';
+                totalElement.style.color = '#10b981';
+            }, 300);
         }
 
         // ============================================================
@@ -2523,6 +2754,9 @@
             window.closeSettings = closeSettings;
             window.saveApiConfig = saveApiConfig;
             window.openFullDashboard = openFullDashboard;
+            window.addRebate = addRebate;
+            window.settleRebate = settleRebate;
+            window.resetRebate = resetRebate;
 
             document.getElementById('overlay').addEventListener('click', closeDrawer);
         });
