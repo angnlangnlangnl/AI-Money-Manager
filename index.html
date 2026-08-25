@@ -78,7 +78,7 @@
             pointer-events: none;
         }
 
-        /* ===== 输入框完美适配（修复灰色竖线） ===== */
+        /* ===== 输入框完美适配 ===== */
         #chatInput {
             min-height: 24px;
             max-height: 66px;
@@ -91,19 +91,15 @@
             outline: none !important;
             width: 100%;
             line-height: 1.4;
-            /* 修复光标颜色 - 与文字颜色一致 */
             caret-color: #e8e8f0;
-            /* 移除任何可能产生多余线条的样式 */
             box-shadow: none !important;
             text-shadow: none !important;
         }
-        /* 移除输入框的伪元素（可能产生多余线条） */
         #chatInput::before,
         #chatInput::after {
             display: none !important;
             content: none !important;
         }
-        /* 移除输入框的滚动条样式 */
         #chatInput::-webkit-scrollbar {
             width: 0;
             height: 0;
@@ -115,7 +111,6 @@
         #chatInput::placeholder {
             color: #5a5a6a;
         }
-        /* 输入框在语音模式下的样式 */
         #chatInput.recording {
             background: #1a3a2a !important;
             color: #4ade80 !important;
@@ -138,13 +133,11 @@
             gap: 4px;
             transition: border-color 0.2s;
             flex: 1;
-            /* 移除任何可能产生多余线条的阴影 */
             box-shadow: none !important;
         }
         .input-container:focus-within {
             border-color: #3b82f6;
         }
-        /* 移除输入框容器伪元素 */
         .input-container::before,
         .input-container::after {
             display: none !important;
@@ -613,6 +606,201 @@
             }
         }
 
+        /* ===== 设置面板样式 ===== */
+        .settings-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .settings-overlay.show {
+            display: flex;
+        }
+        .settings-panel {
+            background: #12121f;
+            border-radius: 24px 24px 0 0;
+            padding: 16px 20px 30px;
+            width: 100%;
+            max-width: 420px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.35s ease;
+            border-top: 1px solid #1a1a2a;
+        }
+        .settings-panel .handle {
+            width: 40px;
+            height: 4px;
+            background: #2a2a3a;
+            border-radius: 4px;
+            margin: 0 auto 16px;
+        }
+        .settings-panel .title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #e8e8f0;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .settings-section {
+            background: #0d0d18;
+            border-radius: 16px;
+            border: 1px solid #1a1a2a;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .settings-section .section-title {
+            padding: 12px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #8a8a9a;
+            border-bottom: 1px solid #1a1a2a;
+        }
+        .settings-section .section-content {
+            padding: 12px 16px;
+        }
+        .settings-input {
+            width: 100%;
+            background: #1a1a2a;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #e8e8f0;
+            outline: none;
+            margin-bottom: 8px;
+            transition: border-color 0.2s;
+        }
+        .settings-input:focus {
+            border-color: #3b82f6;
+        }
+        .settings-input::placeholder {
+            color: #4a4a5a;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 13px;
+        }
+        .info-row .label {
+            color: #6a6a7a;
+        }
+        .info-row .value {
+            color: #e8e8f0;
+            font-weight: 500;
+        }
+        .settings-btn-primary {
+            width: 100%;
+            background: #3b82f6;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .settings-btn-primary:active {
+            background: #2563eb;
+        }
+        .settings-btn-secondary {
+            width: 100%;
+            background: #1a1a2a;
+            color: #8a8a9a;
+            border: 1px solid #2a2a3a;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        .settings-btn-secondary:active {
+            background: #2a2a3a;
+        }
+        .settings-btn-cancel {
+            width: 100%;
+            background: #1a1a2a;
+            color: #6a6a7a;
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            margin-top: 8px;
+        }
+        .settings-btn-cancel:active {
+            background: #2a2a3a;
+        }
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+        .dashboard-stats .stat-item {
+            text-align: center;
+            padding: 8px 0;
+            background: #0a0a12;
+            border-radius: 10px;
+        }
+        .dashboard-stats .stat-num {
+            font-size: 18px;
+            font-weight: 700;
+            color: #e8e8f0;
+            display: block;
+        }
+        .dashboard-stats .stat-label {
+            font-size: 10px;
+            color: #5a5a6a;
+        }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .toggle-switch {
+            position: relative;
+            width: 44px;
+            height: 24px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-switch .slider {
+            position: absolute;
+            cursor: pointer;
+            inset: 0;
+            background: #2a2a3a;
+            border-radius: 24px;
+            transition: background 0.3s;
+        }
+        .toggle-switch .slider::before {
+            content: '';
+            position: absolute;
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background: #6a6a7a;
+            border-radius: 50%;
+            transition: transform 0.3s, background 0.3s;
+        }
+        .toggle-switch input:checked + .slider {
+            background: #3b82f6;
+        }
+        .toggle-switch input:checked + .slider::before {
+            transform: translateX(20px);
+            background: #fff;
+        }
+
         /* 语音波纹动画 */
         .wave-bars {
             display: flex;
@@ -664,18 +852,16 @@
             width: 100%;
             padding: 4px 0;
         }
-        /* AI消息：头像上方，信息框下方，整体右移12px */
         .msg-wrapper .msg-row-ai {
             display: flex;
             flex-direction: column;
             align-items: flex-start;
             width: 100%;
-            padding-left: 12px;  /* 整体右移12px */
+            padding-left: 12px;
         }
         .msg-wrapper .msg-row-ai .msg-avatar {
             margin-bottom: 4px;
             margin-left: 2px;
-            /* 头像位置不变（不受padding-left影响，因为它在内部） */
         }
         .msg-wrapper .msg-row-ai .msg-bubble {
             max-width: 96%;
@@ -689,7 +875,6 @@
             border: 1px solid #1a1a2a;
             border-top-left-radius: 4px;
         }
-        /* 用户消息：头像在右侧，信息框在右侧（同行） */
         .msg-wrapper .msg-row-user {
             display: flex;
             align-items: flex-start;
@@ -714,7 +899,6 @@
             color: #fff;
             order: 1;
         }
-        /* 头像样式 */
         .msg-wrapper .msg-avatar {
             width: 32px;
             height: 32px;
@@ -732,7 +916,6 @@
             background: #3b82f6;
             color: #fff;
         }
-        /* 时间戳 - 在每条信息框正下方 */
         .msg-wrapper .msg-time {
             font-size: 10px;
             color: #4a4a5a;
@@ -742,17 +925,15 @@
         }
         .msg-wrapper .msg-time.ai-time {
             text-align: left;
-            padding-left: 14px;  /* 与消息框对齐（12px + 2px） */
+            padding-left: 14px;
         }
         .msg-wrapper .msg-time.user-time {
             text-align: right;
             padding-right: 2px;
         }
-        /* 报告卡片在消息中自适应宽度 */
         .msg-wrapper .msg-bubble .report-card {
             max-width: 100%;
         }
-        /* 输入框外部布局 */
         .input-wrapper {
             display: flex;
             align-items: flex-end;
@@ -764,11 +945,9 @@
             align-self: flex-end;
             flex-shrink: 0;
         }
-        /* 发送按钮 */
         #sendBtn {
             flex-shrink: 0;
         }
-        /* 分享按钮样式 */
         .share-trigger {
             cursor: pointer;
             padding: 4px 6px;
@@ -793,6 +972,28 @@
         .share-trigger .label {
             font-size: 11px;
             color: #8a8a9a;
+        }
+        /* 抽屉中齿轮按钮样式 */
+        .drawer-settings-btn {
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            color: #6a6a7a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .drawer-settings-btn:active {
+            background: #1a1a2a;
+        }
+        .drawer-settings-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: #6a6a7a;
+            fill: none;
+            stroke-width: 2;
         }
     </style>
 </head>
@@ -861,7 +1062,6 @@
             <div class="handle"></div>
             <div class="title">分享 AI 金融助手</div>
             <div class="share-grid">
-                <!-- 复制链接 -->
                 <div class="share-item" onclick="shareTo('link')">
                     <div class="icon-wrap" style="background:#1a1a2a;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -871,7 +1071,6 @@
                     </div>
                     <span class="label">复制链接</span>
                 </div>
-                <!-- Telegram -->
                 <div class="share-item" onclick="shareTo('telegram')">
                     <div class="icon-wrap" style="background:#1a3a3a;">
                         <svg viewBox="0 0 24 24" fill="#26A5E4">
@@ -880,7 +1079,6 @@
                     </div>
                     <span class="label">Telegram</span>
                 </div>
-                <!-- Twitter/X -->
                 <div class="share-item" onclick="shareTo('twitter')">
                     <div class="icon-wrap" style="background:#1a2a3a;">
                         <svg viewBox="0 0 24 24" fill="#1DA1F2">
@@ -889,7 +1087,6 @@
                     </div>
                     <span class="label">Twitter/X</span>
                 </div>
-                <!-- 微信 -->
                 <div class="share-item" onclick="shareTo('wechat')">
                     <div class="icon-wrap" style="background:#1a2a1a;">
                         <svg viewBox="0 0 24 24" fill="#07C160">
@@ -898,7 +1095,6 @@
                     </div>
                     <span class="label">微信</span>
                 </div>
-                <!-- 二维码 -->
                 <div class="share-item" onclick="shareTo('qrcode')">
                     <div class="icon-wrap" style="background:#1a1a2a;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -914,6 +1110,80 @@
                 </div>
             </div>
             <button class="share-cancel" onclick="closeShare()">取消</button>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 设置面板 -->
+    <!-- ============================================================ -->
+    <div class="settings-overlay" id="settingsOverlay" onclick="closeSettings(event)">
+        <div class="settings-panel" onclick="event.stopPropagation()">
+            <div class="handle"></div>
+            <div class="title">⚙️ 设置</div>
+
+            <!-- 用户信息 -->
+            <div class="settings-section">
+                <div class="section-title">👤 用户信息</div>
+                <div class="section-content">
+                    <div class="info-row">
+                        <span class="label">用户ID</span>
+                        <span class="value" id="userIdDisplay">user_001</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">推广员ID</span>
+                        <input type="text" id="promoterIdInput" placeholder="输入推广员ID" class="settings-input">
+                    </div>
+                </div>
+            </div>
+
+            <!-- API配置 -->
+            <div class="settings-section">
+                <div class="section-title">🔑 API配置</div>
+                <div class="section-content">
+                    <input type="text" id="apiKeyInput" placeholder="API Key" class="settings-input">
+                    <input type="password" id="apiSecretInput" placeholder="API Secret" class="settings-input">
+                    <input type="password" id="apiPassphraseInput" placeholder="Passphrase (Gate.io)" class="settings-input">
+                    <button onclick="saveApiConfig()" class="settings-btn-primary">💾 保存配置</button>
+                </div>
+            </div>
+
+            <!-- 推广员看板 -->
+            <div class="settings-section">
+                <div class="section-title">📊 推广员看板</div>
+                <div class="section-content" id="dashboardMini">
+                    <div class="dashboard-stats">
+                        <div class="stat-item">
+                            <span class="stat-num" id="statTrades">0</span>
+                            <span class="stat-label">交易笔数</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-num" id="statVolume">$0</span>
+                            <span class="stat-label">总交易额</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-num" id="statRebate">$0</span>
+                            <span class="stat-label">预估返利</span>
+                        </div>
+                    </div>
+                    <button onclick="openFullDashboard()" class="settings-btn-secondary">📈 查看完整看板</button>
+                </div>
+            </div>
+
+            <!-- 深色模式 -->
+            <div class="settings-section">
+                <div class="section-title">🌙 深色模式</div>
+                <div class="section-content">
+                    <div class="toggle-row">
+                        <span class="label">启用深色模式</span>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="darkModeToggle" checked>
+                            <span class="slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <button onclick="closeSettings()" class="settings-btn-cancel">关闭</button>
         </div>
     </div>
 
@@ -934,7 +1204,13 @@
                         <p class="text-xs text-[#6a6a7a]">在线 · 4 条链</p>
                     </div>
                 </div>
-                <button onclick="closeDrawer()" class="text-[#6a6a7a] text-xl p-1 tap-active">✕</button>
+                <!-- ✕ 改为 ⚙️ 齿轮图标，点击打开设置面板 -->
+                <div class="drawer-settings-btn" onclick="openSettings()" title="设置">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"/>
+                        <path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+                    </svg>
+                </div>
             </div>
             <div id="assetOverview" class="space-y-4 flex-1"></div>
             <div class="pt-4 border-t border-[#1a1a2a] mt-auto">
@@ -1143,6 +1419,78 @@
             if (shareMap[platform]) {
                 shareMap[platform]();
             }
+        }
+
+        // ============================================================
+        //  设置面板功能
+        // ============================================================
+        function openSettings() {
+            document.getElementById('settingsOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+            loadSettingsData();
+        }
+
+        function closeSettings(e) {
+            document.getElementById('settingsOverlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        document.getElementById('settingsOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeSettings();
+            }
+        });
+
+        function loadSettingsData() {
+            const userId = localStorage.getItem('userId') || 'user_' + Date.now().toString(36);
+            document.getElementById('userIdDisplay').textContent = userId;
+            if (!localStorage.getItem('userId')) {
+                localStorage.setItem('userId', userId);
+            }
+
+            const promoterId = localStorage.getItem('promoterId') || '';
+            document.getElementById('promoterIdInput').value = promoterId;
+
+            const apiConfig = JSON.parse(localStorage.getItem('gateApiConfig') || '{}');
+            document.getElementById('apiKeyInput').value = apiConfig.apiKey || '';
+            document.getElementById('apiSecretInput').value = apiConfig.apiSecret || '';
+            document.getElementById('apiPassphraseInput').value = apiConfig.passphrase || '';
+
+            const darkMode = localStorage.getItem('darkMode') !== 'false';
+            document.getElementById('darkModeToggle').checked = darkMode;
+
+            loadDashboardStats();
+        }
+
+        function saveApiConfig() {
+            const apiKey = document.getElementById('apiKeyInput').value.trim();
+            const apiSecret = document.getElementById('apiSecretInput').value.trim();
+            const passphrase = document.getElementById('apiPassphraseInput').value.trim();
+
+            if (!apiKey || !apiSecret) {
+                alert('⚠️ 请填写完整的API Key和Secret');
+                return;
+            }
+
+            const apiConfig = { apiKey, apiSecret, passphrase };
+            localStorage.setItem('gateApiConfig', JSON.stringify(apiConfig));
+            alert('✅ API配置已保存（本地加密存储）');
+        }
+
+        function loadDashboardStats() {
+            // 模拟数据，实际可从GitHub Issues获取
+            const stats = {
+                trades: 0,
+                volume: 0,
+                rebate: 0
+            };
+            document.getElementById('statTrades').textContent = stats.trades;
+            document.getElementById('statVolume').textContent = '$' + stats.volume.toFixed(2);
+            document.getElementById('statRebate').textContent = '$' + stats.rebate.toFixed(2);
+        }
+
+        function openFullDashboard() {
+            alert('📊 完整看板功能开发中...\n\n当前数据：\n交易笔数：0\n总交易额：$0\n预估返利：$0');
         }
 
         // ============================================================
@@ -2152,6 +2500,10 @@
             window.openShare = openShare;
             window.closeShare = closeShare;
             window.shareTo = shareTo;
+            window.openSettings = openSettings;
+            window.closeSettings = closeSettings;
+            window.saveApiConfig = saveApiConfig;
+            window.openFullDashboard = openFullDashboard;
 
             document.getElementById('overlay').addEventListener('click', closeDrawer);
         });
