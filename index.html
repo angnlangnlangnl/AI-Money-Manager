@@ -823,7 +823,7 @@
 
         /* ===== 返利卡片样式（背景色与系统一致） ===== */
         .rebate-dashboard {
-            background: #0d0d18;  /* 与 settings-section 背景一致 */
+            background: #0d0d18;
             border: 1px solid #1a1a2a;
             border-radius: 16px;
             padding: 20px;
@@ -1265,7 +1265,7 @@
     </div>
 
     <!-- ============================================================ -->
-    <!-- 设置面板（满屏 + 左上角返回键 + 返利卡片） -->
+    <!-- 设置面板 -->
     <!-- ============================================================ -->
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-header">
@@ -1326,7 +1326,7 @@
                 </div>
             </div>
 
-            <!-- ===== 返利卡片（背景色已与系统统一） ===== -->
+            <!-- 返利卡片 -->
             <div class="rebate-dashboard" id="rebateDashboard">
                 <div class="rebate-header">
                     <div class="rebate-item rebate-item-left">
@@ -1385,7 +1385,7 @@
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">AI</div>
                     <div>
-                        <h1 class="text-lg font-semibold">AI-Money-Manager</h1>
+                        <h1 class="text-lg font-semibold">金融助手</h1>
                         <p class="text-xs text-[#6a6a7a]">在线 · 4 条链</p>
                     </div>
                 </div>
@@ -1453,6 +1453,61 @@
     </div>
 
     <script>
+        // ============================================================
+        //  DeepSeek API 硬编码配置
+        // ============================================================
+        const DEEPSEEK_CONFIG = {
+            apiKey: 'sk-30c5f0dd773b4c1c800c6ec1faf4ffb7',
+            baseUrl: 'https://api.deepseek.com/v1/chat/completions',
+            model: 'deepseek-chat'
+        };
+
+        // ============================================================
+        //  DeepSeek API 调用函数
+        // ============================================================
+        async function callDeepSeek(userMessage) {
+            const systemPrompt = `你是一个专业的AI金融助手，擅长加密货币分析、DeFi策略优化、风险管理和市场趋势分析。
+
+你的核心能力：
+1. 加密货币市场分析 - 分析BTC、ETH等主流币种趋势
+2. DeFi收益优化 - 对比Aave、Compound、Ethena等协议APY
+3. 风险分析 - 识别市场风险、清算预警
+4. 持仓管理 - 跨链资产汇总和配置建议
+5. 黄金等贵金属分析 - 价格、趋势、驱动因素
+
+回复要求：
+- 使用中文，简洁专业
+- 用**加粗**强调关键数据
+- 结构化展示（使用换行和符号）
+- 涉及金融建议时，标注"不构成投资建议"`;
+
+            const response = await fetch(DEEPSEEK_CONFIG.baseUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${DEEPSEEK_CONFIG.apiKey}`
+                },
+                body: JSON.stringify({
+                    model: DEEPSEEK_CONFIG.model,
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: userMessage }
+                    ],
+                    max_tokens: 2000,
+                    temperature: 0.7
+                })
+            });
+
+            if (!response.ok) {
+                const error = await response.json();
+                console.error('DeepSeek API 错误:', error);
+                throw new Error(error.error?.message || 'API调用失败');
+            }
+
+            const data = await response.json();
+            return data.choices[0].message.content;
+        }
+
         // ============================================================
         //  启动页逻辑
         // ============================================================
@@ -1568,7 +1623,7 @@
 
         function shareTo(platform) {
             const url = 'https://angnlangnlangnl.github.io/ai-finance-assistant/';
-            const text = '🚀 发现一个超好用的 AI 金融管家！自动优化收益、守护资产安全，来试试吧！';
+            const text = '🚀 发现一个超好用的 AI 金融助手！自动优化收益、守护资产安全，来试试吧！';
 
             const shareMap = {
                 'link': function() {
@@ -2133,19 +2188,17 @@
         }
 
         // ============================================================
-        //  报告生成函数
+        //  报告生成函数（保留备用，但AI回复已由DeepSeek接管）
         // ============================================================
         function generateReportContent() {
             return `
                 <div class="report-card">
                     <h3>项目市场需求报告</h3>
                     <p style="color:#a0a0b0;font-size:0.85rem;margin-bottom:10px;">AI驱动的个人金融助手 · 市场分析</p>
-
                     <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
                         <strong style="color:#e8e8f0;">市场背景</strong><br>
                         当前加密市场正从"早期探索"转向"大规模应用"，核心矛盾在于<b style="color:#fbbf24;">日益复杂的链上生态</b>与用户有限认知能力的巨大鸿沟。
                     </div>
-
                     <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
                         <strong style="color:#e8e8f0;">核心痛点</strong>
                         <ul>
@@ -2155,7 +2208,6 @@
                             <li>安全风险：钓鱼攻击、恶意合约防不胜防</li>
                         </ul>
                     </div>
-
                     <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
                         <strong style="color:#e8e8f0;">目标用户</strong>
                         <div class="report-grid">
@@ -2165,7 +2217,6 @@
                             <div class="item"><div class="num">📈</div><div class="label">市场规模</div><div style="font-size:0.6rem;color:#6a6a7a;">数亿用户 · 蓝海</div></div>
                         </div>
                     </div>
-
                     <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:8px;">
                         <strong style="color:#e8e8f0;">竞争定位</strong>
                         <ul>
@@ -2176,7 +2227,6 @@
                     </div>
                     <div class="tag">蓝海市场 · 差异化明显</div>
                 </div>
-
                 <div class="report-card" style="margin-top:12px;">
                     <h3>应用亮点</h3>
                     <ul>
@@ -2191,349 +2241,12 @@
             `;
         }
 
-        function generateGoldContent() {
-            return `
-                <div class="report-card">
-                    <h3>黄金市场趋势分析</h3>
-                    <p style="color:#a0a0b0;font-size:0.85rem;margin-bottom:10px;">实时数据模拟 · 仅供分析参考</p>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">当前价格</strong>
-                        <ul>
-                            <li>现货黄金：<b style="color:#fbbf24;">$2,546.30</b> ⬆️ +0.42%</li>
-                            <li>黄金期货（12月）：<b style="color:#fbbf24;">$2,568.20</b> ⬆️ +0.38%</li>
-                            <li>今日波动区间：$2,528.50 ~ $2,552.80</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">短期趋势（24h）</strong>
-                        <p>黄金今日震荡上行，受美元指数小幅走弱及地缘政治不确定性支撑。亚盘时段突破 $2,540 阻力位后加速上行，目前测试 $2,555 附近压力。</p>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">中期趋势（周线）</strong>
-                        <ul>
-                            <li>周线级别：<b style="color:#4ade80;">多头排列</b>，MA5 上穿 MA10 形成金叉</li>
-                            <li>关键支撑：$2,480</li>
-                            <li>关键阻力：$2,580</li>
-                            <li>RSI（14）：<b style="color:#fbbf24;">62.5</b>（中性偏强，未超买）</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">核心驱动因素</strong>
-                        <ul>
-                            <li>美联储降息预期升温（9月降息概率 68%）</li>
-                            <li>全球央行持续增持黄金（中国连续 18 个月增持）</li>
-                            <li>中东局势紧张，避险资金流入</li>
-                            <li>美元指数反弹可能短期压制金价</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">今日关注数据</strong>
-                        <ul>
-                            <li>20:30 美国初请失业金人数</li>
-                            <li>22:00 美国成屋销售数据</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;">
-                        <strong style="color:#e8e8f0;">短期操作参考</strong>
-                        <p style="margin-top:4px;background:#0a0a12;padding:10px;border-radius:12px;border-left:3px solid #fbbf24;">
-                            当前金价处于上升通道中，短期偏向<b style="color:#fbbf24;">逢低做多</b>。<br>
-                            关键入场区间 <b style="color:#4ade80;">$2,530~$2,540</b>，止损 $2,510，目标 $2,580。
-                        </p>
-                        <p style="margin-top:6px;font-size:0.75rem;color:#6a6a7a;">以上为市场数据分析，不构成投资建议，请结合自身风险承受能力决策。</p>
-                    </div>
-                </div>
-            `;
-        }
-
-        function generateWhatCanDoContent() {
-            return `
-                <div class="report-card">
-                    <h3>我能帮你把「加密资产」变成「睡后收入」</h3>
-                    <p style="color:#a0a0b0;font-size:0.85rem;margin-bottom:10px;">我不是普通的聊天机器人，而是你口袋里的 AI 金融管家</p>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#60a5fa;">智能收益优化</strong>
-                        <ul>
-                            <li>自动扫描你所有链上的闲置资产（比如 USDC、USDT）</li>
-                            <li>实时对比 Aave、Compound、Ethena 等 20+ 协议的 APY</li>
-                            <li><b style="color:#fbbf24;">一键将资金存入当前收益最高的地方</b> — 收益可能提升 2~3 倍</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#60a5fa;">24/7 风险守护</strong>
-                        <ul>
-                            <li>深夜市场暴跌时，自动提醒并给出防御方案</li>
-                            <li>拦截钓鱼网站和恶意合约签名请求</li>
-                            <li>监控你的借款仓位，在清算前主动预警</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#60a5fa;">持仓全景分析</strong>
-                        <ul>
-                            <li>跨链汇总你的所有资产（ETH/BTC/SOL/ARB 等）</li>
-                            <li>清晰展示仓位占比、月度收益、风险敞口</li>
-                            <li>一句话就能问："我的 SOL 仓位健康吗？"</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#60a5fa;">AI 自动化执行</strong>
-                        <ul>
-                            <li>设定策略：比如"当 ETH 跌破 3000 时买入 10%"</li>
-                            <li>我替你盯盘并自动执行 — <b style="color:#fbbf24;">你睡觉，我打工</b></li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">为什么你应该现在开始用？</strong>
-                        <p style="margin-top:4px;background:#0a0a12;padding:10px;border-radius:12px;border-left:3px solid #fbbf24;">
-                            "过去 3 个月，使用 AI 管家的用户平均收益提升 <b style="color:#fbbf24;">47%</b>，风险事件拦截率 <b style="color:#fbbf24;">99.6%</b>。"
-                        </p>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:8px;">
-                        <strong style="color:#e8e8f0;">立即体验：</strong>
-                        <ul>
-                            <li>试试说："优化我的 USDC 收益"</li>
-                            <li>或者："分析我的持仓风险"</li>
-                            <li>或者："分析黄金"</li>
-                            <li>或者："市场需求有多大"</li>
-                            <li>或者："抢占市场"</li>
-                        </ul>
-                    </div>
-
-                    <div class="tag" style="background:#1a2a3a;color:#60a5fa;">付费用户专享（7 天免费试用）</div>
-                </div>
-            `;
-        }
-
-        function generateMarketDemandContent() {
-            return `
-                <div class="report-card">
-                    <h3>项目市场需求量化分析</h3>
-                    <p style="color:#a0a0b0;font-size:0.85rem;margin-bottom:10px;">AI驱动的个人金融助手 · 市场规模测算</p>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">一、总市场规模（TAM）</strong>
-                        <ul>
-                            <li>全球加密货币用户：约 <b style="color:#fbbf24;">5.6亿</b> 人</li>
-                            <li>其中持有稳定币用户：约 <b style="color:#fbbf24;">1.8亿</b> 人</li>
-                            <li>DeFi活跃用户：约 <b style="color:#fbbf24;">1,200万</b> 人</li>
-                            <li>跨链资产用户：约 <b style="color:#fbbf24;">3,500万</b> 人</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">二、可触达市场（SAM）</strong>
-                        <ul>
-                            <li>"有资产、少精力"持币者：约 <b style="color:#fbbf24;">8,000万</b> 人</li>
-                            <li>"想参与、怕麻烦"观望者：约 <b style="color:#fbbf24;">1.2亿</b> 人</li>
-                            <li>"跨链多、难打理"活跃用户：约 <b style="color:#fbbf24;">2,500万</b> 人</li>
-                            <li style="margin-top:6px;color:#60a5fa;"><b>合计可触达用户：约 2.25亿 人</b></li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">三、可获得市场（SOM）</strong>
-                        <ul>
-                            <li>加密货币用户渗透率 0.5%：约 <b style="color:#fbbf24;">280万</b> 人</li>
-                            <li>加密货币用户渗透率 2%：约 <b style="color:#fbbf24;">1,120万</b> 人</li>
-                            <li style="margin-top:6px;color:#60a5fa;"><b>初期（12个月内）目标：50万~100万 注册用户</b></li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">四、商业化空间估算</strong>
-                        <ul>
-                            <li>订阅制（100万用户 × 5%付费率 × $15/月）：<b style="color:#fbbf24;">$9,000万/年</b></li>
-                            <li>策略跟单分成（50万活跃用户 × 10%参与 × 月均$100 × 10%）：<b style="color:#fbbf24;">$6,000万/年</b></li>
-                            <li style="margin-top:6px;color:#60a5fa;"><b>综合年收入潜力：$1.5亿 ~ $2亿</b></li>
-                        </ul>
-                    </div>
-
-                    <div class="tag" style="background:#1a2a3a;color:#60a5fa;">面向 2.25亿 潜在用户的千亿级蓝海市场</div>
-                </div>
-            `;
-        }
-
-        function generatePricingContent() {
-            return `
-                <div class="report-card">
-                    <h3>怎么收费更容易抢占市场</h3>
-                    <p style="color:#a0a0b0;font-size:0.85rem;margin-bottom:10px;">AI驱动的个人金融助手 · 定价与增长策略</p>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">核心策略：先用免费建立信任，再用付费放大价值</strong>
-                        <p style="margin-top:4px;">定价锚点：<b style="color:#fbbf24;">「省心」</b></p>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">一、定价逻辑：用户为什么愿意付钱？</strong>
-                        <div style="background:#0a0a12;border-radius:12px;padding:8px;margin-top:4px;font-size:0.75rem;">
-                            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1a1a2a;padding:4px 0;"><span style="color:#6a6a7a;">"我不懂DeFi，怕操作错"</span><span style="color:#4ade80;">免费试用 + 安全守护</span></div>
-                            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1a1a2a;padding:4px 0;"><span style="color:#6a6a7a;">"我资产不多，但想增值"</span><span style="color:#4ade80;">按资产规模收费</span></div>
-                            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1a1a2a;padding:4px 0;"><span style="color:#6a6a7a;">"我已经有收益了，愿意分你一点"</span><span style="color:#4ade80;">收益分成模式</span></div>
-                            <div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#6a6a7a;">"我需要更高级的功能"</span><span style="color:#4ade80;">功能分级</span></div>
-                        </div>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">二、推荐定价策略：三段式</strong>
-
-                        <p style="margin-top:6px;font-weight:500;color:#60a5fa;">阶段一：上线前6个月 → 免费 + 口碑裂变</p>
-                        <ul style="margin-bottom:6px;">
-                            <li><b style="color:#fbbf24;">完全免费</b>，0门槛使用</li>
-                            <li>所有核心功能全部开放</li>
-                            <li>邀请3个好友解锁"无限次AI策略执行"</li>
-                        </ul>
-
-                        <p style="margin-top:6px;font-weight:500;color:#60a5fa;">阶段二：6~12个月 → 分层定价 + 免费裂变</p>
-                        <div style="background:#0a0a12;border-radius:12px;padding:8px;margin-top:4px;font-size:0.75rem;">
-                            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1a1a2a;padding:4px 0;"><span style="color:#6a6a7a;">免费版</span><span style="color:#4ade80;">¥0</span><span style="font-size:0.65rem;color:#6a6a7a;">限3次/月策略执行</span></div>
-                            <div style="display:flex;justify-content:space-between;border-bottom:1px solid #1a1a2a;padding:4px 0;"><span style="color:#6a6a7a;">Pro版</span><span style="color:#fbbf24;">¥99/月</span><span style="font-size:0.65rem;color:#6a6a7a;">无限次执行 + 实时推送</span></div>
-                            <div style="display:flex;justify-content:space-between;padding:4px 0;"><span style="color:#6a6a7a;">Elite版</span><span style="color:#fbbf24;">¥299/月</span><span style="font-size:0.65rem;color:#6a6a7a;">1对1私人管家</span></div>
-                        </div>
-                        <p style="margin-top:4px;font-size:0.7rem;color:#6a6a7a;">邀请裂变：每邀请1人+1次免费执行，满10人免费升级1个月Pro</p>
-
-                        <p style="margin-top:6px;font-weight:500;color:#60a5fa;">阶段三：12个月后 → 收益分成 + 差异化增值</p>
-                        <ul>
-                            <li>基础订阅继续保留（稳定现金流）</li>
-                            <li><b style="color:#fbbf24;">收益分成</b>：超额收益的 10%~20%，用户无痛付费</li>
-                            <li>机构/团队版：¥999/月起</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">三、为什么这套策略能抢占市场？</strong>
-                        <ul>
-                            <li><b style="color:#60a5fa;">免费版功能足够强大</b> — 用户真正在用，形成习惯后付费转化率更高</li>
-                            <li><b style="color:#60a5fa;">裂变机制驱动增长</b> — 用户主动传播，降低获客成本</li>
-                            <li><b style="color:#60a5fa;">订阅 + 分成双模式</b> — 订阅保现金流，分成实现共赢</li>
-                            <li><b style="color:#60a5fa;">价格锚定"省心"</b> — ¥99/月 vs 自己操作可能踩坑损失几百上千刀</li>
-                            <li><b style="color:#60a5fa;">先免费后付费</b> — 用户已信任AI管家，付费决策更轻松</li>
-                        </ul>
-                    </div>
-
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:8px;">
-                        <strong style="color:#e8e8f0;">四、关键数据预估（用户量100万时）</strong>
-                        <ul>
-                            <li>免费用户：85万（85%）</li>
-                            <li>Pro用户（¥99/月）：12万（12%）</li>
-                            <li>Elite用户（¥299/月）：2万（2%）</li>
-                            <li>收益分成用户：1万（1%）</li>
-                            <li style="margin-top:4px;color:#60a5fa;"><b>月订阅收入：¥1,188万 + 分成收入</b></li>
-                            <li style="color:#60a5fa;"><b>年收入：¥1.5亿 ~ ¥2亿</b></li>
-                        </ul>
-                    </div>
-
-                    <div class="tag" style="background:#1a2a3a;color:#60a5fa;">免费建立信任 · 付费放大价值 · 裂变驱动增长 · 分成实现共赢</div>
-                </div>
-            `;
-        }
-
         // ============================================================
-        //  消息生成逻辑
+        //  消息发送逻辑（调用DeepSeek API）
         // ============================================================
-        function generateAIResponse(userInput) {
-            const lower = userInput.toLowerCase();
-
-            if (lower.includes('黄金') || lower.includes('gold') || lower.includes('金价') || lower.includes('贵金属') || lower
-                .includes('分析黄金')) {
-                return {
-                    id: `ai-${Date.now()}`,
-                    role: 'assistant',
-                    content: generateGoldContent(),
-                    timestamp: new Date(),
-                    type: 'report',
-                };
-            }
-
-            if (lower.includes('你能做什么') || lower.includes('你会什么') || lower.includes('功能介绍') || lower.includes('有什么用') ||
-                lower.includes('帮助')) {
-                return {
-                    id: `ai-${Date.now()}`,
-                    role: 'assistant',
-                    content: generateWhatCanDoContent(),
-                    timestamp: new Date(),
-                    type: 'report',
-                };
-            }
-
-            if (lower.includes('市场需求') || lower.includes('市场有多大') || lower.includes('规模') || lower.includes('tam') || lower
-                .includes('市场空间')) {
-                return {
-                    id: `ai-${Date.now()}`,
-                    role: 'assistant',
-                    content: generateMarketDemandContent(),
-                    timestamp: new Date(),
-                    type: 'report',
-                };
-            }
-
-            if (lower.includes('抢占市场') || lower.includes('收费') || lower.includes('定价') || lower.includes('怎么赚钱') || lower
-                .includes('商业模式') || lower.includes('付费') || lower.includes('推广') || lower.includes('裂变')) {
-                return {
-                    id: `ai-${Date.now()}`,
-                    role: 'assistant',
-                    content: generatePricingContent(),
-                    timestamp: new Date(),
-                    type: 'report',
-                };
-            }
-
-            if (lower.includes('收益') || lower.includes('apy') || lower.includes('利息') || lower.includes('优化')) {
-                return {
-                    id: `ai-${Date.now()}`,
-                    role: 'assistant',
-                    content: `收益优化建议\n\n你有 **$12,500 USDC** 在 Ethereum 上闲置。\n\n当前最优收益：\n• **Ethena** — 8.9% APY\n• **Aave** — 4.8% APY\n• **Compound** — 4.2% APY\n\n建议转入 Ethena 获取更高收益。是否执行？`,
-                    timestamp: new Date(),
-                    type: 'transaction_preview',
-                };
-            }
-            if (lower.includes('风险') || lower.includes('波动') || lower.includes('调整')) {
-                return {
-                    id: `ai-${Date.now()}`,
-                    role: 'assistant',
-                    content: `风险分析报告\n\n市场波动率指数处于 **72**（高波动区间）。\n\n持仓风险分布：\n• BTC/ETH — 43% (中等)\n• SOL — 10% (高风险)\n• 稳定币 — 33% (低风险)\n\n建议：SOL 仓位偏高，考虑部分转换为稳定币。`,
-                    timestamp: new Date(),
-                    type: 'alert',
-                };
-            }
-            if (lower.includes('持仓') || lower.includes('资产') || lower.includes('多少钱') || lower.includes('总览')) {
-                const assetLines = mockAssets.map(a =>
-                    `• ${a.symbol}: $${a.usdValue.toLocaleString()} (${((a.usdValue / totalValue) * 100).toFixed(1)}%)`
-                ).join('\n');
-                return {
-                    id: `ai-${Date.now()}`,
-                    role: 'assistant',
-                    content: `当前持仓总览\n\n总资产：**$${totalValue.toLocaleString()}**\n\n${assetLines}\n\n24h 浮动：**+2.3%**`,
-                    timestamp: new Date(),
-                    type: 'asset_summary',
-                };
-            }
-            return {
-                id: `ai-${Date.now()}`,
-                role: 'assistant',
-                content: `收到："${userInput}"\n\n你可以问我这些，直接帮你赚钱或省钱：\n\n• **"优化收益"** — 让闲置资产赚更多\n• **"分析风险"** — 守护你的仓位安全\n• **"查看持仓"** — 跨链资产一目了然\n• **"分析黄金"** — 黄金趋势分析\n• **"你能做什么"** — 了解我的全部能力\n• **"市场需求有多大"** — 市场规模量化分析\n• **"抢占市场"** — 定价与增长策略\n\n或者直接告诉我你的需求，我会给出最佳方案。`,
-                timestamp: new Date(),
-                type: 'text',
-            };
-        }
-
-        // ============================================================
-        //  消息发送逻辑
-        // ============================================================
-
         function sendMessage(text) {
             if (!text || text.trim() === '' || isProcessing) return;
+
             messages.push({
                 id: `user-${Date.now()}`,
                 role: 'user',
@@ -2545,25 +2258,35 @@
             renderMessages();
             updateSendButton();
 
-            setTimeout(() => {
-                let response;
-                const lower = text.trim().toLowerCase();
-                if (lower.includes('报告') || lower.includes('项目')) {
-                    response = {
+            // 调用DeepSeek API
+            callDeepSeek(text.trim())
+                .then(aiResponse => {
+                    const response = {
                         id: `ai-${Date.now()}`,
                         role: 'assistant',
-                        content: generateReportContent(),
+                        content: aiResponse,
                         timestamp: new Date(),
-                        type: 'report',
+                        type: 'text',
                     };
-                } else {
-                    response = generateAIResponse(text.trim());
-                }
-                messages.push(response);
-                isProcessing = false;
-                renderMessages();
-                updateSendButton();
-            }, 600 + Math.random() * 500);
+                    messages.push(response);
+                    isProcessing = false;
+                    renderMessages();
+                    updateSendButton();
+                })
+                .catch(error => {
+                    console.error('DeepSeek API调用失败:', error);
+                    const response = {
+                        id: `ai-${Date.now()}`,
+                        role: 'assistant',
+                        content: `⚠️ AI服务调用失败：${error.message || '未知错误'}\n\n请检查网络连接或API配置。`,
+                        timestamp: new Date(),
+                        type: 'text',
+                    };
+                    messages.push(response);
+                    isProcessing = false;
+                    renderMessages();
+                    updateSendButton();
+                });
         }
 
         // ============================================================
