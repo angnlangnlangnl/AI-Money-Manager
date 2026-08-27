@@ -33,7 +33,7 @@
         }
 
         .container {
-            max-width: 900px;
+            max-width: 1000px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -72,7 +72,7 @@
         /* 策略卡片网格 */
         .strategy-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 16px;
         }
 
@@ -84,7 +84,7 @@
             padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
             transition: all 0.3s ease;
         }
         .strategy-card:hover {
@@ -104,17 +104,17 @@
             padding-bottom: 10px;
         }
         .card-header .strategy-icon {
-            font-size: 24px;
+            font-size: 22px;
         }
         .card-header .strategy-name {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: #60a5fa;
         }
         .card-header .strategy-badge {
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 10px;
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 8px;
             background: #1a2a3a;
             color: #60a5fa;
             font-weight: 600;
@@ -124,9 +124,43 @@
             color: #10b981;
         }
 
+        /* 交易对选择 */
+        .pair-selector {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 6px 10px;
+        }
+        .pair-selector .pair-label {
+            font-size: 10px;
+            color: #6a6a7a;
+        }
+        .pair-selector select {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #e8e8f0;
+            font-size: 12px;
+            font-weight: 600;
+            outline: none;
+            cursor: pointer;
+        }
+        .pair-selector select option {
+            background: #12121f;
+            color: #e8e8f0;
+        }
+        .pair-selector .pair-price {
+            font-size: 11px;
+            color: #10b981;
+            font-weight: 600;
+        }
+
         /* 策略描述 */
         .strategy-desc {
-            font-size: 12px;
+            font-size: 11px;
             color: #9ca3af;
             line-height: 1.5;
         }
@@ -138,7 +172,7 @@
             gap: 4px;
         }
         .signal-tag {
-            font-size: 10px;
+            font-size: 9px;
             padding: 2px 8px;
             border-radius: 8px;
             background: #1a1a2a;
@@ -150,9 +184,14 @@
         .status-row {
             display: flex;
             align-items: center;
-            gap: 6px;
-            font-size: 11px;
+            justify-content: space-between;
+            font-size: 10px;
             color: #9ca3af;
+        }
+        .status-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
         .status-dot {
             width: 6px;
@@ -163,6 +202,15 @@
         .status-dot.active {
             background: #10b981;
             box-shadow: 0 0 6px #10b981;
+        }
+        .log-link {
+            color: #60a5fa;
+            cursor: pointer;
+            font-size: 10px;
+            text-decoration: underline;
+        }
+        .log-link:hover {
+            color: #93c5fd;
         }
 
         /* 账户信息 */
@@ -225,10 +273,11 @@
             background: transparent;
             border: 1px solid #1a1a2a;
             color: #6a6a7a;
-            font-size: 11px;
+            font-size: 10px;
             padding: 4px 8px;
             border-radius: 4px;
             cursor: pointer;
+            width: 100%;
         }
         .btn-params:hover {
             border-color: #3b82f6;
@@ -306,6 +355,69 @@
             background: #1a1a2a;
             color: #6a6a7a;
         }
+
+        /* 日志弹窗 */
+        .log-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2100;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .log-modal-overlay.show {
+            display: flex;
+        }
+        .log-modal {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 20px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 70vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .log-modal .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .log-modal .modal-title {
+            color: #60a5fa;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .log-modal .close-btn {
+            background: #1a1a2a;
+            color: #8a8a9a;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .log-box {
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 11px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #9ca3af;
+            max-height: 300px;
+        }
     </style>
 </head>
 <body>
@@ -338,18 +450,41 @@
         </div>
     </div>
 
+    <!-- 日志弹窗 -->
+    <div class="log-modal-overlay" id="logModalOverlay" onclick="closeLogModal(event)">
+        <div class="log-modal" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <span class="modal-title" id="logModalTitle">📋 操作日志</span>
+                <button class="close-btn" onclick="closeLogModal()">✕</button>
+            </div>
+            <div class="log-box" id="logBoxContent">暂无日志</div>
+        </div>
+    </div>
+
     <script>
         // ============================================================
         //  策略卡片数据
         // ============================================================
         
+        // 可用交易对
+        const availablePairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT'];
+        
+        // 交易对价格
+        const pairPrices = {
+            'BTC/USDT': 65432.10,
+            'ETH/USDT': 3456.78,
+            'SOL/USDT': 187.50,
+            'BNB/USDT': 598.20,
+            'XRP/USDT': 0.612
+        };
+
         const strategies = [
             {
                 id: 'rsi',
                 icon: '📈',
                 name: 'RSI网格策略',
                 badge: 'RSI',
-                description: '基于RSI超买超卖信号的网格交易，在极端点位自动买卖',
+                description: '基于RSI超买超卖信号的网格交易',
                 signals: ['超卖买入', '超买卖出', '中性持有'],
                 params: {
                     rsiPeriod: { label: 'RSI周期', value: 14 },
@@ -364,7 +499,7 @@
                 icon: '📊',
                 name: '布林带网格策略',
                 badge: 'BOLL',
-                description: '基于布林带上下轨的均值回归网格，触及轨道自动交易',
+                description: '基于布林带上下轨的均值回归网格',
                 signals: ['下轨买入', '上轨卖出', '中轨平仓'],
                 params: {
                     bbPeriod: { label: '布林带周期', value: 20 },
@@ -378,7 +513,7 @@
                 icon: '📉',
                 name: 'EMA趋势网格策略',
                 badge: 'EMA',
-                description: 'EMA趋势过滤+动态网格，趋势明确时只做单边',
+                description: 'EMA趋势过滤+动态网格',
                 signals: ['金叉买入', '死叉卖出', '趋势过滤'],
                 params: {
                     emaShort: { label: 'EMA短期', value: 20 },
@@ -393,7 +528,7 @@
                 icon: '📐',
                 name: 'KDJ网格策略',
                 badge: 'KDJ',
-                description: 'KDJ指标+网格交易，J值极端时触发买卖',
+                description: 'KDJ指标+网格交易',
                 signals: ['K上穿D买入', 'K下穿D卖出', 'J值超买超卖'],
                 params: {
                     kdjPeriod: { label: 'KDJ周期', value: 9 },
@@ -408,7 +543,7 @@
                 icon: '📋',
                 name: 'MACD网格策略',
                 badge: 'MACD',
-                description: 'MACD趋势判断+网格执行，柱状图变化触发交易',
+                description: 'MACD趋势判断+网格执行',
                 signals: ['MACD金叉买入', 'MACD死叉卖出', '柱状图缩量'],
                 params: {
                     fastPeriod: { label: '快线周期', value: 12 },
@@ -423,7 +558,7 @@
                 icon: '🔄',
                 name: '多周期网格策略',
                 badge: 'MULTI',
-                description: '多重时间框架+网格交易，4H判断趋势，15M执行',
+                description: '多重时间框架+网格交易',
                 signals: ['4H趋势判断', '1H网格区间', '15M执行'],
                 params: {
                     trendPeriod: { label: '趋势周期(小时)', value: 4 },
@@ -443,12 +578,22 @@
                 usdtBalance: 10000,
                 assetBalance: 0,
                 interval: null,
-                params: JSON.parse(JSON.stringify(s.params))
+                params: JSON.parse(JSON.stringify(s.params)),
+                currentPair: 'BTC/USDT',
+                logs: []
             };
         });
 
         // 当前编辑的策略ID
         let currentEditingStrategy = null;
+
+        // 添加日志
+        function addLog(strategyId, msg) {
+            const state = strategyStates[strategyId];
+            const time = new Date().toLocaleTimeString();
+            state.logs.push(`[${time}] ${msg}`);
+            if (state.logs.length > 50) state.logs.shift();
+        }
 
         // 渲染策略卡片
         function renderStrategyCards() {
@@ -457,6 +602,9 @@
             let html = '';
             strategies.forEach(strategy => {
                 const state = strategyStates[strategy.id];
+                const currentPrice = pairPrices[state.currentPair] || 65432.10;
+                const totalValue = state.usdtBalance + state.assetBalance * currentPrice;
+                const pnl = totalValue - 10000;
                 
                 html += `
                     <div class="strategy-card ${state.running ? 'running' : ''}" id="card_${strategy.id}">
@@ -469,6 +617,17 @@
                             <span class="strategy-badge ${state.running ? 'running' : ''}">${strategy.badge}${state.running ? ' · 运行中' : ''}</span>
                         </div>
                         
+                        <!-- 交易对选择 -->
+                        <div class="pair-selector">
+                            <span class="pair-label">交易对:</span>
+                            <select id="pairSelect_${strategy.id}" onchange="changePair('${strategy.id}', this.value)">
+                                ${availablePairs.map(pair => `
+                                    <option value="${pair}" ${state.currentPair === pair ? 'selected' : ''}>${pair}</option>
+                                `).join('')}
+                            </select>
+                            <span class="pair-price">$${currentPrice.toFixed(2)}</span>
+                        </div>
+                        
                         <!-- 策略描述 -->
                         <div class="strategy-desc">${strategy.description}</div>
                         
@@ -479,8 +638,11 @@
                         
                         <!-- 状态指示器 -->
                         <div class="status-row">
-                            <span class="status-dot ${state.running ? 'active' : ''}" id="dot_${strategy.id}"></span>
-                            <span id="status_${strategy.id}">${state.running ? '运行中' : '已停止'}</span>
+                            <div class="status-left">
+                                <span class="status-dot ${state.running ? 'active' : ''}" id="dot_${strategy.id}"></span>
+                                <span id="status_${strategy.id}">${state.running ? '运行中' : '已停止'}</span>
+                            </div>
+                            <span class="log-link" onclick="openLogModal('${strategy.id}')">📋 查看日志</span>
                         </div>
                         
                         <!-- 账户信息 -->
@@ -490,12 +652,12 @@
                                 <span class="value" id="usdt_${strategy.id}">${state.usdtBalance.toFixed(2)}</span>
                             </div>
                             <div class="account-row">
-                                <span class="label">持仓数量</span>
+                                <span class="label">${state.currentPair.split('/')[0]}持仓</span>
                                 <span class="value" id="asset_${strategy.id}">${state.assetBalance.toFixed(4)}</span>
                             </div>
                             <div class="account-row">
                                 <span class="label">盈亏</span>
-                                <span class="value" id="pnl_${strategy.id}" style="color:#10b981;">+$0.00</span>
+                                <span class="value" id="pnl_${strategy.id}" style="color:${pnl >= 0 ? '#10b981' : '#ef4444'};">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</span>
                             </div>
                         </div>
                         
@@ -522,20 +684,28 @@
             container.innerHTML = html;
         }
 
+        // 切换交易对
+        function changePair(strategyId, pair) {
+            const state = strategyStates[strategyId];
+            state.currentPair = pair;
+            addLog(strategyId, `切换交易对至 ${pair}`);
+            renderStrategyCards();
+        }
+
         // 切换策略运行状态
         function toggleStrategy(id) {
             const state = strategyStates[id];
             
             if (state.running) {
-                // 暂停策略
                 state.running = false;
                 if (state.interval) {
                     clearInterval(state.interval);
                     state.interval = null;
                 }
+                addLog(id, '策略已暂停');
             } else {
-                // 启动策略
                 state.running = true;
+                addLog(id, `策略已启动，交易对: ${state.currentPair}`);
                 state.interval = setInterval(() => {
                     simulateTrade(id);
                 }, 3000);
@@ -548,26 +718,25 @@
         function simulateTrade(id) {
             const state = strategyStates[id];
             const strategy = strategies.find(s => s.id === id);
-            
-            // 模拟价格
-            const currentPrice = 65432.10 + (Math.random() - 0.5) * 200;
+            const currentPrice = pairPrices[state.currentPair] || 65432.10;
             const positionSize = state.params.positionSize.value / 100;
+            const assetSymbol = state.currentPair.split('/')[0];
             
             if (Math.random() > 0.5) {
-                // 买入
                 if (state.usdtBalance > 100) {
                     const buyAmount = Math.min(state.usdtBalance * positionSize, 500);
                     const quantity = buyAmount / currentPrice;
                     state.assetBalance += quantity;
                     state.usdtBalance -= buyAmount;
+                    addLog(id, `📈 买入 ${quantity.toFixed(6)} ${assetSymbol} @ $${currentPrice.toFixed(2)}`);
                 }
             } else {
-                // 卖出
                 if (state.assetBalance > 0.001) {
                     const sellQuantity = state.assetBalance * positionSize;
                     const sellAmount = sellQuantity * currentPrice;
                     state.assetBalance -= sellQuantity;
                     state.usdtBalance += sellAmount;
+                    addLog(id, `📉 卖出 ${sellQuantity.toFixed(6)} ${assetSymbol} @ $${currentPrice.toFixed(2)}`);
                 }
             }
             
@@ -577,6 +746,7 @@
         // 更新卡片显示
         function updateCardDisplay(id) {
             const state = strategyStates[id];
+            const currentPrice = pairPrices[state.currentPair] || 65432.10;
             
             const usdtEl = document.getElementById(`usdt_${id}`);
             const assetEl = document.getElementById(`asset_${id}`);
@@ -586,7 +756,7 @@
             if (assetEl) assetEl.textContent = state.assetBalance.toFixed(4);
             
             if (pnlEl) {
-                const totalValue = state.usdtBalance + state.assetBalance * 65432.10;
+                const totalValue = state.usdtBalance + state.assetBalance * currentPrice;
                 const pnl = totalValue - 10000;
                 pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
                 pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
@@ -607,8 +777,25 @@
             
             state.usdtBalance = 10000;
             state.assetBalance = 0;
+            addLog(id, '🔄 已撤销全部操作，账户已重置');
             
             renderStrategyCards();
+        }
+
+        // 打开日志弹窗
+        function openLogModal(id) {
+            const state = strategyStates[id];
+            const strategy = strategies.find(s => s.id === id);
+            
+            document.getElementById('logModalTitle').textContent = `📋 ${strategy.name} - 操作日志`;
+            document.getElementById('logBoxContent').textContent = state.logs.length > 0 ? state.logs.join('\n') : '暂无日志';
+            document.getElementById('logModalOverlay').classList.add('show');
+        }
+
+        // 关闭日志弹窗
+        function closeLogModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('logModalOverlay').classList.remove('show');
         }
 
         // 打开参数设置弹窗
@@ -655,6 +842,7 @@
                 }
             });
             
+            addLog(currentEditingStrategy, '⚙️ 参数已更新');
             closeParamsModal();
             renderStrategyCards();
         }
@@ -670,6 +858,21 @@
                     closeParamsModal();
                 }
             });
+            document.getElementById('logModalOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeLogModal();
+                }
+            });
+            
+            // 暴露全局函数
+            window.changePair = changePair;
+            window.toggleStrategy = toggleStrategy;
+            window.resetStrategy = resetStrategy;
+            window.openLogModal = openLogModal;
+            window.closeLogModal = closeLogModal;
+            window.openParamsModal = openParamsModal;
+            window.closeParamsModal = closeParamsModal;
+            window.saveParams = saveParams;
         });
     </script>
 </body>
