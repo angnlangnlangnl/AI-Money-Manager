@@ -1186,7 +1186,6 @@
             stroke-width: 2;
         }
 
-        /* 策略交易面板内部样式 */
         .strategy-dashboard {
             max-width: 900px;
             width: 100%;
@@ -1397,6 +1396,11 @@
             border-radius: 12px;
             padding: 18px;
             margin-bottom: 20px;
+            min-height: 260px;
+        }
+        .strategy-dashboard .chart-container canvas {
+            width: 100% !important;
+            height: 200px !important;
         }
         .strategy-dashboard .log-box {
             background: #0d1117;
@@ -1498,7 +1502,6 @@
             margin-bottom: 10px;
             font-size: 15px;
         }
-        /* 策略面板隐藏滚动条 */
         #strategyPanel::-webkit-scrollbar {
             width: 4px;
         }
@@ -1587,7 +1590,8 @@
             </div>
 
             <div class="header">
-                <h1>⚡ BTC 自动交易演示</h1>
+                <!-- 修改：⚡ BTC 自动交易演示 → 总盈利 -->
+                <h1>📊 总盈利</h1>
                 <div class="price-container">
                     <div class="price" id="strategyBtcPrice">$ --</div>
                     <div class="change" id="strategyPriceChange">--</div>
@@ -1879,10 +1883,16 @@
 
         <div id="messageList" class="flex-1 overflow-y-auto px-4 py-3 space-y-3"></div>
 
+        <!-- ===== 输入区域（语音按钮已改为SVG图标） ===== -->
         <div class="border-t border-[#1a1a2a] p-2 bg-[#0a0a0f] flex-shrink-0 safe-area-bottom">
             <div class="input-wrapper">
+                <!-- 语音按钮 - SVG图标 -->
                 <button id="voiceBtn" class="p-2 rounded-xl transition-all flex-shrink-0 bg-[#1a1a2a] text-[#4a4a5a] hover:bg-[#2a2a3a] tap-active" title="语音输入">
-                    <span style="font-size:13px; font-weight:500;">语音</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="9" y="2" width="6" height="12" rx="3"/>
+                        <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
+                        <line x1="12" y1="19" x2="12" y2="22"/>
+                    </svg>
                 </button>
                 <div class="input-container">
                     <textarea id="chatInput" rows="1" placeholder="输入指令..." class="bg-transparent outline-none resize-none text-sm min-h-[24px] max-h-[66px] px-2 py-1.5 text-[#e8e8f0] placeholder-[#4a4a5a] leading-4 w-full"></textarea>
@@ -1952,10 +1962,11 @@
         }
 
         // ============================================================
-        //  语音转文字（Web Speech API）
+        //  语音转文字（Web Speech API）- 修复重复启动错误
         // ============================================================
         let recognition = null;
         let isListening = false;
+        let isSpeechRecognitionSupported = false;
 
         function initSpeechRecognition() {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -1963,21 +1974,45 @@
                 console.warn('浏览器不支持语音识别');
                 return false;
             }
+            // 如果已存在recognition且正在运行，先停止
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {}
+                recognition = null;
+            }
             recognition = new SpeechRecognition();
             recognition.lang = 'zh-CN';
             recognition.continuous = false;
             recognition.interimResults = true;
             recognition.maxAlternatives = 1;
+            isSpeechRecognitionSupported = true;
             return true;
         }
 
         function startSpeechToText(onResult, onError) {
+            // 如果尚未初始化，先初始化
             if (!recognition) {
                 if (!initSpeechRecognition()) {
                     if (onError) onError('浏览器不支持语音识别，请使用Chrome或Edge浏览器');
                     return;
                 }
             }
+
+            // 检查是否已经在运行
+            if (isListening) {
+                try {
+                    recognition.stop();
+                } catch (e) {}
+                isListening = false;
+                // 延迟一小段时间再重新启动
+                setTimeout(() => {
+                    startSpeechToText(onResult, onError);
+                }, 100);
+                return;
+            }
+
+            // 重置监听器
             recognition.onresult = null;
             recognition.onerror = null;
             recognition.onend = null;
@@ -2000,7 +2035,10 @@
                     if (event.error === 'not-allowed') msg = '请允许使用麦克风权限';
                     else if (event.error === 'no-speech') msg = '未检测到语音，请重新尝试';
                     else if (event.error === 'audio-capture') msg = '无法访问麦克风';
-                    else msg = '语音识别失败：' + event.error;
+                    else if (event.error === 'aborted') {
+                        // 用户取消或主动停止，不报错
+                        return;
+                    } else msg = '语音识别失败：' + event.error;
                     onError(msg);
                 }
             };
@@ -2351,7 +2389,7 @@
         let _voiceData = {};
 
         // ============================================================
-        //  语音功能函数
+        //  语音功能函数（修复重复启动错误）
         // ============================================================
 
         function toggleVoiceMode() {
@@ -2396,7 +2434,10 @@
 
                 input.removeEventListener('click', onVoiceInputClick);
 
-                stopSpeechToText();
+                // 停止语音识别
+                if (isListening) {
+                    stopSpeechToText();
+                }
                 document.getElementById('cancelTip').classList.remove('show');
 
                 addSystemMessage('已切换回键盘模式');
@@ -2405,6 +2446,8 @@
 
         function onVoiceInputClick(e) {
             if (!isVoiceMode) return;
+
+            // 如果正在监听，点击停止
             if (isListening) {
                 stopSpeechToText();
                 isListening = false;
@@ -2419,7 +2462,6 @@
             input.placeholder = '正在听...';
             input.style.background = '#2a3a3a !important';
             input.value = '聆听中...';
-            isListening = true;
 
             document.getElementById('cancelTip').textContent = '请说话...';
             document.getElementById('cancelTip').classList.add('show');
@@ -2943,7 +2985,7 @@ Elite版：¥299/月，1对1私人管家
         }
 
         // ============================================================
-        //  快捷操作渲染（点击“策略交易”打开策略面板）
+        //  快捷操作渲染
         // ============================================================
         function renderQuickActions() {
             const container = document.getElementById('quickActions');
@@ -2953,7 +2995,6 @@ Elite版：¥299/月，1对1私人管家
                 { label: '收益排行', prompt: '查看收益排行榜' },
             ];
             container.innerHTML = actions.map((a) => {
-                // 策略交易特殊处理：直接打开策略面板
                 if (a.label === '策略交易') {
                     return `<button onclick="openStrategyPanel()" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
                 }
@@ -2967,7 +3008,6 @@ Elite版：¥299/月，1对1私人管家
         function openStrategyPanel() {
             document.getElementById('strategyPanel').classList.add('active');
             document.body.style.overflow = 'hidden';
-            // 初始化策略面板
             if (!window._strategyInited) {
                 initStrategyPanel();
                 window._strategyInited = true;
@@ -2980,7 +3020,7 @@ Elite版：¥299/月，1对1私人管家
         }
 
         // ============================================================
-        //  策略交易面板逻辑（完整BTC交易演示）
+        //  策略交易面板逻辑
         // ============================================================
         let strategyUsdtBalance = 10000;
         let strategyBtcBalance = 0;
@@ -3134,6 +3174,10 @@ Elite版：¥299/月，1对1私人管家
             const canvas = document.getElementById('strategyPriceChart');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
+            // 修复图表显示兼容性：设置固定宽高
+            canvas.style.width = '100%';
+            canvas.style.height = '200px';
+
             strategyChart = new Chart(ctx, {
                 type: 'line',
                 data: {
@@ -3178,7 +3222,6 @@ Elite版：¥299/月，1对1私人管家
         }
 
         function strategyRenderSymbols() {
-            // 顶部
             const topContainer = document.getElementById('strategySymbolList');
             if (topContainer) {
                 let html = '';
@@ -3189,7 +3232,6 @@ Elite版：¥299/月，1对1私人管家
                 });
                 topContainer.innerHTML = html;
             }
-            // 底部
             const bottomContainer = document.getElementById('strategyBottomSymbolList');
             if (bottomContainer) {
                 let html = '';
@@ -3260,7 +3302,6 @@ Elite版：¥299/月，1对1私人管家
             strategyAddLog('✅ 策略面板已就绪');
             strategyAddLog(`📊 当前 BTC 价格: $${strategyBtcPrice.toFixed(2)}`);
 
-            // 自动更新价格（非策略模式）
             setInterval(() => {
                 if (!strategyRunning) {
                     strategyUpdatePrice();
@@ -3277,7 +3318,6 @@ Elite版：¥299/月，1对1私人管家
             const trimmedText = text.trim();
             const lower = trimmedText.toLowerCase();
 
-            // 关键词匹配
             if (lower === '你好' || lower === '您好' || lower === 'hi' || lower === 'hello') {
                 messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
                     type: 'text' });
@@ -3332,7 +3372,6 @@ Elite版：¥299/月，1对1私人管家
                 return;
             }
 
-            // 非数字资产指令筛选
             if (!isAssetRelated(trimmedText)) {
                 messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
                     type: 'text' });
@@ -3343,7 +3382,6 @@ Elite版：¥299/月，1对1私人管家
                 return;
             }
 
-            // 正常发送到DeepSeek API
             messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
                 type: 'text' });
             isProcessing = true;
@@ -3556,7 +3594,6 @@ Elite版：¥299/月，1对1私人管家
             window.settleRebate = settleRebate;
             window.resetRebate = resetRebate;
 
-            // 策略面板函数
             window.openStrategyPanel = openStrategyPanel;
             window.closeStrategyPanel = closeStrategyPanel;
             window.strategyExecuteOrder = strategyExecuteOrder;
