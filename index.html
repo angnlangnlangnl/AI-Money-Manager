@@ -6,6 +6,8 @@
     <title>AI 金融助手</title>
     <script src="https://cdn.tailwindcss.com">
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
     <style>
         /* ===== 全局重置 & 主应用样式 ===== */
         * {
@@ -606,7 +608,7 @@
             }
         }
 
-        /* ===== 设置面板样式（满屏 + 左上角返回键） ===== */
+        /* ===== 设置面板样式 ===== */
         .settings-overlay {
             position: fixed;
             inset: 0;
@@ -821,7 +823,7 @@
             background: #fff;
         }
 
-        /* ===== 返利卡片样式（背景色与系统一致） ===== */
+        /* ===== 返利卡片样式 ===== */
         .rebate-dashboard {
             background: #0d0d18;
             border: 1px solid #1a1a2a;
@@ -953,7 +955,6 @@
             }
         }
 
-        /* 语音波纹动画 */
         .wave-bars {
             display: flex;
             align-items: center;
@@ -1146,6 +1147,365 @@
             fill: none;
             stroke-width: 2;
         }
+
+        /* ===== 策略交易面板样式 ===== */
+        #strategyPanel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: #0d1117;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        #strategyPanel.active {
+            display: block;
+        }
+        #strategyPanel .back-btn {
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 8px;
+            transition: background 0.2s;
+            color: #8a8a9a;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        #strategyPanel .back-btn:active {
+            background: #1a1a2a;
+        }
+        #strategyPanel .back-btn svg {
+            width: 20px;
+            height: 20px;
+            stroke: #8a8a9a;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        /* 策略交易面板内部样式 */
+        .strategy-dashboard {
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+        }
+        .strategy-dashboard .symbol-bar {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            border-bottom: 1px solid #333333;
+            padding: 16px 0 8px 0;
+            margin-bottom: 16px;
+            position: relative;
+        }
+        .strategy-dashboard .symbol-list {
+            display: flex;
+            gap: 18px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #f0b90b #161b22;
+            flex: 1;
+            padding-bottom: 4px;
+        }
+        .strategy-dashboard .symbol-list::-webkit-scrollbar {
+            height: 4px;
+        }
+        .strategy-dashboard .symbol-list::-webkit-scrollbar-thumb {
+            background-color: #f0b90b;
+            border-radius: 2px;
+        }
+        .strategy-dashboard .symbol-list::-webkit-scrollbar-track {
+            background: #21262d;
+        }
+        .strategy-dashboard .symbol-item {
+            color: #888888;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            position: relative;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .strategy-dashboard .symbol-item:hover {
+            color: #cccccc;
+        }
+        .strategy-dashboard .symbol-item.active {
+            color: #f0b90b;
+        }
+        .strategy-dashboard .symbol-item.active::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -8px;
+            width: 100%;
+            height: 2px;
+            background-color: #f0b90b;
+        }
+        .strategy-dashboard .add-pair-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #f0b90b;
+            color: #f0b90b;
+            background: transparent;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: 300;
+            margin-left: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .strategy-dashboard .add-pair-btn:hover {
+            background-color: #f0b90b;
+            color: #0d1117;
+        }
+        .strategy-dashboard .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .strategy-dashboard .header h1 {
+            color: #f7931a;
+            font-size: 24px;
+        }
+        .strategy-dashboard .price-container {
+            text-align: right;
+        }
+        .strategy-dashboard .price {
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .strategy-dashboard .change {
+            font-size: 14px;
+            margin-top: 2px;
+        }
+        .strategy-dashboard .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .strategy-dashboard .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 18px;
+        }
+        .strategy-dashboard .card h3 {
+            margin-bottom: 15px;
+            color: #f7931a;
+            font-size: 16px;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 8px;
+        }
+        .strategy-dashboard .account-total {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        .strategy-dashboard .account-total .total-label {
+            font-size: 14px;
+            color: #8b949e;
+        }
+        .strategy-dashboard .account-total .total-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #e6e6e6;
+        }
+        .strategy-dashboard .account-total .total-change {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .strategy-dashboard .account-detail {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #30363d;
+        }
+        .strategy-dashboard .account-detail .detail-item {
+            display: flex;
+            flex-direction: column;
+        }
+        .strategy-dashboard .account-detail .detail-item .label {
+            font-size: 12px;
+            color: #8b949e;
+        }
+        .strategy-dashboard .account-detail .detail-item .value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #e6e6e6;
+            margin-top: 2px;
+        }
+        .strategy-dashboard .account-detail .detail-item .value.btc {
+            color: #f7931a;
+        }
+        .strategy-dashboard .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            color: white;
+        }
+        .strategy-dashboard .btn:hover {
+            opacity: 0.85;
+        }
+        .strategy-dashboard .btn-buy {
+            background: #2ea043;
+        }
+        .strategy-dashboard .btn-sell {
+            background: #da3633;
+        }
+        .strategy-dashboard .btn-strategy {
+            background: #1f6feb;
+            width: 100%;
+        }
+        .strategy-dashboard .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .strategy-dashboard .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #da3633;
+        }
+        .strategy-dashboard .dot.active {
+            background: #2ea043;
+            box-shadow: 0 0 8px #2ea043;
+        }
+        .strategy-dashboard .chart-container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .strategy-dashboard .log-box {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px;
+            height: 160px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .strategy-dashboard .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .strategy-dashboard .bottom-symbol-bar {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            border-top: 1px solid #333333;
+            padding: 12px 0 4px 0;
+            margin-top: 16px;
+            position: relative;
+        }
+        .strategy-dashboard .bottom-symbol-list {
+            display: flex;
+            gap: 18px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scrollbar-width: thin;
+            scrollbar-color: #f0b90b #161b22;
+            flex: 1;
+            padding-bottom: 4px;
+        }
+        .strategy-dashboard .bottom-symbol-list::-webkit-scrollbar {
+            height: 4px;
+        }
+        .strategy-dashboard .bottom-symbol-list::-webkit-scrollbar-thumb {
+            background-color: #f0b90b;
+            border-radius: 2px;
+        }
+        .strategy-dashboard .bottom-symbol-list::-webkit-scrollbar-track {
+            background: #21262d;
+        }
+        .strategy-dashboard .bottom-symbol-item {
+            color: #888888;
+            font-size: 14px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: color 0.3s ease;
+            position: relative;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .strategy-dashboard .bottom-symbol-item:hover {
+            color: #cccccc;
+        }
+        .strategy-dashboard .bottom-symbol-item.active {
+            color: #f0b90b;
+        }
+        .strategy-dashboard .bottom-symbol-item.active::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -8px;
+            width: 100%;
+            height: 2px;
+            background-color: #f0b90b;
+        }
+        .strategy-dashboard .bottom-add-pair-btn {
+            width: 28px;
+            height: 28px;
+            border: 1px solid #f0b90b;
+            color: #f0b90b;
+            background: transparent;
+            border-radius: 50%;
+            font-size: 16px;
+            font-weight: 300;
+            margin-left: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .strategy-dashboard .bottom-add-pair-btn:hover {
+            background-color: #f0b90b;
+            color: #0d1117;
+        }
+        .strategy-dashboard .balance-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 15px;
+        }
+        /* 策略面板隐藏滚动条 */
+        #strategyPanel::-webkit-scrollbar {
+            width: 4px;
+        }
+        #strategyPanel::-webkit-scrollbar-thumb {
+            background: #2a2a3a;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -1202,6 +1562,100 @@
             </div>
             <button class="splash-btn" id="splashBtn">开始使用</button>
             <button class="splash-skip" id="splashSkip">跳过介绍</button>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- 策略交易面板 -->
+    <!-- ============================================================ -->
+    <div id="strategyPanel">
+        <div class="strategy-dashboard">
+            <!-- 返回按钮 -->
+            <button class="back-btn" onclick="closeStrategyPanel()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"/>
+                </svg>
+                返回
+            </button>
+
+            <!-- 顶部交易对 -->
+            <div class="symbol-bar">
+                <div class="symbol-list" id="strategySymbolList">
+                    <!-- 由JS渲染 -->
+                </div>
+                <button class="add-pair-btn" onclick="strategyAddPair()">+</button>
+            </div>
+
+            <div class="header">
+                <h1>⚡ BTC 自动交易演示</h1>
+                <div class="price-container">
+                    <div class="price" id="strategyBtcPrice">$ --</div>
+                    <div class="change" id="strategyPriceChange">--</div>
+                </div>
+            </div>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>📊 账户</h3>
+                    <div class="account-total">
+                        <span class="total-label">总资产</span>
+                        <span>
+                            <span class="total-value" id="strategyTotalBalance">$64,488.22</span>
+                            <span class="total-change" id="strategyTotalChange" style="color:#2ea043;">-0.01%</span>
+                        </span>
+                    </div>
+                    <div class="account-detail">
+                        <div class="detail-item">
+                            <span class="label">USDT 余额</span>
+                            <span class="value" id="strategyUsdtBalance">10,000.00</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">BTC 持仓</span>
+                            <span class="value btc" id="strategyBtcBalance">0.0000</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="label">总盈亏</span>
+                            <span class="value" id="strategyTotalPnl" style="color:#8b949e;">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3>⚡ 快速操作</h3>
+                    <div class="status-indicator">
+                        <span class="dot active" id="strategyStatusDot"></span>
+                        <span id="strategyStatusText">策略已停止</span>
+                    </div>
+                    <div class="button-group">
+                        <button class="btn btn-buy" onclick="strategyExecuteOrder('buy')">买入 BTC</button>
+                        <button class="btn btn-sell" onclick="strategyExecuteOrder('sell')">卖出 BTC</button>
+                    </div>
+                    <button class="btn btn-strategy" onclick="strategyToggle()" style="margin-top:10px;">
+                        ▶ 启动策略
+                    </button>
+                    <div style="margin-top:12px;font-size:13px;color:#8b949e;">
+                        当前价格: <span id="strategyCurrentPrice">--</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <h3 style="color:#f7931a;font-size:16px;margin-bottom:12px;">📈 价格走势</h3>
+                <canvas id="strategyPriceChart" height="200"></canvas>
+            </div>
+
+            <div class="card" style="margin-bottom:20px;">
+                <h3>📋 交易日志</h3>
+                <div class="log-box" id="strategyLogBox">[系统] 初始化完成，等待 BTC 价格数据...</div>
+            </div>
+
+            <!-- 底部交易对 -->
+            <div class="bottom-symbol-bar">
+                <div class="bottom-symbol-list" id="strategyBottomSymbolList">
+                    <!-- 由JS渲染 -->
+                </div>
+                <button class="bottom-add-pair-btn" onclick="strategyAddBottomPair()">+</button>
+            </div>
         </div>
     </div>
 
@@ -1278,7 +1732,6 @@
         </div>
 
         <div class="settings-body">
-            <!-- 用户信息 -->
             <div class="settings-section">
                 <div class="section-title">👤 用户信息</div>
                 <div class="section-content">
@@ -1293,7 +1746,6 @@
                 </div>
             </div>
 
-            <!-- API配置 -->
             <div class="settings-section">
                 <div class="section-title">🔑 API配置</div>
                 <div class="section-content">
@@ -1304,7 +1756,6 @@
                 </div>
             </div>
 
-            <!-- 推广员看板 -->
             <div class="settings-section">
                 <div class="section-title">📊 推广员看板</div>
                 <div class="section-content" id="dashboardMini">
@@ -1326,7 +1777,6 @@
                 </div>
             </div>
 
-            <!-- 返利卡片 -->
             <div class="rebate-dashboard" id="rebateDashboard">
                 <div class="rebate-header">
                     <div class="rebate-item rebate-item-left">
@@ -1356,7 +1806,6 @@
                 </div>
             </div>
 
-            <!-- 深色模式 -->
             <div class="settings-section">
                 <div class="section-title">🌙 深色模式</div>
                 <div class="section-content">
@@ -1376,10 +1825,8 @@
     <!-- 主应用 -->
     <!-- ============================================================ -->
     <div id="app">
-        <!-- 遮罩层 -->
         <div id="overlay" class="overlay closed fixed inset-0 bg-black/60 z-40" onclick="closeDrawer()"></div>
 
-        <!-- 左侧抽屉 -->
         <div id="drawer" class="drawer closed fixed top-0 left-0 h-full w-[280px] bg-[#0f0f1a] border-r border-[#1a1a2a] z-50 p-5 flex flex-col overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
                 <div class="flex items-center gap-3">
@@ -1406,7 +1853,6 @@
             </div>
         </div>
 
-        <!-- ===== 顶部导航 ===== -->
         <div class="top-nav flex items-center justify-between px-4 border-b border-[#1a1a2a] bg-[#0a0a0f] z-10 flex-shrink-0 top-nav-border">
             <button onclick="toggleDrawer()" class="p-1.5 -ml-2 tap-active" aria-label="打开菜单">
                 <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
@@ -1427,18 +1873,14 @@
             </div>
         </div>
 
-        <!-- 快捷操作 -->
         <div class="px-4 py-2 border-b border-[#1a1a2a] bg-[#0a0a0f] flex-shrink-0">
             <div id="quickActions" class="flex gap-2 overflow-x-auto quick-scroll"></div>
         </div>
 
-        <!-- 消息列表 -->
         <div id="messageList" class="flex-1 overflow-y-auto px-4 py-3 space-y-3"></div>
 
-        <!-- ===== 输入区域 ===== -->
         <div class="border-t border-[#1a1a2a] p-2 bg-[#0a0a0f] flex-shrink-0 safe-area-bottom">
             <div class="input-wrapper">
-                <!-- 语音按钮（无图标，只有文字） -->
                 <button id="voiceBtn" class="p-2 rounded-xl transition-all flex-shrink-0 bg-[#1a1a2a] text-[#4a4a5a] hover:bg-[#2a2a3a] tap-active" title="语音输入">
                     <span style="font-size:13px; font-weight:500;">语音</span>
                 </button>
@@ -1510,10 +1952,9 @@
         }
 
         // ============================================================
-        //  语音转文字（Web Speech API）- 无图标
+        //  语音转文字（Web Speech API）
         // ============================================================
         let recognition = null;
-        let isSpeechToTextSupported = false;
         let isListening = false;
 
         function initSpeechRecognition() {
@@ -1522,13 +1963,11 @@
                 console.warn('浏览器不支持语音识别');
                 return false;
             }
-            
             recognition = new SpeechRecognition();
             recognition.lang = 'zh-CN';
             recognition.continuous = false;
             recognition.interimResults = true;
             recognition.maxAlternatives = 1;
-            
             return true;
         }
 
@@ -1539,11 +1978,10 @@
                     return;
                 }
             }
-            
             recognition.onresult = null;
             recognition.onerror = null;
             recognition.onend = null;
-            
+
             recognition.onresult = function(event) {
                 let transcript = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -1555,7 +1993,7 @@
                     }
                 }
             };
-            
+
             recognition.onerror = function(event) {
                 if (onError) {
                     let msg = '语音识别错误';
@@ -1566,11 +2004,11 @@
                     onError(msg);
                 }
             };
-            
+
             recognition.onend = function() {
                 isListening = false;
             };
-            
+
             try {
                 recognition.start();
                 isListening = true;
@@ -1925,7 +2363,7 @@
                     addSystemMessage('当前浏览器不支持语音输入，请使用Chrome或Edge浏览器');
                     return;
                 }
-                
+
                 isVoiceMode = true;
                 input.placeholder = '点击输入框开始语音输入...';
                 input.readOnly = true;
@@ -1940,7 +2378,7 @@
                 voiceBtn.style.borderColor = '#4ade80';
 
                 input.addEventListener('click', onVoiceInputClick);
-                
+
                 addSystemMessage('语音模式已开启，点击输入框开始说话');
             } else {
                 isVoiceMode = false;
@@ -1957,7 +2395,7 @@
                 voiceBtn.style.borderColor = '';
 
                 input.removeEventListener('click', onVoiceInputClick);
-                
+
                 stopSpeechToText();
                 document.getElementById('cancelTip').classList.remove('show');
 
@@ -1976,16 +2414,16 @@
                 document.getElementById('cancelTip').classList.remove('show');
                 return;
             }
-            
+
             const input = document.getElementById('chatInput');
             input.placeholder = '正在听...';
             input.style.background = '#2a3a3a !important';
             input.value = '聆听中...';
             isListening = true;
-            
+
             document.getElementById('cancelTip').textContent = '请说话...';
             document.getElementById('cancelTip').classList.add('show');
-            
+
             startSpeechToText(
                 function(transcript, isFinal) {
                     const inputEl = document.getElementById('chatInput');
@@ -1994,7 +2432,7 @@
                         inputEl.style.background = '#1a3a2a !important';
                         document.getElementById('cancelTip').classList.remove('show');
                         isListening = false;
-                        
+
                         if (transcript.trim()) {
                             sendMessage(transcript.trim());
                         }
@@ -2012,7 +2450,7 @@
                     inputEl.value = '错误: ' + error;
                     document.getElementById('cancelTip').classList.remove('show');
                     isListening = false;
-                    
+
                     setTimeout(() => {
                         if (!isVoiceMode) return;
                         inputEl.placeholder = '点击输入框开始语音输入...';
@@ -2295,6 +2733,172 @@
         }
 
         // ============================================================
+        //  预设回复内容
+        // ============================================================
+
+        function getWhatCanDoContent() {
+            return `我能帮你把「加密资产」变成「睡后收入」
+
+我不是普通的聊天机器人，而是你口袋里的 AI 金融管家。以下是我能为你做的 —— 每一件都直接关系到你的钱袋子：
+
+---
+
+智能收益优化
+• 自动扫描你所有链上的闲置资产（比如 USDC、USDT）
+• 实时对比 Aave、Compound、Ethena 等 20+ 协议的 APY
+• 一键将资金存入当前收益最高的地方 — 收益可能提升 2~3 倍
+
+24/7 风险守护
+• 深夜市场暴跌时，自动提醒并给出防御方案
+• 拦截钓鱼网站和恶意合约签名请求
+• 监控你的借款仓位，在清算前主动预警
+
+持仓全景分析
+• 跨链汇总你的所有资产（ETH/BTC/SOL/ARB 等）
+• 清晰展示仓位占比、月度收益、风险敞口
+• 一句话就能问："我的 SOL 仓位健康吗？"
+
+AI 自动化执行
+• 设定策略：比如"当 ETH 跌破 3000 时买入 10%"
+• 我替你盯盘并自动执行 — 你睡觉，我打工
+
+---
+
+为什么你应该现在开始用？
+"过去 3 个月，使用 AI 管家的用户平均收益提升 47%，风险事件拦截率 99.6%。"
+
+立即体验：
+• 试试说："优化我的 USDC 收益"
+• 或者："分析我的持仓风险"
+• 或者："分析黄金"
+• 或者："市场需求有多大"
+• 或者："抢占市场"
+
+---
+
+付费用户专享（7 天免费试用）
+• 无限次 AI 策略执行
+• 实时市场异动推送
+• 优先享受新功能（如 AI 定投、跨链套利）`;
+        }
+
+        function getMarketDemandContent() {
+            return `项目市场需求量化分析
+
+AI驱动的个人金融助手 · 市场规模测算
+
+一、总市场规模（TAM）
+• 全球加密货币用户：约 5.6亿 人
+• 其中持有稳定币用户：约 1.8亿 人
+• DeFi活跃用户：约 1,200万 人
+• 跨链资产用户：约 3,500万 人
+
+二、可触达市场（SAM）
+• "有资产、少精力"持币者：约 8,000万 人
+• "想参与、怕麻烦"观望者：约 1.2亿 人
+• "跨链多、难打理"活跃用户：约 2,500万 人
+合计可触达用户：约 2.25亿 人
+
+三、可获得市场（SOM）
+• 加密货币用户渗透率 0.5%：约 280万 人
+• 加密货币用户渗透率 2%：约 1,120万 人
+初期（12个月内）目标：50万~100万 注册用户
+
+四、商业化空间估算
+• 订阅制（100万用户 × 5%付费率 × $15/月）：$9,000万/年
+• 策略跟单分成（50万活跃用户 × 10%参与 × 月均$100 × 10%）：$6,000万/年
+综合年收入潜力：$1.5亿 ~ $2亿
+
+面向 2.25亿 潜在用户的千亿级蓝海市场`;
+        }
+
+        function getPricingContent() {
+            return `怎么收费更容易抢占市场
+
+AI驱动的个人金融助手 · 定价与增长策略
+
+核心策略：先用免费建立信任，再用付费放大价值
+定价锚点：「省心」
+
+一、定价逻辑：用户为什么愿意付钱？
+"我不懂DeFi，怕操作错" → 免费试用 + 安全守护
+"我资产不多，但想增值" → 按资产规模收费
+"我已经有收益了，愿意分你一点" → 收益分成模式
+"我需要更高级的功能" → 功能分级
+
+二、推荐定价策略：三段式
+
+阶段一：上线前6个月 → 免费 + 口碑裂变
+• 完全免费，0门槛使用
+• 所有核心功能全部开放
+• 邀请3个好友解锁"无限次AI策略执行"
+
+阶段二：6~12个月 → 分层定价 + 免费裂变
+免费版：¥0，限3次/月策略执行
+Pro版：¥99/月，无限次执行 + 实时推送
+Elite版：¥299/月，1对1私人管家
+邀请裂变：每邀请1人+1次免费执行，满10人免费升级1个月Pro
+
+阶段三：12个月后 → 收益分成 + 差异化增值
+• 基础订阅继续保留（稳定现金流）
+• 收益分成：超额收益的 10%~20%，用户无痛付费
+• 机构/团队版：¥999/月起
+
+三、为什么这套策略能抢占市场？
+• 免费版功能足够强大 — 用户真正在用，形成习惯后付费转化率更高
+• 裂变机制驱动增长 — 用户主动传播，降低获客成本
+• 订阅 + 分成双模式 — 订阅保现金流，分成实现共赢
+• 价格锚定"省心" — ¥99/月 vs 自己操作可能踩坑损失几百上千刀
+• 先免费后付费 — 用户已信任AI管家，付费决策更轻松
+
+四、关键数据预估（用户量100万时）
+• 免费用户：85万（85%）
+• Pro用户（¥99/月）：12万（12%）
+• Elite用户（¥299/月）：2万（2%）
+• 收益分成用户：1万（1%）
+月订阅收入：¥1,188万 + 分成收入
+年收入：¥1.5亿 ~ ¥2亿
+
+免费建立信任 · 付费放大价值 · 裂变驱动增长 · 分成实现共赢`;
+        }
+
+        function getGoldContent() {
+            return `黄金市场趋势分析
+
+实时数据模拟 · 仅供分析参考
+
+当前价格
+• 现货黄金：$2,546.30 ⬆️ +0.42%
+• 黄金期货（12月）：$2,568.20 ⬆️ +0.38%
+• 今日波动区间：$2,528.50 ~ $2,552.80
+
+短期趋势（24h）
+黄金今日震荡上行，受美元指数小幅走弱及地缘政治不确定性支撑。亚盘时段突破 $2,540 阻力位后加速上行，目前测试 $2,555 附近压力。
+
+中期趋势（周线）
+• 周线级别：多头排列，MA5 上穿 MA10 形成金叉
+• 关键支撑：$2,480
+• 关键阻力：$2,580
+• RSI（14）：62.5（中性偏强，未超买）
+
+核心驱动因素
+• 美联储降息预期升温（9月降息概率 68%）
+• 全球央行持续增持黄金（中国连续 18 个月增持）
+• 中东局势紧张，避险资金流入
+• 美元指数反弹可能短期压制金价
+
+今日关注数据
+• 20:30 美国初请失业金人数
+• 22:00 美国成屋销售数据
+
+短期操作参考
+当前金价处于上升通道中，短期偏向逢低做多。
+关键入场区间 $2,530~$2,540，止损 $2,510，目标 $2,580。
+
+以上为市场数据分析，不构成投资建议，请结合自身风险承受能力决策。`;
+        }
+
+        // ============================================================
         //  渲染函数
         // ============================================================
 
@@ -2338,142 +2942,427 @@
             container.innerHTML = html;
         }
 
+        // ============================================================
+        //  快捷操作渲染（点击“策略交易”打开策略面板）
+        // ============================================================
         function renderQuickActions() {
             const container = document.getElementById('quickActions');
             const actions = [
-                { label: '收益', prompt: '帮我优化闲置资产的收益' },
-                { label: '风险', prompt: '帮我分析当前持仓风险' },
-                { label: '持仓', prompt: '查看我的完整持仓' },
-                { label: '智能', prompt: '根据当前市场自动调整配置' },
-                { label: '报告', prompt: '查看项目报告' },
+                { label: '策略交易', prompt: '策略交易' },
+                { label: '量化交易', prompt: '帮我分析量化交易机会' },
+                { label: '收益排行', prompt: '查看收益排行榜' },
             ];
-            container.innerHTML = actions.map((a, index) => {
-                const isReport = index === actions.length - 1;
-                return `<button onclick="sendMessage('${a.prompt}')" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active ${isReport ? 'report-btn' : 'bg-[#12121f]'}">${a.label}</button>`;
+            container.innerHTML = actions.map((a) => {
+                // 策略交易特殊处理：直接打开策略面板
+                if (a.label === '策略交易') {
+                    return `<button onclick="openStrategyPanel()" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
+                }
+                return `<button onclick="sendMessage('${a.prompt}')" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
             }).join('');
         }
 
         // ============================================================
-        //  报告生成函数（保留备用）
+        //  策略交易面板控制
         // ============================================================
-        function generateReportContent() {
-            return `
-                <div class="report-card">
-                    <h3>项目市场需求报告</h3>
-                    <p style="color:#a0a0b0;font-size:0.85rem;margin-bottom:10px;">AI驱动的个人金融助手 · 市场分析</p>
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">市场背景</strong><br>
-                        当前加密市场正从"早期探索"转向"大规模应用"，核心矛盾在于<b style="color:#fbbf24;">日益复杂的链上生态</b>与用户有限认知能力的巨大鸿沟。
-                    </div>
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">核心痛点</strong>
-                        <ul>
-                            <li>操作门槛极高：Gas费、跨链、授权签名等概念复杂</li>
-                            <li>信息过载：海量协议和APY，难以决策</li>
-                            <li>资产分散：多链多钱包，缺乏统一管理</li>
-                            <li>安全风险：钓鱼攻击、恶意合约防不胜防</li>
-                        </ul>
-                    </div>
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:12px;">
-                        <strong style="color:#e8e8f0;">目标用户</strong>
-                        <div class="report-grid">
-                            <div class="item"><div class="num">💰</div><div class="label">持币者</div><div style="font-size:0.6rem;color:#6a6a7a;">有资产，少精力</div></div>
-                            <div class="item"><div class="num">🧭</div><div class="label">观望者</div><div style="font-size:0.6rem;color:#6a6a7a;">想参与，怕麻烦</div></div>
-                            <div class="item"><div class="num">🔗</div><div class="label">活跃用户</div><div style="font-size:0.6rem;color:#6a6a7a;">跨链多，难打理</div></div>
-                            <div class="item"><div class="num">📈</div><div class="label">市场规模</div><div style="font-size:0.6rem;color:#6a6a7a;">数亿用户 · 蓝海</div></div>
-                        </div>
-                    </div>
-                    <div style="font-size:0.8rem;color:#b0b0c0;margin-bottom:8px;">
-                        <strong style="color:#e8e8f0;">竞争定位</strong>
-                        <ul>
-                            <li>传统钱包：<span class="highlight">复杂菜单</span> → 我们：<span class="highlight">自然语言对话</span></li>
-                            <li>DeFi聚合器：<span class="highlight">数据看板</span> → 我们：<span class="highlight">AI个性化策略</span></li>
-                            <li>被动安全 → 我们：<span class="highlight">主动风险守护</span></li>
-                        </ul>
-                    </div>
-                    <div class="tag">蓝海市场 · 差异化明显</div>
-                </div>
-                <div class="report-card" style="margin-top:12px;">
-                    <h3>应用亮点</h3>
-                    <ul>
-                        <li><strong style="color:#60a5fa;">自然语言交互</strong> — 说出需求即可操作，零门槛</li>
-                        <li><strong style="color:#60a5fa;">AI Agent自动化</strong> — 夜间自动优化收益，实现"懒人理财"</li>
-                        <li><strong style="color:#60a5fa;">主动式守护</strong> — 拦截钓鱼攻击，预警清算风险</li>
-                        <li><strong style="color:#60a5fa;">个性化服务</strong> — 越用越懂你，千人千面建议</li>
-                        <li><strong style="color:#60a5fa;">非托管透明</strong> — AI不碰私钥，资产由你全权控制</li>
-                    </ul>
-                    <div class="tag" style="background:#1a2a3a;color:#60a5fa;">核心价值：让普通人轻松驾驭加密世界</div>
-                </div>
-            `;
+        function openStrategyPanel() {
+            document.getElementById('strategyPanel').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            // 初始化策略面板
+            if (!window._strategyInited) {
+                initStrategyPanel();
+                window._strategyInited = true;
+            }
+        }
+
+        function closeStrategyPanel() {
+            document.getElementById('strategyPanel').classList.remove('active');
+            document.body.style.overflow = '';
         }
 
         // ============================================================
-        //  消息发送逻辑（调用DeepSeek API + 筛选）
+        //  策略交易面板逻辑（完整BTC交易演示）
+        // ============================================================
+        let strategyUsdtBalance = 10000;
+        let strategyBtcBalance = 0;
+        let strategyBtcPrice = 65000;
+        let strategyRunning = false;
+        let strategyInterval = null;
+        let strategyChartData = [];
+        let strategyChart = null;
+        let strategyLogEntries = [];
+        const strategyTopPairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT'];
+        const strategyBottomPairs = ['DOGE/USDT', 'SHIB/USDT', 'LINK/USDT', 'UNI/USDT', 'MATIC/USDT', 'ATOM/USDT', 'FIL/USDT',
+            'NEAR/USDT'
+        ];
+
+        function strategyAddLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            const entry = `[${time}] ${msg}`;
+            strategyLogEntries.push(entry);
+            if (strategyLogEntries.length > 100) strategyLogEntries.shift();
+            const box = document.getElementById('strategyLogBox');
+            if (box) box.textContent = strategyLogEntries.join('\n');
+            if (box) box.scrollTop = box.scrollHeight;
+        }
+
+        function strategyUpdateDisplay() {
+            const total = strategyUsdtBalance + strategyBtcBalance * strategyBtcPrice;
+            const initial = 10000;
+            const pnl = total - initial;
+
+            document.getElementById('strategyTotalBalance').textContent = '$' + total.toFixed(2);
+
+            const changePercent = ((strategyBtcPrice - 65000) / 65000 * 100);
+            const changeEl = document.getElementById('strategyTotalChange');
+            if (changeEl) {
+                changeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
+                changeEl.style.color = changePercent >= 0 ? '#2ea043' : '#da3633';
+            }
+
+            document.getElementById('strategyUsdtBalance').textContent = strategyUsdtBalance.toFixed(2);
+            document.getElementById('strategyBtcBalance').textContent = strategyBtcBalance.toFixed(4);
+
+            const pnlEl = document.getElementById('strategyTotalPnl');
+            if (pnlEl) {
+                pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+                pnlEl.style.color = pnl >= 0 ? '#2ea043' : '#da3633';
+            }
+
+            document.getElementById('strategyCurrentPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
+        }
+
+        function strategyUpdatePrice() {
+            const volatility = 120;
+            const change = (Math.random() - 0.5) * volatility * 2;
+            strategyBtcPrice = Math.max(10000, strategyBtcPrice + change);
+            strategyBtcPrice = Math.round(strategyBtcPrice * 100) / 100;
+
+            document.getElementById('strategyBtcPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
+            const changePercent = ((change / (strategyBtcPrice - change)) * 100);
+            const changeEl = document.getElementById('strategyPriceChange');
+            if (changeEl) {
+                changeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
+                changeEl.style.color = changePercent >= 0 ? '#2ea043' : '#da3633';
+            }
+
+            strategyChartData.push(strategyBtcPrice);
+            if (strategyChartData.length > 100) strategyChartData.shift();
+            if (strategyChart) {
+                strategyChart.data.datasets[0].data = strategyChartData;
+                strategyChart.update();
+            }
+
+            strategyUpdateDisplay();
+
+            if (strategyRunning) {
+                const rsi = 50 + (Math.random() - 0.5) * 30;
+                if (rsi < 30 && strategyUsdtBalance > 100) {
+                    const buyAmount = Math.min(strategyUsdtBalance * 0.2, 500);
+                    const quantity = buyAmount / strategyBtcPrice;
+                    if (quantity > 0.001) {
+                        strategyBtcBalance += quantity;
+                        strategyUsdtBalance -= buyAmount;
+                        strategyAddLog(`📈 策略买入 ${quantity.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+                        strategyUpdateDisplay();
+                    }
+                } else if (rsi > 70 && strategyBtcBalance > 0.001) {
+                    const sellQuantity = strategyBtcBalance * 0.3;
+                    if (sellQuantity > 0.001) {
+                        const sellAmount = sellQuantity * strategyBtcPrice;
+                        strategyBtcBalance -= sellQuantity;
+                        strategyUsdtBalance += sellAmount;
+                        strategyAddLog(`📉 策略卖出 ${sellQuantity.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+                        strategyUpdateDisplay();
+                    }
+                }
+            }
+        }
+
+        function strategyExecuteOrder(type) {
+            if (type === 'buy') {
+                const maxBuy = Math.min(strategyUsdtBalance, 500);
+                if (maxBuy < 10) {
+                    strategyAddLog('⚠️ USDT 余额不足，无法买入');
+                    return;
+                }
+                const quantity = maxBuy / strategyBtcPrice;
+                if (quantity < 0.001) {
+                    strategyAddLog('⚠️ 买入量太小，至少需要 0.001 BTC');
+                    return;
+                }
+                strategyBtcBalance += quantity;
+                strategyUsdtBalance -= maxBuy;
+                strategyAddLog(`✅ 买入 ${quantity.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+            } else {
+                if (strategyBtcBalance < 0.001) {
+                    strategyAddLog('⚠️ BTC 持仓不足，无法卖出');
+                    return;
+                }
+                const maxSell = Math.min(strategyBtcBalance, 0.01);
+                const sellAmount = maxSell * strategyBtcPrice;
+                strategyBtcBalance -= maxSell;
+                strategyUsdtBalance += sellAmount;
+                strategyAddLog(`✅ 卖出 ${maxSell.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+            }
+            strategyUpdateDisplay();
+        }
+
+        function strategyToggle() {
+            const btn = document.querySelector('#strategyPanel .btn-strategy');
+            const dot = document.getElementById('strategyStatusDot');
+            const statusText = document.getElementById('strategyStatusText');
+
+            if (strategyRunning) {
+                strategyRunning = false;
+                clearInterval(strategyInterval);
+                btn.textContent = '▶ 启动策略';
+                dot.classList.remove('active');
+                statusText.textContent = '策略已停止';
+                strategyAddLog('⏹️ 策略已停止');
+            } else {
+                strategyRunning = true;
+                btn.textContent = '⏹ 停止策略';
+                dot.classList.add('active');
+                statusText.textContent = '策略运行中 (RSI 网格)';
+                strategyAddLog('▶️ 策略已启动 (RSI 超买/超卖网格)');
+                strategyUpdatePrice();
+                strategyInterval = setInterval(strategyUpdatePrice, 3000);
+            }
+        }
+
+        function strategyInitChart() {
+            const canvas = document.getElementById('strategyPriceChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            strategyChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(50).fill(''),
+                    datasets: [{
+                        label: 'BTC/USDT',
+                        data: Array(50).fill(65000),
+                        borderColor: '#f7931a',
+                        backgroundColor: 'rgba(247,147,26,0.1)',
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '$' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            ticks: {
+                                color: '#8b949e',
+                                callback: function(value) { return '$' + value.toFixed(0); }
+                            },
+                            grid: { color: '#21262d' }
+                        }
+                    }
+                }
+            });
+            strategyChartData = Array(50).fill(65000);
+        }
+
+        function strategyRenderSymbols() {
+            // 顶部
+            const topContainer = document.getElementById('strategySymbolList');
+            if (topContainer) {
+                let html = '';
+                strategyTopPairs.forEach((symbol, index) => {
+                    const activeClass = index === 0 ? 'active' : '';
+                    html +=
+                        `<span class="symbol-item ${activeClass}" onclick="strategySelectSymbol(this, '${symbol}')">${symbol}</span>`;
+                });
+                topContainer.innerHTML = html;
+            }
+            // 底部
+            const bottomContainer = document.getElementById('strategyBottomSymbolList');
+            if (bottomContainer) {
+                let html = '';
+                strategyBottomPairs.forEach((symbol, index) => {
+                    const activeClass = index === 0 ? 'active' : '';
+                    html +=
+                        `<span class="bottom-symbol-item ${activeClass}" onclick="strategySelectBottomSymbol(this, '${symbol}')">${symbol}</span>`;
+                });
+                bottomContainer.innerHTML = html;
+            }
+        }
+
+        function strategySelectSymbol(el, symbol) {
+            document.querySelectorAll('#strategySymbolList .symbol-item').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function strategySelectBottomSymbol(el, symbol) {
+            document.querySelectorAll('#strategyBottomSymbolList .bottom-symbol-item').forEach(s => s.classList.remove(
+            'active'));
+            el.classList.add('active');
+        }
+
+        function strategyAddPair() {
+            const newSymbol = prompt('请输入新的交易对 (例如: ATOM/USDT):');
+            if (newSymbol && newSymbol.trim()) {
+                const symbol = newSymbol.trim().toUpperCase();
+                if (!strategyTopPairs.includes(symbol)) {
+                    strategyTopPairs.push(symbol);
+                    strategyRenderSymbols();
+                } else {
+                    alert('该交易对已存在');
+                }
+            }
+        }
+
+        function strategyAddBottomPair() {
+            const newSymbol = prompt('请输入新的交易对 (例如: ATOM/USDT):');
+            if (newSymbol && newSymbol.trim()) {
+                const symbol = newSymbol.trim().toUpperCase();
+                if (!strategyBottomPairs.includes(symbol)) {
+                    strategyBottomPairs.push(symbol);
+                    strategyRenderSymbols();
+                } else {
+                    alert('该交易对已存在');
+                }
+            }
+        }
+
+        function initStrategyPanel() {
+            strategyRenderSymbols();
+            strategyInitChart();
+
+            let base = 65000;
+            for (let i = 0; i < 50; i++) {
+                base += (Math.random() - 0.5) * 100;
+                base = Math.max(60000, base);
+                strategyChartData[i] = Math.round(base * 100) / 100;
+            }
+            strategyBtcPrice = strategyChartData[strategyChartData.length - 1];
+            if (strategyChart) {
+                strategyChart.data.datasets[0].data = strategyChartData;
+                strategyChart.update();
+            }
+            document.getElementById('strategyBtcPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
+            document.getElementById('strategyCurrentPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
+            strategyUpdateDisplay();
+            strategyAddLog('✅ 策略面板已就绪');
+            strategyAddLog(`📊 当前 BTC 价格: $${strategyBtcPrice.toFixed(2)}`);
+
+            // 自动更新价格（非策略模式）
+            setInterval(() => {
+                if (!strategyRunning) {
+                    strategyUpdatePrice();
+                }
+            }, 5000);
+        }
+
+        // ============================================================
+        //  消息发送逻辑
         // ============================================================
         function sendMessage(text) {
             if (!text || text.trim() === '' || isProcessing) return;
 
-            // === 新增：检查是否与数字资产相关 ===
-            if (!isAssetRelated(text.trim())) {
-                // 添加用户消息
-                messages.push({
-                    id: `user-${Date.now()}`,
-                    role: 'user',
-                    content: text.trim(),
-                    timestamp: new Date(),
-                    type: 'text',
-                });
-                
-                // 添加系统提示消息
-                messages.push({
-                    id: `system-${Date.now()}`,
-                    role: 'system',
-                    content: '你已经超出对话范围，请输入数字资产管理相关指令',
-                    timestamp: new Date(),
-                    type: 'text',
-                });
-                
+            const trimmedText = text.trim();
+            const lower = trimmedText.toLowerCase();
+
+            // 关键词匹配
+            if (lower === '你好' || lower === '您好' || lower === 'hi' || lower === 'hello') {
+                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
+                    type: 'text' });
+                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getWhatCanDoContent(), timestamp: new Date(),
+                    type: 'text' });
                 renderMessages();
                 updateSendButton();
                 return;
             }
 
-            // === 原有逻辑：正常发送 ===
-            messages.push({
-                id: `user-${Date.now()}`,
-                role: 'user',
-                content: text.trim(),
-                timestamp: new Date(),
-                type: 'text',
-            });
+            if (lower.includes('你能做什么') || lower.includes('你会什么') || lower.includes('功能介绍') || lower.includes('有什么用') ||
+                lower.includes('帮助')) {
+                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
+                    type: 'text' });
+                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getWhatCanDoContent(), timestamp: new Date(),
+                    type: 'text' });
+                renderMessages();
+                updateSendButton();
+                return;
+            }
+
+            if (lower.includes('市场需求') || lower.includes('市场有多大') || lower.includes('规模') || lower.includes('tam') || lower
+                .includes('市场空间')) {
+                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
+                    type: 'text' });
+                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getMarketDemandContent(), timestamp: new Date(),
+                    type: 'text' });
+                renderMessages();
+                updateSendButton();
+                return;
+            }
+
+            if (lower.includes('抢占市场') || lower.includes('收费') || lower.includes('定价') || lower.includes('怎么赚钱') || lower
+                .includes('商业模式') || lower.includes('付费') || lower.includes('推广') || lower.includes('裂变')) {
+                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
+                    type: 'text' });
+                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getPricingContent(), timestamp: new Date(),
+                    type: 'text' });
+                renderMessages();
+                updateSendButton();
+                return;
+            }
+
+            if (lower.includes('黄金') || lower.includes('gold') || lower.includes('金价') || lower.includes('贵金属') || lower
+                .includes('分析黄金')) {
+                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
+                    type: 'text' });
+                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getGoldContent(), timestamp: new Date(),
+                    type: 'text' });
+                renderMessages();
+                updateSendButton();
+                return;
+            }
+
+            // 非数字资产指令筛选
+            if (!isAssetRelated(trimmedText)) {
+                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
+                    type: 'text' });
+                messages.push({ id: `system-${Date.now()}`, role: 'system',
+                    content: '你已经超出对话范围，请输入数字资产管理相关指令', timestamp: new Date(), type: 'text' });
+                renderMessages();
+                updateSendButton();
+                return;
+            }
+
+            // 正常发送到DeepSeek API
+            messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
+                type: 'text' });
             isProcessing = true;
             renderMessages();
             updateSendButton();
 
-            callDeepSeek(text.trim())
+            callDeepSeek(trimmedText)
                 .then(aiResponse => {
-                    const response = {
-                        id: `ai-${Date.now()}`,
-                        role: 'assistant',
-                        content: aiResponse,
-                        timestamp: new Date(),
-                        type: 'text',
-                    };
-                    messages.push(response);
+                    messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: aiResponse, timestamp: new Date(),
+                        type: 'text' });
                     isProcessing = false;
                     renderMessages();
                     updateSendButton();
                 })
                 .catch(error => {
                     console.error('DeepSeek API调用失败:', error);
-                    const response = {
-                        id: `ai-${Date.now()}`,
-                        role: 'assistant',
+                    messages.push({ id: `ai-${Date.now()}`, role: 'assistant',
                         content: `AI服务调用失败：${error.message || '未知错误'}\n\n请检查网络连接或API配置。`,
-                        timestamp: new Date(),
-                        type: 'text',
-                    };
-                    messages.push(response);
+                        timestamp: new Date(), type: 'text' });
                     isProcessing = false;
                     renderMessages();
                     updateSendButton();
@@ -2483,7 +3372,6 @@
         // ============================================================
         //  渲染消息
         // ============================================================
-
         function renderMessages() {
             const container = document.getElementById('messageList');
             const children = container.children;
@@ -2590,7 +3478,6 @@
         // ============================================================
         //  UI 控制
         // ============================================================
-
         function updateSendButton() {
             const input = document.getElementById('chatInput');
             const btn = document.getElementById('sendBtn');
@@ -2611,7 +3498,6 @@
         // ============================================================
         //  初始化
         // ============================================================
-
         document.addEventListener('DOMContentLoaded', function() {
             const input = document.getElementById('chatInput');
             const sendBtn = document.getElementById('sendBtn');
@@ -2669,6 +3555,16 @@
             window.addRebate = addRebate;
             window.settleRebate = settleRebate;
             window.resetRebate = resetRebate;
+
+            // 策略面板函数
+            window.openStrategyPanel = openStrategyPanel;
+            window.closeStrategyPanel = closeStrategyPanel;
+            window.strategyExecuteOrder = strategyExecuteOrder;
+            window.strategyToggle = strategyToggle;
+            window.strategyAddPair = strategyAddPair;
+            window.strategyAddBottomPair = strategyAddBottomPair;
+            window.strategySelectSymbol = strategySelectSymbol;
+            window.strategySelectBottomSymbol = strategySelectBottomSymbol;
 
             document.getElementById('overlay').addEventListener('click', closeDrawer);
         });
