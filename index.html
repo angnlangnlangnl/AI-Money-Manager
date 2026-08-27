@@ -1192,6 +1192,7 @@
             width: 100%;
             margin: 0 auto;
         }
+        /* 交易对列表 */
         .strategy-dashboard .symbol-bar {
             display: flex;
             align-items: center;
@@ -1246,7 +1247,8 @@
             bottom: -2px;
             width: 100%;
             height: 2px;
-            background-color: #f0b90b;
+            background-color: #4a4a5a;
+            border-radius: 2px;
         }
         .strategy-dashboard .add-pair-btn {
             width: 28px;
@@ -1279,100 +1281,96 @@
             background: #161b22;
             border: 1px solid #30363d;
             border-radius: 12px;
-            padding: 16px 20px;
+            padding: 14px 20px;
         }
         .strategy-dashboard .header .total-info {
             display: flex;
-            flex-direction: column;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
         }
         .strategy-dashboard .header .total-info .label {
-            font-size: 12px;
+            font-size: 14px;
             color: #8b949e;
         }
         .strategy-dashboard .header .total-info .value {
-            font-size: 28px;
+            font-size: 26px;
             font-weight: 700;
             color: #e6e6e6;
         }
         .strategy-dashboard .header .total-info .change {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .strategy-dashboard .header .price-info {
-            text-align: right;
-        }
-        .strategy-dashboard .header .price-info .price {
-            font-size: 24px;
-            font-weight: 700;
-            color: #f7931a;
-        }
-        .strategy-dashboard .header .price-info .change-text {
-            font-size: 13px;
+            font-size: 16px;
+            font-weight: 600;
         }
 
-        .strategy-dashboard .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-        .strategy-dashboard .card {
+        /* ===== 合并后的账户操作卡片 ===== */
+        .strategy-dashboard .account-card {
             background: #161b22;
             border: 1px solid #30363d;
             border-radius: 12px;
             padding: 18px;
+            margin-bottom: 20px;
         }
-        .strategy-dashboard .card h3 {
-            margin-bottom: 15px;
+        .strategy-dashboard .account-card .card-title {
             color: #f7931a;
             font-size: 16px;
+            font-weight: 600;
             border-bottom: 1px solid #30363d;
-            padding-bottom: 8px;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
         }
-        .strategy-dashboard .account-total {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            margin-bottom: 4px;
-        }
-        .strategy-dashboard .account-total .total-label {
-            font-size: 14px;
-            color: #8b949e;
-        }
-        .strategy-dashboard .account-total .total-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #e6e6e6;
-        }
-        .strategy-dashboard .account-total .total-change {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        .strategy-dashboard .account-detail {
+        .strategy-dashboard .account-card .account-row {
             display: flex;
             justify-content: space-between;
-            margin-top: 12px;
-            padding-top: 12px;
-            border-top: 1px solid #30363d;
+            align-items: center;
+            margin-bottom: 8px;
         }
-        .strategy-dashboard .account-detail .detail-item {
-            display: flex;
-            flex-direction: column;
-        }
-        .strategy-dashboard .account-detail .detail-item .label {
-            font-size: 12px;
+        .strategy-dashboard .account-card .account-row .label {
+            font-size: 13px;
             color: #8b949e;
         }
-        .strategy-dashboard .account-detail .detail-item .value {
+        .strategy-dashboard .account-card .account-row .value {
             font-size: 15px;
             font-weight: 600;
             color: #e6e6e6;
-            margin-top: 2px;
         }
-        .strategy-dashboard .account-detail .detail-item .value.btc {
+        .strategy-dashboard .account-card .account-row .value.btc {
             color: #f7931a;
         }
-        .strategy-dashboard .btn {
+        .strategy-dashboard .account-card .account-row .value.green {
+            color: #2ea043;
+        }
+        .strategy-dashboard .account-card .account-row .value.red {
+            color: #da3633;
+        }
+        .strategy-dashboard .account-card .divider {
+            border-top: 1px solid #30363d;
+            margin: 12px 0;
+        }
+        .strategy-dashboard .account-card .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .strategy-dashboard .account-card .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #da3633;
+        }
+        .strategy-dashboard .account-card .dot.active {
+            background: #2ea043;
+            box-shadow: 0 0 8px #2ea043;
+        }
+        .strategy-dashboard .account-card .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        .strategy-dashboard .account-card .button-group .btn {
+            flex: 1;
+            text-align: center;
             padding: 10px 18px;
             border: none;
             border-radius: 8px;
@@ -1382,36 +1380,38 @@
             transition: opacity 0.2s;
             color: white;
         }
-        .strategy-dashboard .btn:hover {
+        .strategy-dashboard .account-card .button-group .btn:hover {
             opacity: 0.85;
         }
-        .strategy-dashboard .btn-buy {
+        .strategy-dashboard .account-card .button-group .btn-buy {
             background: #2ea043;
         }
-        .strategy-dashboard .btn-sell {
+        .strategy-dashboard .account-card .button-group .btn-sell {
             background: #da3633;
         }
-        .strategy-dashboard .btn-strategy {
+        .strategy-dashboard .account-card .btn-strategy {
             background: #1f6feb;
             width: 100%;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            color: white;
+            margin-top: 10px;
         }
-        .strategy-dashboard .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            margin-bottom: 15px;
+        .strategy-dashboard .account-card .btn-strategy:hover {
+            opacity: 0.85;
         }
-        .strategy-dashboard .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #da3633;
+        .strategy-dashboard .account-card .current-price {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #8b949e;
         }
-        .strategy-dashboard .dot.active {
-            background: #2ea043;
-            box-shadow: 0 0 8px #2ea043;
-        }
+
+        /* 价格走势卡片 */
         .strategy-dashboard .chart-container {
             background: #161b22;
             border: 1px solid #30363d;
@@ -1421,11 +1421,31 @@
             min-height: 260px;
             position: relative;
         }
+        .strategy-dashboard .chart-container .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .strategy-dashboard .chart-container .chart-header .chart-title {
+            color: #f7931a;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        .strategy-dashboard .chart-container .chart-header .chart-pair {
+            color: #8a8a9a;
+            font-size: 14px;
+            font-weight: 500;
+            background: #1a1a2a;
+            padding: 2px 12px;
+            border-radius: 12px;
+            border: 1px solid #2a2a3a;
+        }
         .strategy-dashboard .chart-container canvas {
             width: 100% !important;
             height: 200px !important;
         }
-        /* 天数类型提示标记 - 图表右侧 */
+        /* 时间周期提示标记 - 1小时、4小时、日线、月线 */
         .chart-time-labels {
             display: flex;
             justify-content: flex-end;
@@ -1464,15 +1484,6 @@
             white-space: pre-wrap;
             word-break: break-all;
         }
-        .strategy-dashboard .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .strategy-dashboard .button-group .btn {
-            flex: 1;
-            text-align: center;
-        }
         /* 移除底部交易对卡片 */
         .strategy-dashboard .bottom-symbol-bar {
             display: none !important;
@@ -1484,7 +1495,7 @@
             background: #2a2a3a;
             border-radius: 4px;
         }
-        /* 系统提示消息样式 - 移除粉红色背景和⚠️ */
+        /* 系统提示消息样式 */
         .system-message {
             color: #f87171;
             font-size: 12px;
@@ -1571,75 +1582,71 @@
                 <button class="add-pair-btn" onclick="strategyAddPair()">+</button>
             </div>
 
-            <!-- ===== 顶部总收益卡片（修复） ===== -->
+            <!-- 顶部总收益卡片 -->
             <div class="header">
                 <div class="total-info">
                     <span class="label">总收益</span>
-                    <span class="value" id="strategyHeaderTotal">$64,488.22</span>
-                    <span class="change" id="strategyHeaderChange" style="color:#2ea043;">-0.01%</span>
-                </div>
-                <div class="price-info">
-                    <div class="price" id="strategyHeaderPrice">$65,432.10</div>
-                    <div class="change-text" id="strategyHeaderPriceChange" style="color:#2ea043;">+0.42%</div>
+                    <span class="value" id="strategyHeaderTotal">$65,432.10</span>
+                    <span class="change" id="strategyHeaderChange" style="color:#2ea043;">+0.42%</span>
                 </div>
             </div>
 
-            <!-- 账户卡片 -->
-            <div class="grid" style="margin-bottom:16px;">
-                <div class="card" id="strategyAccountCard">
-                    <h3 id="strategyAccountTitle">📊 账户 (BTC/USDT)</h3>
-                    <div class="account-total">
-                        <span class="total-label">总资产</span>
-                        <span>
-                            <span class="total-value" id="strategyTotalBalance">$64,488.22</span>
-                            <span class="total-change" id="strategyTotalChange" style="color:#2ea043;">-0.01%</span>
-                        </span>
-                    </div>
-                    <div class="account-detail">
-                        <div class="detail-item">
-                            <span class="label" id="strategyBaseLabel">USDT 余额</span>
-                            <span class="value" id="strategyUsdtBalance">10,000.00</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label" id="strategyAssetLabel">BTC 持仓</span>
-                            <span class="value btc" id="strategyBtcBalance">0.0000</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">总盈亏</span>
-                            <span class="value" id="strategyTotalPnl" style="color:#8b949e;">$0.00</span>
-                        </div>
-                    </div>
+            <!-- ===== 合并后的账户操作卡片 ===== -->
+            <div class="account-card">
+                <div class="card-title" id="strategyAccountTitle">📊 账户操作 (BTC/USDT)</div>
+
+                <!-- 账户信息 -->
+                <div class="account-row">
+                    <span class="label">总资产</span>
+                    <span class="value" id="strategyTotalBalance">$64,488.22</span>
+                </div>
+                <div class="account-row">
+                    <span class="label" id="strategyBaseLabel">USDT 余额</span>
+                    <span class="value" id="strategyUsdtBalance">10,000.00</span>
+                </div>
+                <div class="account-row">
+                    <span class="label" id="strategyAssetLabel">BTC 持仓</span>
+                    <span class="value btc" id="strategyBtcBalance">0.0000</span>
+                </div>
+                <div class="account-row">
+                    <span class="label">总盈亏</span>
+                    <span class="value" id="strategyTotalPnl" style="color:#8b949e;">$0.00</span>
                 </div>
 
-                <div class="card">
-                    <h3>⚡ 快速操作</h3>
-                    <div class="status-indicator">
-                        <span class="dot active" id="strategyStatusDot"></span>
-                        <span id="strategyStatusText">策略已停止</span>
-                    </div>
-                    <div class="button-group">
-                        <button class="btn btn-buy" onclick="strategyExecuteOrder('buy')">买入</button>
-                        <button class="btn btn-sell" onclick="strategyExecuteOrder('sell')">卖出</button>
-                    </div>
-                    <button class="btn btn-strategy" onclick="strategyToggle()" style="margin-top:10px;">
-                        ▶ 启动策略
-                    </button>
-                    <div style="margin-top:12px;font-size:13px;color:#8b949e;">
-                        当前价格: <span id="strategyCurrentPrice">--</span>
-                    </div>
+                <div class="divider"></div>
+
+                <!-- 状态指示器 -->
+                <div class="status-indicator">
+                    <span class="dot active" id="strategyStatusDot"></span>
+                    <span id="strategyStatusText">策略已停止</span>
+                </div>
+
+                <!-- 操作按钮 -->
+                <div class="button-group">
+                    <button class="btn btn-buy" onclick="strategyExecuteOrder('buy')">买入</button>
+                    <button class="btn btn-sell" onclick="strategyExecuteOrder('sell')">卖出</button>
+                </div>
+                <button class="btn-strategy" onclick="strategyToggle()">
+                    ▶ 启动策略
+                </button>
+                <div class="current-price">
+                    当前价格: <span id="strategyCurrentPrice">--</span>
                 </div>
             </div>
 
-            <!-- 价格走势 + 天数类型提示标记 -->
+            <!-- 价格走势卡片 -->
             <div class="chart-container">
-                <h3 style="color:#f7931a;font-size:16px;margin-bottom:12px;">📈 价格走势</h3>
+                <div class="chart-header">
+                    <span class="chart-title">📈 价格走势</span>
+                    <span class="chart-pair" id="chartPairDisplay">BTC/USDT</span>
+                </div>
                 <canvas id="strategyPriceChart" height="200"></canvas>
-                <!-- 天数类型提示标记 -->
+                <!-- 时间周期提示标记 -->
                 <div class="chart-time-labels" id="chartTimeLabels">
-                    <span class="time-label active" data-days="1" onclick="strategySetTimeRange(1, this)">1D</span>
-                    <span class="time-label" data-days="7" onclick="strategySetTimeRange(7, this)">7D</span>
-                    <span class="time-label" data-days="30" onclick="strategySetTimeRange(30, this)">30D</span>
-                    <span class="time-label" data-days="90" onclick="strategySetTimeRange(90, this)">90D</span>
+                    <span class="time-label active" data-period="1h" onclick="strategySetTimePeriod('1h', this)">1小时</span>
+                    <span class="time-label" data-period="4h" onclick="strategySetTimePeriod('4h', this)">4小时</span>
+                    <span class="time-label" data-period="1d" onclick="strategySetTimePeriod('1d', this)">日线</span>
+                    <span class="time-label" data-period="1m" onclick="strategySetTimePeriod('1m', this)">月线</span>
                 </div>
             </div>
 
@@ -3006,7 +3013,7 @@ Elite版：¥299/月，1对1私人管家
         let strategyChart = null;
         let strategyLogEntries = [];
         let currentStrategySymbol = 'BTC/USDT';
-        let currentTimeRange = 1; // 默认1天
+        let currentTimePeriod = '1h'; // 默认1小时
 
         const strategyTopPairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT'];
 
@@ -3019,6 +3026,14 @@ Elite版：¥299/月，1对1私人管家
             'ADA/USDT': { price: 0.456, change: 3.21, base: 'USDT', asset: 'ADA', label: 'ADA' },
             'DOT/USDT': { price: 7.89, change: -2.10, base: 'USDT', asset: 'DOT', label: 'DOT' },
             'AVAX/USDT': { price: 38.76, change: 4.56, base: 'USDT', asset: 'AVAX', label: 'AVAX' },
+        };
+
+        // 时间周期对应的数据点数
+        const periodDataPoints = {
+            '1h': 24,
+            '4h': 30,
+            '1d': 30,
+            '1m': 30
         };
 
         function strategyAddLog(msg) {
@@ -3036,25 +3051,18 @@ Elite版：¥299/月，1对1私人管家
             const initial = 10000;
             const pnl = total - initial;
 
-            // 更新顶部总收益卡片
-            document.getElementById('strategyHeaderTotal').textContent = '$' + total.toFixed(2);
-            const changePercent = ((strategyBtcPrice - 65000) / 65000 * 100);
+            // 顶部总收益卡片
+            document.getElementById('strategyHeaderTotal').textContent = '$' + strategyBtcPrice.toFixed(2);
+            const data = pairData[currentStrategySymbol] || pairData['BTC/USDT'];
             const headerChangeEl = document.getElementById('strategyHeaderChange');
             if (headerChangeEl) {
-                headerChangeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
-                headerChangeEl.style.color = changePercent >= 0 ? '#2ea043' : '#da3633';
-            }
-            // 更新顶部价格
-            document.getElementById('strategyHeaderPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
-            const data = pairData[currentStrategySymbol] || pairData['BTC/USDT'];
-            const headerPriceChange = document.getElementById('strategyHeaderPriceChange');
-            if (headerPriceChange) {
-                headerPriceChange.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerPriceChange.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
+                headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
+                headerChangeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
             }
 
-            // 更新账户卡片
+            // 更新合并后的账户卡片
             document.getElementById('strategyTotalBalance').textContent = '$' + total.toFixed(2);
+            const changePercent = ((strategyBtcPrice - 65000) / 65000 * 100);
             const changeEl = document.getElementById('strategyTotalChange');
             if (changeEl) {
                 changeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
@@ -3071,22 +3079,21 @@ Elite版：¥299/月，1对1私人管家
             }
 
             document.getElementById('strategyCurrentPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
+            document.getElementById('chartPairDisplay').textContent = currentStrategySymbol;
         }
 
-        // 天数类型切换
-        function strategySetTimeRange(days, el) {
-            currentTimeRange = days;
-            // 更新高亮
+        // 时间周期切换
+        function strategySetTimePeriod(period, el) {
+            currentTimePeriod = period;
             document.querySelectorAll('.chart-time-labels .time-label').forEach(label => {
                 label.classList.remove('active');
             });
             if (el) el.classList.add('active');
 
-            // 根据天数重新生成数据
             const data = pairData[currentStrategySymbol] || pairData['BTC/USDT'];
             const basePrice = data.price;
             const volatility = basePrice * 0.025;
-            const numPoints = Math.min(days * 10, 200); // 天数越多，数据点越多
+            const numPoints = periodDataPoints[period] || 24;
             const newData = [];
             let current = basePrice * 0.97;
             for (let i = 0; i < numPoints; i++) {
@@ -3099,23 +3106,20 @@ Elite版：¥299/月，1对1私人管家
                 strategyChart.data.datasets[0].data = strategyChartData;
                 strategyChart.update();
             }
-            strategyAddLog(`📊 切换至 ${currentStrategySymbol} ${days}D 视图`);
+            strategyAddLog(`📊 切换至 ${currentStrategySymbol} ${period} 视图`);
         }
 
-        // 点击交易对切换
         function strategySelectSymbol(el, symbol) {
             document.querySelectorAll('#strategySymbolList .symbol-item').forEach(s => s.classList.remove('active'));
             el.classList.add('active');
             currentStrategySymbol = symbol;
 
-            // 更新账户卡片标题
-            document.getElementById('strategyAccountTitle').textContent = '📊 账户 (' + symbol + ')';
+            document.getElementById('strategyAccountTitle').textContent = '📊 账户操作 (' + symbol + ')';
 
             const data = pairData[symbol] || pairData['BTC/USDT'];
             document.getElementById('strategyBaseLabel').textContent = data.base + ' 余额';
             document.getElementById('strategyAssetLabel').textContent = data.asset + ' 持仓';
 
-            // 更新价格
             strategyBtcPrice = data.price;
             document.getElementById('strategyBtcPrice').textContent = '$' + data.price.toFixed(2);
             const changeEl = document.getElementById('strategyPriceChange');
@@ -3124,19 +3128,11 @@ Elite版：¥299/月，1对1私人管家
                 changeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
             }
             document.getElementById('strategyCurrentPrice').textContent = '$' + data.price.toFixed(2);
+            document.getElementById('chartPairDisplay').textContent = symbol;
 
-            // 更新顶部价格
-            document.getElementById('strategyHeaderPrice').textContent = '$' + data.price.toFixed(2);
-            const headerPriceChange = document.getElementById('strategyHeaderPriceChange');
-            if (headerPriceChange) {
-                headerPriceChange.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerPriceChange.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
-            }
-
-            // 生成该交易对自己的价格数据（基于当前天数范围）
             const basePrice = data.price;
             const volatility = basePrice * 0.025;
-            const numPoints = Math.min(currentTimeRange * 10, 200);
+            const numPoints = periodDataPoints[currentTimePeriod] || 24;
             const newData = [];
             let current = basePrice * 0.97;
             for (let i = 0; i < numPoints; i++) {
@@ -3170,7 +3166,7 @@ Elite版：¥299/月，1对1私人管家
             }
 
             strategyChartData.push(strategyBtcPrice);
-            const maxPoints = Math.min(currentTimeRange * 10, 200);
+            const maxPoints = periodDataPoints[currentTimePeriod] || 24;
             if (strategyChartData.length > maxPoints) strategyChartData.shift();
             if (strategyChart) {
                 strategyChart.data.datasets[0].data = strategyChartData;
@@ -3263,7 +3259,7 @@ Elite版：¥299/月，1对1私人管家
             canvas.style.height = '200px';
 
             const basePrice = 65432.10;
-            const numPoints = 50;
+            const numPoints = 24;
             const initialData = [];
             let current = basePrice * 0.97;
             for (let i = 0; i < numPoints; i++) {
@@ -3350,21 +3346,20 @@ Elite版：¥299/月，1对1私人管家
             const data = pairData['BTC/USDT'];
             strategyBtcPrice = data.price;
 
-            // 设置初始顶部显示
-            document.getElementById('strategyHeaderPrice').textContent = '$' + data.price.toFixed(2);
-            const headerPriceChange = document.getElementById('strategyHeaderPriceChange');
-            if (headerPriceChange) {
-                headerPriceChange.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerPriceChange.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
+            document.getElementById('strategyHeaderTotal').textContent = '$' + data.price.toFixed(2);
+            const headerChangeEl = document.getElementById('strategyHeaderChange');
+            if (headerChangeEl) {
+                headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
+                headerChangeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
             }
 
             document.getElementById('strategyBtcPrice').textContent = '$' + data.price.toFixed(2);
             document.getElementById('strategyCurrentPrice').textContent = '$' + data.price.toFixed(2);
-            document.getElementById('strategyAccountTitle').textContent = '📊 账户 (BTC/USDT)';
+            document.getElementById('strategyAccountTitle').textContent = '📊 账户操作 (BTC/USDT)';
+            document.getElementById('chartPairDisplay').textContent = 'BTC/USDT';
 
-            // 设置初始图表数据
             const basePrice = data.price;
-            const numPoints = 50;
+            const numPoints = 24;
             const initialData = [];
             let current = basePrice * 0.97;
             for (let i = 0; i < numPoints; i++) {
@@ -3680,7 +3675,7 @@ Elite版：¥299/月，1对1私人管家
             window.strategyToggle = strategyToggle;
             window.strategyAddPair = strategyAddPair;
             window.strategySelectSymbol = strategySelectSymbol;
-            window.strategySetTimeRange = strategySetTimeRange;
+            window.strategySetTimePeriod = strategySetTimePeriod;
 
             document.getElementById('overlay').addEventListener('click', closeDrawer);
         });
