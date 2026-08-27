@@ -1272,40 +1272,22 @@
             color: #0a0a0f;
         }
 
-        /* 顶部总收益卡片 */
+        /* 顶部总收益卡片 - 只显示价格信息 */
         .strategy-dashboard .header {
             display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
+            justify-content: flex-end;
+            align-items: center;
             margin-bottom: 16px;
             background: #12121f;
             border: 1px solid #1a1a2a;
             border-radius: 16px;
             padding: 14px 20px;
         }
-        .strategy-dashboard .header .total-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .strategy-dashboard .header .total-info .label {
-            font-size: 14px;
-            color: #6a6a7a;
-        }
-        .strategy-dashboard .header .total-info .value {
-            font-size: 26px;
-            font-weight: 700;
-            color: #e8e8f0;
-        }
-        .strategy-dashboard .header .total-info .change {
-            font-size: 16px;
-            font-weight: 600;
-        }
         .strategy-dashboard .header .price-info {
             display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 4px;
+            flex-direction: row;
+            align-items: center;
+            gap: 16px;
         }
         .strategy-dashboard .header .price-info .price-value {
             font-size: 26px;
@@ -1886,12 +1868,8 @@
                 </svg>
             </button>
 
-            <!-- 1. 顶部总收益卡片 -->
+            <!-- 1. 顶部价格信息卡片 -->
             <div class="header">
-                <div class="total-info">
-                    <span class="label">总收益</span>
-                    <span class="value" id="strategyHeaderTotal"></span>
-                </div>
                 <div class="price-info">
                     <span class="price-value" id="strategyHeaderPrice">$65,432.10</span>
                     <span class="price-change" id="strategyHeaderChange" style="color:#10b981;">+3.21%</span>
@@ -1979,7 +1957,7 @@
                 <div class="log-box" id="strategyLogBox">[系统] 初始化完成，等待 BTC 价格数据...</div>
             </div>
 
-            <!-- 6. 策略规则介绍 - 移动到底部 -->
+            <!-- 6. 策略规则介绍 - 底部 -->
             <div class="rules-card">
                 <div class="rules-title">📋 EMA20+EMA50 趋势策略规则</div>
                 <div class="rule-item">
@@ -3502,8 +3480,6 @@ Elite版：¥299/月，1对1私人管家
             const initial = 10000;
             const pnl = total - initial;
 
-            document.getElementById('strategyHeaderTotal').textContent;
-
             const data = pairData[currentStrategySymbol] || pairData['BTC/USDT'];
             document.getElementById('strategyHeaderPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
             const headerChangeEl = document.getElementById('strategyHeaderChange');
@@ -4007,7 +3983,6 @@ Elite版：¥299/月，1对1私人管家
                 priceHistory.push(data.price + (Math.random() - 0.5) * 100);
             }
 
-            document.getElementById('strategyHeaderTotal').textContent = ;
             document.getElementById('strategyHeaderPrice').textContent = '$' + data.price.toFixed(2);
             const headerChangeEl = document.getElementById('strategyHeaderChange');
             if (headerChangeEl) {
