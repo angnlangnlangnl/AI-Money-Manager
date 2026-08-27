@@ -1488,6 +1488,22 @@
         .strategy-dashboard .bottom-symbol-bar {
             display: none !important;
         }
+        /* 交易日志卡片样式 */
+        .strategy-dashboard .log-card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .strategy-dashboard .log-card .card-title {
+            color: #f7931a;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 1px solid #30363d;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
         #strategyPanel::-webkit-scrollbar {
             width: 4px;
         }
@@ -1574,15 +1590,7 @@
                 </svg>
             </button>
 
-            <!-- 交易对列表 -->
-            <div class="symbol-bar">
-                <div class="symbol-list" id="strategySymbolList">
-                    <!-- 由JS渲染 -->
-                </div>
-                <button class="add-pair-btn" onclick="strategyAddPair()">+</button>
-            </div>
-
-            <!-- 顶部总收益卡片 -->
+            <!-- 1. 顶部总收益卡片 -->
             <div class="header">
                 <div class="total-info">
                     <span class="label">总收益</span>
@@ -1591,7 +1599,31 @@
                 </div>
             </div>
 
-            <!-- ===== 合并后的账户操作卡片 ===== -->
+            <!-- 2. 交易对选择栏 -->
+            <div class="symbol-bar">
+                <div class="symbol-list" id="strategySymbolList">
+                    <!-- 由JS渲染 -->
+                </div>
+                <button class="add-pair-btn" onclick="strategyAddPair()">+</button>
+            </div>
+
+            <!-- 3. 价格走势卡片 -->
+            <div class="chart-container">
+                <div class="chart-header">
+                    <span class="chart-title">📈 价格走势</span>
+                    <span class="chart-pair" id="chartPairDisplay">BTC/USDT</span>
+                </div>
+                <canvas id="strategyPriceChart" height="200"></canvas>
+                <!-- 时间周期提示标记 -->
+                <div class="chart-time-labels" id="chartTimeLabels">
+                    <span class="time-label active" data-period="1h" onclick="strategySetTimePeriod('1h', this)">1小时</span>
+                    <span class="time-label" data-period="4h" onclick="strategySetTimePeriod('4h', this)">4小时</span>
+                    <span class="time-label" data-period="1d" onclick="strategySetTimePeriod('1d', this)">日线</span>
+                    <span class="time-label" data-period="1m" onclick="strategySetTimePeriod('1m', this)">月线</span>
+                </div>
+            </div>
+
+            <!-- 4. 账户操作卡片 -->
             <div class="account-card">
                 <div class="card-title" id="strategyAccountTitle">📊 账户操作 (BTC/USDT)</div>
 
@@ -1634,24 +1666,9 @@
                 </div>
             </div>
 
-            <!-- 价格走势卡片 -->
-            <div class="chart-container">
-                <div class="chart-header">
-                    <span class="chart-title">📈 价格走势</span>
-                    <span class="chart-pair" id="chartPairDisplay">BTC/USDT</span>
-                </div>
-                <canvas id="strategyPriceChart" height="200"></canvas>
-                <!-- 时间周期提示标记 -->
-                <div class="chart-time-labels" id="chartTimeLabels">
-                    <span class="time-label active" data-period="1h" onclick="strategySetTimePeriod('1h', this)">1小时</span>
-                    <span class="time-label" data-period="4h" onclick="strategySetTimePeriod('4h', this)">4小时</span>
-                    <span class="time-label" data-period="1d" onclick="strategySetTimePeriod('1d', this)">日线</span>
-                    <span class="time-label" data-period="1m" onclick="strategySetTimePeriod('1m', this)">月线</span>
-                </div>
-            </div>
-
-            <div class="card" style="margin-bottom:20px;">
-                <h3>📋 交易日志</h3>
+            <!-- 5. 交易日志 -->
+            <div class="log-card">
+                <div class="card-title">📋 交易日志</div>
                 <div class="log-box" id="strategyLogBox">[系统] 初始化完成，等待 BTC 价格数据...</div>
             </div>
         </div>
@@ -3051,7 +3068,7 @@ Elite版：¥299/月，1对1私人管家
             const initial = 10000;
             const pnl = total - initial;
 
-            // 顶部总收益卡片
+            // 顶部总收益卡片 - 显示当前交易对价格
             document.getElementById('strategyHeaderTotal').textContent = '$' + strategyBtcPrice.toFixed(2);
             const data = pairData[currentStrategySymbol] || pairData['BTC/USDT'];
             const headerChangeEl = document.getElementById('strategyHeaderChange');
@@ -3063,11 +3080,6 @@ Elite版：¥299/月，1对1私人管家
             // 更新合并后的账户卡片
             document.getElementById('strategyTotalBalance').textContent = '$' + total.toFixed(2);
             const changePercent = ((strategyBtcPrice - 65000) / 65000 * 100);
-            const changeEl = document.getElementById('strategyTotalChange');
-            if (changeEl) {
-                changeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
-                changeEl.style.color = changePercent >= 0 ? '#2ea043' : '#da3633';
-            }
 
             document.getElementById('strategyUsdtBalance').textContent = strategyUsdtBalance.toFixed(2);
             document.getElementById('strategyBtcBalance').textContent = strategyBtcBalance.toFixed(4);
@@ -3090,7 +3102,14 @@ Elite版：¥299/月，1对1私人管家
             });
             if (el) el.classList.add('active');
 
-            const data = pairData[currentStrategySymbol] || pairData['BTC/USDT'];
+            // 重新生成当前交易对的图表数据
+            regenerateChartData(currentStrategySymbol, period);
+            strategyAddLog(`📊 切换至 ${currentStrategySymbol} ${period} 视图`);
+        }
+
+        // 生成当前交易对的图表数据
+        function regenerateChartData(symbol, period) {
+            const data = pairData[symbol] || pairData['BTC/USDT'];
             const basePrice = data.price;
             const volatility = basePrice * 0.025;
             const numPoints = periodDataPoints[period] || 24;
@@ -3104,9 +3123,9 @@ Elite版：¥299/月，1对1私人管家
             strategyChartData = newData;
             if (strategyChart) {
                 strategyChart.data.datasets[0].data = strategyChartData;
+                strategyChart.data.datasets[0].label = symbol;
                 strategyChart.update();
             }
-            strategyAddLog(`📊 切换至 ${currentStrategySymbol} ${period} 视图`);
         }
 
         function strategySelectSymbol(el, symbol) {
@@ -3121,31 +3140,19 @@ Elite版：¥299/月，1对1私人管家
             document.getElementById('strategyAssetLabel').textContent = data.asset + ' 持仓';
 
             strategyBtcPrice = data.price;
-            document.getElementById('strategyBtcPrice').textContent = '$' + data.price.toFixed(2);
-            const changeEl = document.getElementById('strategyPriceChange');
-            if (changeEl) {
-                changeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                changeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
-            }
             document.getElementById('strategyCurrentPrice').textContent = '$' + data.price.toFixed(2);
             document.getElementById('chartPairDisplay').textContent = symbol;
 
-            const basePrice = data.price;
-            const volatility = basePrice * 0.025;
-            const numPoints = periodDataPoints[currentTimePeriod] || 24;
-            const newData = [];
-            let current = basePrice * 0.97;
-            for (let i = 0; i < numPoints; i++) {
-                current += (Math.random() - 0.5) * volatility * 2;
-                current = Math.max(basePrice * 0.85, Math.min(basePrice * 1.15, current));
-                newData.push(Math.round(current * 100) / 100);
+            // 更新顶部总收益卡片的价格
+            document.getElementById('strategyHeaderTotal').textContent = '$' + data.price.toFixed(2);
+            const headerChangeEl = document.getElementById('strategyHeaderChange');
+            if (headerChangeEl) {
+                headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
+                headerChangeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
             }
-            strategyChartData = newData;
-            if (strategyChart) {
-                strategyChart.data.datasets[0].data = strategyChartData;
-                strategyChart.data.datasets[0].label = symbol;
-                strategyChart.update();
-            }
+
+            // 重新生成图表数据
+            regenerateChartData(symbol, currentTimePeriod);
 
             strategyUpdateDisplay();
             strategyAddLog('📊 切换至 ' + symbol);
@@ -3157,14 +3164,10 @@ Elite版：¥299/月，1对1私人管家
             strategyBtcPrice = Math.max(10000, strategyBtcPrice + change);
             strategyBtcPrice = Math.round(strategyBtcPrice * 100) / 100;
 
-            document.getElementById('strategyBtcPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
-            const changePercent = ((change / (strategyBtcPrice - change)) * 100);
-            const changeEl = document.getElementById('strategyPriceChange');
-            if (changeEl) {
-                changeEl.textContent = (changePercent >= 0 ? '+' : '') + changePercent.toFixed(2) + '%';
-                changeEl.style.color = changePercent >= 0 ? '#2ea043' : '#da3633';
-            }
+            document.getElementById('strategyCurrentPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
+            document.getElementById('strategyHeaderTotal').textContent = '$' + strategyBtcPrice.toFixed(2);
 
+            // 更新图表数据
             strategyChartData.push(strategyBtcPrice);
             const maxPoints = periodDataPoints[currentTimePeriod] || 24;
             if (strategyChartData.length > maxPoints) strategyChartData.shift();
@@ -3183,7 +3186,7 @@ Elite版：¥299/月，1对1私人管家
                     if (quantity > 0.001) {
                         strategyBtcBalance += quantity;
                         strategyUsdtBalance -= buyAmount;
-                        strategyAddLog(`📈 策略买入 ${quantity.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+                        strategyAddLog(`📈 策略买入 ${quantity.toFixed(4)} ${currentStrategySymbol.split('/')[0]} @ $${strategyBtcPrice.toFixed(2)}`);
                         strategyUpdateDisplay();
                     }
                 } else if (rsi > 70 && strategyBtcBalance > 0.001) {
@@ -3192,7 +3195,7 @@ Elite版：¥299/月，1对1私人管家
                         const sellAmount = sellQuantity * strategyBtcPrice;
                         strategyBtcBalance -= sellQuantity;
                         strategyUsdtBalance += sellAmount;
-                        strategyAddLog(`📉 策略卖出 ${sellQuantity.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+                        strategyAddLog(`📉 策略卖出 ${sellQuantity.toFixed(4)} ${currentStrategySymbol.split('/')[0]} @ $${strategyBtcPrice.toFixed(2)}`);
                         strategyUpdateDisplay();
                     }
                 }
@@ -3200,6 +3203,7 @@ Elite版：¥299/月，1对1私人管家
         }
 
         function strategyExecuteOrder(type) {
+            const assetSymbol = currentStrategySymbol.split('/')[0];
             if (type === 'buy') {
                 const maxBuy = Math.min(strategyUsdtBalance, 500);
                 if (maxBuy < 10) {
@@ -3208,22 +3212,22 @@ Elite版：¥299/月，1对1私人管家
                 }
                 const quantity = maxBuy / strategyBtcPrice;
                 if (quantity < 0.001) {
-                    strategyAddLog('⚠️ 买入量太小，至少需要 0.001 BTC');
+                    strategyAddLog('⚠️ 买入量太小，至少需要 0.001 ' + assetSymbol);
                     return;
                 }
                 strategyBtcBalance += quantity;
                 strategyUsdtBalance -= maxBuy;
-                strategyAddLog(`✅ 买入 ${quantity.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+                strategyAddLog(`✅ 买入 ${quantity.toFixed(4)} ${assetSymbol} @ $${strategyBtcPrice.toFixed(2)}`);
             } else {
                 if (strategyBtcBalance < 0.001) {
-                    strategyAddLog('⚠️ BTC 持仓不足，无法卖出');
+                    strategyAddLog('⚠️ ' + assetSymbol + ' 持仓不足，无法卖出');
                     return;
                 }
                 const maxSell = Math.min(strategyBtcBalance, 0.01);
                 const sellAmount = maxSell * strategyBtcPrice;
                 strategyBtcBalance -= maxSell;
                 strategyUsdtBalance += sellAmount;
-                strategyAddLog(`✅ 卖出 ${maxSell.toFixed(4)} BTC @ $${strategyBtcPrice.toFixed(2)}`);
+                strategyAddLog(`✅ 卖出 ${maxSell.toFixed(4)} ${assetSymbol} @ $${strategyBtcPrice.toFixed(2)}`);
             }
             strategyUpdateDisplay();
         }
@@ -3258,12 +3262,13 @@ Elite版：¥299/月，1对1私人管家
             canvas.style.width = '100%';
             canvas.style.height = '200px';
 
-            const basePrice = 65432.10;
-            const numPoints = 24;
+            const data = pairData['BTC/USDT'];
+            const basePrice = data.price;
+            const numPoints = periodDataPoints['1h'] || 24;
             const initialData = [];
             let current = basePrice * 0.97;
             for (let i = 0; i < numPoints; i++) {
-                current += (Math.random() - 0.5) * 100;
+                current += (Math.random() - 0.5) * basePrice * 0.025 * 2;
                 current = Math.max(basePrice * 0.85, Math.min(basePrice * 1.15, current));
                 initialData.push(Math.round(current * 100) / 100);
             }
@@ -3345,7 +3350,10 @@ Elite版：¥299/月，1对1私人管家
 
             const data = pairData['BTC/USDT'];
             strategyBtcPrice = data.price;
+            currentStrategySymbol = 'BTC/USDT';
+            currentTimePeriod = '1h';
 
+            // 更新顶部总收益卡片
             document.getElementById('strategyHeaderTotal').textContent = '$' + data.price.toFixed(2);
             const headerChangeEl = document.getElementById('strategyHeaderChange');
             if (headerChangeEl) {
@@ -3353,25 +3361,12 @@ Elite版：¥299/月，1对1私人管家
                 headerChangeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
             }
 
-            document.getElementById('strategyBtcPrice').textContent = '$' + data.price.toFixed(2);
             document.getElementById('strategyCurrentPrice').textContent = '$' + data.price.toFixed(2);
             document.getElementById('strategyAccountTitle').textContent = '📊 账户操作 (BTC/USDT)';
             document.getElementById('chartPairDisplay').textContent = 'BTC/USDT';
 
-            const basePrice = data.price;
-            const numPoints = 24;
-            const initialData = [];
-            let current = basePrice * 0.97;
-            for (let i = 0; i < numPoints; i++) {
-                current += (Math.random() - 0.5) * 100;
-                current = Math.max(basePrice * 0.85, Math.min(basePrice * 1.15, current));
-                initialData.push(Math.round(current * 100) / 100);
-            }
-            strategyChartData = initialData;
-            if (strategyChart) {
-                strategyChart.data.datasets[0].data = strategyChartData;
-                strategyChart.update();
-            }
+            // 重新生成图表数据
+            regenerateChartData('BTC/USDT', '1h');
 
             strategyUpdateDisplay();
             strategyAddLog('✅ 策略面板已就绪');
