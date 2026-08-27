@@ -20,6 +20,7 @@
             min-height: 100vh;
             overflow-y: auto;
             touch-action: manipulation;
+            -webkit-touch-callout: none;
         }
         ::-webkit-scrollbar {
             width: 3px;
@@ -124,38 +125,42 @@
             color: #10b981;
         }
 
-        /* 交易对选择 */
-        .pair-selector {
+        /* 交易对选择按钮 - 修复手机端触发 */
+        .pair-selector-btn {
             display: flex;
             align-items: center;
             gap: 6px;
             background: #0a0a12;
             border: 1px solid #1a1a2a;
             border-radius: 8px;
-            padding: 6px 10px;
+            padding: 8px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-        .pair-selector .pair-label {
+        .pair-selector-btn:active {
+            background: #1a1a2a;
+            border-color: #3b82f6;
+        }
+        .pair-selector-btn .pair-label {
             font-size: 10px;
             color: #6a6a7a;
         }
-        .pair-selector select {
+        .pair-selector-btn .pair-name {
             flex: 1;
-            background: transparent;
-            border: none;
             color: #e8e8f0;
             font-size: 12px;
             font-weight: 600;
-            outline: none;
-            cursor: pointer;
         }
-        .pair-selector select option {
-            background: #12121f;
-            color: #e8e8f0;
-        }
-        .pair-selector .pair-price {
+        .pair-selector-btn .pair-price {
             font-size: 11px;
             color: #10b981;
             font-weight: 600;
+        }
+        .pair-selector-btn .dropdown-arrow {
+            font-size: 10px;
+            color: #6a6a7a;
         }
 
         /* 策略描述 */
@@ -208,8 +213,10 @@
             cursor: pointer;
             font-size: 10px;
             text-decoration: underline;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-        .log-link:hover {
+        .log-link:active {
             color: #93c5fd;
         }
 
@@ -242,7 +249,7 @@
         }
         .action-btn {
             flex: 1;
-            padding: 8px 12px;
+            padding: 10px 12px;
             border: none;
             border-radius: 8px;
             font-size: 12px;
@@ -250,6 +257,8 @@
             cursor: pointer;
             transition: all 0.2s;
             text-align: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .action-btn:active {
             transform: scale(0.95);
@@ -266,7 +275,7 @@
             background: #1a1a2a;
             color: #8a8a9a;
         }
-        .btn-reset:hover {
+        .btn-reset:active {
             background: #2a2a3a;
         }
         .btn-params {
@@ -274,12 +283,14 @@
             border: 1px solid #1a1a2a;
             color: #6a6a7a;
             font-size: 10px;
-            padding: 4px 8px;
+            padding: 6px 8px;
             border-radius: 4px;
             cursor: pointer;
             width: 100%;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-        .btn-params:hover {
+        .btn-params:active {
             border-color: #3b82f6;
             color: #3b82f6;
         }
@@ -340,12 +351,13 @@
         }
         .params-modal .modal-buttons button {
             flex: 1;
-            padding: 8px;
+            padding: 10px;
             border: none;
             border-radius: 8px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
+            touch-action: manipulation;
         }
         .btn-confirm {
             background: #3b82f6;
@@ -402,6 +414,7 @@
             height: 28px;
             font-size: 14px;
             cursor: pointer;
+            touch-action: manipulation;
         }
         .log-box {
             background: #0a0a12;
@@ -417,6 +430,77 @@
             word-break: break-all;
             color: #9ca3af;
             max-height: 300px;
+        }
+
+        /* 交易对选择弹窗 */
+        .pair-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2200;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .pair-modal-overlay.show {
+            display: flex;
+        }
+        .pair-modal {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 16px;
+            width: 85%;
+            max-width: 320px;
+        }
+        .pair-modal .modal-title {
+            color: #60a5fa;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .pair-modal .pair-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            margin-bottom: 4px;
+        }
+        .pair-modal .pair-option:active {
+            background: #1a1a2a;
+        }
+        .pair-modal .pair-option.selected {
+            background: #1a2a3a;
+            border: 1px solid #3b82f6;
+        }
+        .pair-modal .pair-option .pair-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #e8e8f0;
+        }
+        .pair-modal .pair-option .pair-price {
+            font-size: 12px;
+            color: #6a6a7a;
+        }
+        .pair-modal .pair-option .check-icon {
+            color: #3b82f6;
+            font-size: 16px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .strategy-grid {
+                grid-template-columns: 1fr;
+            }
+            .container {
+                padding: 12px;
+            }
         }
     </style>
 </head>
@@ -458,6 +542,14 @@
                 <button class="close-btn" onclick="closeLogModal()">✕</button>
             </div>
             <div class="log-box" id="logBoxContent">暂无日志</div>
+        </div>
+    </div>
+
+    <!-- 交易对选择弹窗 -->
+    <div class="pair-modal-overlay" id="pairModalOverlay" onclick="closePairModal(event)">
+        <div class="pair-modal" onclick="event.stopPropagation()">
+            <div class="modal-title" id="pairModalTitle">选择交易对</div>
+            <div id="pairModalContent"></div>
         </div>
     </div>
 
@@ -586,6 +678,7 @@
 
         // 当前编辑的策略ID
         let currentEditingStrategy = null;
+        let currentPairSelectStrategy = null;
 
         // 添加日志
         function addLog(strategyId, msg) {
@@ -617,15 +710,12 @@
                             <span class="strategy-badge ${state.running ? 'running' : ''}">${strategy.badge}${state.running ? ' · 运行中' : ''}</span>
                         </div>
                         
-                        <!-- 交易对选择 -->
-                        <div class="pair-selector">
+                        <!-- 交易对选择按钮 -->
+                        <div class="pair-selector-btn" onclick="openPairModal('${strategy.id}')">
                             <span class="pair-label">交易对:</span>
-                            <select id="pairSelect_${strategy.id}" onchange="changePair('${strategy.id}', this.value)">
-                                ${availablePairs.map(pair => `
-                                    <option value="${pair}" ${state.currentPair === pair ? 'selected' : ''}>${pair}</option>
-                                `).join('')}
-                            </select>
+                            <span class="pair-name">${state.currentPair}</span>
                             <span class="pair-price">$${currentPrice.toFixed(2)}</span>
+                            <span class="dropdown-arrow">▼</span>
                         </div>
                         
                         <!-- 策略描述 -->
@@ -684,11 +774,44 @@
             container.innerHTML = html;
         }
 
-        // 切换交易对
-        function changePair(strategyId, pair) {
+        // 打开交易对选择弹窗
+        function openPairModal(strategyId) {
+            currentPairSelectStrategy = strategyId;
             const state = strategyStates[strategyId];
+            const strategy = strategies.find(s => s.id === strategyId);
+            
+            document.getElementById('pairModalTitle').textContent = `${strategy.name} - 选择交易对`;
+            
+            let html = '';
+            availablePairs.forEach(pair => {
+                const isSelected = state.currentPair === pair;
+                const price = pairPrices[pair] || 0;
+                html += `
+                    <div class="pair-option ${isSelected ? 'selected' : ''}" onclick="selectPair('${pair}')">
+                        <span class="pair-name">${pair}</span>
+                        <span class="pair-price">$${price.toFixed(2)}</span>
+                        <span class="check-icon">${isSelected ? '✓' : ''}</span>
+                    </div>
+                `;
+            });
+            
+            document.getElementById('pairModalContent').innerHTML = html;
+            document.getElementById('pairModalOverlay').classList.add('show');
+        }
+
+        // 关闭交易对选择弹窗
+        function closePairModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('pairModalOverlay').classList.remove('show');
+        }
+
+        // 选择交易对
+        function selectPair(pair) {
+            if (!currentPairSelectStrategy) return;
+            const state = strategyStates[currentPairSelectStrategy];
             state.currentPair = pair;
-            addLog(strategyId, `切换交易对至 ${pair}`);
+            addLog(currentPairSelectStrategy, `切换交易对至 ${pair}`);
+            closePairModal();
             renderStrategyCards();
         }
 
@@ -863,9 +986,13 @@
                     closeLogModal();
                 }
             });
+            document.getElementById('pairModalOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closePairModal();
+                }
+            });
             
             // 暴露全局函数
-            window.changePair = changePair;
             window.toggleStrategy = toggleStrategy;
             window.resetStrategy = resetStrategy;
             window.openLogModal = openLogModal;
@@ -873,6 +1000,9 @@
             window.openParamsModal = openParamsModal;
             window.closeParamsModal = closeParamsModal;
             window.saveParams = saveParams;
+            window.openPairModal = openPairModal;
+            window.closePairModal = closePairModal;
+            window.selectPair = selectPair;
         });
     </script>
 </body>
