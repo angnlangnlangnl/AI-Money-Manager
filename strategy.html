@@ -143,6 +143,8 @@
             white-space: nowrap;
             flex-shrink: 0;
             padding: 4px 0;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .symbol-item:hover {
             color: #9ca3af;
@@ -167,8 +169,9 @@
             justify-content: center;
             flex-shrink: 0;
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
-        .add-pair-btn:hover {
+        .add-pair-btn:active {
             background-color: #3b82f6;
             color: #0a0a0f;
         }
@@ -322,7 +325,6 @@
             margin: 12px 0;
         }
 
-        /* 资金输入框 */
         .amount-input-section {
             margin-bottom: 12px;
         }
@@ -418,7 +420,7 @@
             -webkit-tap-highlight-color: transparent;
             white-space: nowrap;
         }
-        .button-group .btn:hover {
+        .button-group .btn:active {
             opacity: 0.85;
         }
         .button-group .btn-buy {
@@ -433,7 +435,6 @@
             color: #6a6a7a;
         }
 
-        /* 止盈止损设置 */
         .tp-sl-section {
             background: #0a0a12;
             border: 1px solid #1a1a2a;
@@ -511,7 +512,7 @@
             color: #10b981;
         }
 
-        /* 订单记录卡片 - 手机兼容 */
+        /* 订单记录卡片 */
         .orders-card {
             background: transparent;
             border: none;
@@ -674,7 +675,6 @@
         }
         .order-action-btn:active {
             opacity: 0.7;
-            transform: scale(0.97);
         }
         .btn-cancel-order {
             background: #3a1a1a;
@@ -699,7 +699,7 @@
             font-size: 13px;
         }
 
-        /* 添加交易对弹窗 */
+        /* 统一交易对选择弹窗 */
         .pair-modal-overlay {
             position: fixed;
             inset: 0;
@@ -721,6 +721,7 @@
             max-width: 350px;
             display: flex;
             flex-direction: column;
+            max-height: 80vh;
         }
         .pair-modal .modal-title {
             color: #60a5fa;
@@ -743,10 +744,14 @@
         .pair-modal .search-input:focus {
             border-color: #3b82f6;
         }
+        .pair-modal .search-input::placeholder {
+            color: #5a5a6a;
+        }
         .pair-modal .pair-list {
-            max-height: 200px;
+            max-height: 250px;
             overflow-y: auto;
             margin-bottom: 12px;
+            flex: 1;
         }
         .pair-modal .pair-option {
             display: flex;
@@ -757,9 +762,14 @@
             cursor: pointer;
             margin-bottom: 4px;
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .pair-modal .pair-option:active {
             background: #1a1a2a;
+        }
+        .pair-modal .pair-option.selected {
+            background: #1a2a3a;
+            border: 1px solid #3b82f6;
         }
         .pair-modal .pair-option .pair-name {
             font-size: 13px;
@@ -775,6 +785,7 @@
         .pair-modal .pair-option .check-icon {
             color: #3b82f6;
             font-size: 14px;
+            font-weight: 700;
         }
         .pair-modal .no-results {
             text-align: center;
@@ -804,6 +815,9 @@
         .add-pair-row input:focus {
             border-color: #3b82f6;
         }
+        .add-pair-row input::placeholder {
+            color: #5a5a6a;
+        }
         .add-pair-modal-btn {
             background: #3b82f6;
             color: white;
@@ -817,8 +831,28 @@
             touch-action: manipulation;
             flex-shrink: 0;
         }
+        .add-pair-modal-btn:active {
+            background: #2563eb;
+        }
+        .pair-modal .save-btn {
+            width: 100%;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            margin-top: 8px;
+        }
+        .pair-modal .save-btn:active {
+            background: #0d9668;
+        }
 
-        /* 响应式 - 手机兼容 */
+        /* 响应式 */
         @media (max-width: 480px) {
             .spot-container {
                 padding: 12px;
@@ -845,9 +879,6 @@
             }
             .account-card .account-row .value {
                 font-size: 13px;
-            }
-            .tp-sl-btn-row {
-                flex-wrap: nowrap;
             }
             .tp-sl-status {
                 font-size: 9px;
@@ -902,7 +933,7 @@
             <div class="symbol-list" id="spotSymbolList">
                 <!-- 由JS渲染 -->
             </div>
-            <button class="add-pair-btn" onclick="spotAddPair()">+</button>
+            <button class="add-pair-btn" onclick="openUnifiedPairModal()">+</button>
         </div>
 
         <!-- 3. 价格走势卡片 -->
@@ -953,7 +984,6 @@
             
             <div class="divider"></div>
 
-            <!-- 资金输入框 -->
             <div class="amount-input-section">
                 <div class="amount-input-row">
                     <span class="amount-label">金额</span>
@@ -977,7 +1007,6 @@
                 当前价格: <span id="spotCurrentPriceDisplay">$65,432.10</span>
             </div>
 
-            <!-- 止盈止损设置 -->
             <div class="tp-sl-section">
                 <div class="tp-sl-title">🎯 止盈/止损设置</div>
                 <div class="tp-sl-row">
@@ -1004,17 +1033,18 @@
         </div>
     </div>
 
-    <!-- 添加交易对弹窗 -->
-    <div class="pair-modal-overlay" id="pairModalOverlay" onclick="spotClosePairModal(event)">
+    <!-- 统一交易对选择弹窗 -->
+    <div class="pair-modal-overlay" id="pairModalOverlay" onclick="closeUnifiedPairModal(event)">
         <div class="pair-modal" onclick="event.stopPropagation()">
-            <div class="modal-title">🔍 添加交易对</div>
-            <input type="text" class="search-input" id="pairSearchInput" placeholder="搜索交易对..." oninput="spotFilterPairList()">
+            <div class="modal-title">🔍 选择交易对</div>
+            <input type="text" class="search-input" id="pairSearchInput" placeholder="搜索交易对..." oninput="filterUnifiedPairList()">
             <div class="pair-list" id="pairModalContent"></div>
             <div class="add-pair-section">
                 <div class="add-pair-row">
-                    <input type="text" id="newPairInput" placeholder="输入新交易对 (如: ATOM/USDT)" onkeydown="spotHandleNewPairKeydown(event)">
-                    <button class="add-pair-modal-btn" onclick="spotAddNewPair()">添加</button>
+                    <input type="text" id="newPairInput" placeholder="输入新交易对 (如: ATOM/USDT)" onkeydown="handleNewPairKeydown(event)">
+                    <button class="add-pair-modal-btn" onclick="addNewPairFromModal()">添加</button>
                 </div>
+                <button class="save-btn" onclick="savePairSelection()">💾 保存选择</button>
             </div>
         </div>
     </div>
@@ -1041,8 +1071,10 @@
         let tpSlActive = false;
         let tpSlCheckInterval = null;
         
+        // 已选中的交易对列表
         let spotPairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT'];
         
+        // 所有可用交易对（包含价格数据）
         let spotPairData = {
             'BTC/USDT': { price: 65432.10, change: 3.21, base: 'USDT', asset: 'BTC' },
             'ETH/USDT': { price: 3456.78, change: -1.23, base: 'USDT', asset: 'ETH' },
@@ -1052,6 +1084,28 @@
             'ADA/USDT': { price: 0.456, change: 3.21, base: 'USDT', asset: 'ADA' },
             'DOT/USDT': { price: 7.89, change: -2.10, base: 'USDT', asset: 'DOT' },
             'AVAX/USDT': { price: 38.76, change: 4.56, base: 'USDT', asset: 'AVAX' },
+            'LINK/USDT': { price: 16.45, change: 2.34, base: 'USDT', asset: 'LINK' },
+            'UNI/USDT': { price: 8.92, change: -0.78, base: 'USDT', asset: 'UNI' },
+            'ATOM/USDT': { price: 9.87, change: 1.45, base: 'USDT', asset: 'ATOM' },
+            'LTC/USDT': { price: 72.34, change: 0.56, base: 'USDT', asset: 'LTC' },
+            'BCH/USDT': { price: 345.67, change: -1.89, base: 'USDT', asset: 'BCH' },
+            'FIL/USDT': { price: 5.67, change: 3.45, base: 'USDT', asset: 'FIL' },
+            'APT/USDT': { price: 12.34, change: 7.89, base: 'USDT', asset: 'APT' },
+            'SUI/USDT': { price: 1.89, change: 4.56, base: 'USDT', asset: 'SUI' },
+            'NEAR/USDT': { price: 5.67, change: -2.34, base: 'USDT', asset: 'NEAR' },
+            'OP/USDT': { price: 2.34, change: 1.23, base: 'USDT', asset: 'OP' },
+            'ARB/USDT': { price: 1.56, change: -0.89, base: 'USDT', asset: 'ARB' },
+            'MATIC/USDT': { price: 0.78, change: 2.45, base: 'USDT', asset: 'MATIC' },
+            'DOGE/USDT': { price: 0.156, change: 8.90, base: 'USDT', asset: 'DOGE' },
+            'SHIB/USDT': { price: 0.0000234, change: 6.78, base: 'USDT', asset: 'SHIB' },
+            'TRX/USDT': { price: 0.234, change: 1.56, base: 'USDT', asset: 'TRX' },
+            'ETC/USDT': { price: 23.45, change: -1.23, base: 'USDT', asset: 'ETC' },
+            'AAVE/USDT': { price: 156.78, change: 3.45, base: 'USDT', asset: 'AAVE' },
+            'MKR/USDT': { price: 2345.67, change: -0.56, base: 'USDT', asset: 'MKR' },
+            'COMP/USDT': { price: 56.78, change: 1.89, base: 'USDT', asset: 'COMP' },
+            'CRV/USDT': { price: 0.567, change: -2.34, base: 'USDT', asset: 'CRV' },
+            'SNX/USDT': { price: 3.45, change: 4.56, base: 'USDT', asset: 'SNX' },
+            'YFI/USDT': { price: 6789.01, change: 0.89, base: 'USDT', asset: 'YFI' },
         };
         
         const periodDataPoints = {
@@ -1061,6 +1115,137 @@
             '1m': 30
         };
         
+        // ============================================================
+        //  统一交易对选择功能
+        // ============================================================
+        
+        // 打开统一交易对选择弹窗
+        function openUnifiedPairModal() {
+            document.getElementById('pairSearchInput').value = '';
+            document.getElementById('newPairInput').value = '';
+            renderUnifiedPairList('');
+            document.getElementById('pairModalOverlay').classList.add('show');
+        }
+        
+        // 关闭统一交易对选择弹窗
+        function closeUnifiedPairModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('pairModalOverlay').classList.remove('show');
+        }
+        
+        // 渲染统一交易对列表（显示所有交易对，已添加的标记选中状态）
+        function renderUnifiedPairList(filter) {
+            const container = document.getElementById('pairModalContent');
+            const filterLower = filter.toLowerCase();
+            const allPairs = Object.keys(spotPairData);
+            const filteredPairs = allPairs.filter(pair => pair.toLowerCase().includes(filterLower));
+            
+            if (filteredPairs.length === 0) {
+                container.innerHTML = '<div class="no-results">未找到匹配的交易对</div>';
+                return;
+            }
+            
+            let html = '';
+            filteredPairs.forEach(pair => {
+                const isSelected = spotPairs.includes(pair);
+                const price = spotPairData[pair]?.price || 0;
+                html += `
+                    <div class="pair-option ${isSelected ? 'selected' : ''}" onclick="togglePairSelection('${pair}')">
+                        <span class="pair-name">${pair}</span>
+                        <span class="pair-price">$${price.toFixed(2)}</span>
+                        <span class="check-icon">${isSelected ? '✓' : '+'}</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        // 搜索过滤
+        function filterUnifiedPairList() {
+            const filter = document.getElementById('pairSearchInput').value;
+            renderUnifiedPairList(filter);
+        }
+        
+        // 切换交易对选择状态
+        function togglePairSelection(pair) {
+            if (spotPairs.includes(pair)) {
+                // 取消选择（但不允许取消最后一个）
+                if (spotPairs.length <= 1) {
+                    alert('至少保留一个交易对');
+                    return;
+                }
+                spotPairs = spotPairs.filter(p => p !== pair);
+            } else {
+                // 添加选择
+                spotPairs.push(pair);
+            }
+            renderUnifiedPairList(document.getElementById('pairSearchInput').value);
+        }
+        
+        // 处理新交易对输入回车键
+        function handleNewPairKeydown(event) {
+            if (event.key === 'Enter') {
+                addNewPairFromModal();
+            }
+        }
+        
+        // 从弹窗添加新交易对
+        function addNewPairFromModal() {
+            const input = document.getElementById('newPairInput');
+            const newPair = input.value.trim().toUpperCase();
+            
+            if (!newPair) {
+                alert('请输入交易对名称');
+                return;
+            }
+            
+            if (!newPair.includes('/')) {
+                alert('请输入正确格式，如: ATOM/USDT');
+                return;
+            }
+            
+            if (spotPairData[newPair]) {
+                // 已存在数据，只需添加到选中列表
+                if (!spotPairs.includes(newPair)) {
+                    spotPairs.push(newPair);
+                    input.value = '';
+                    renderUnifiedPairList(document.getElementById('pairSearchInput').value);
+                    alert(`✅ 已添加交易对: ${newPair}`);
+                } else {
+                    alert('该交易对已在列表中');
+                    input.value = '';
+                }
+                return;
+            }
+            
+            // 新交易对，生成随机价格
+            const randomPrice = (Math.random() * 100 + 1).toFixed(2);
+            const assetName = newPair.split('/')[0];
+            spotPairData[newPair] = {
+                price: parseFloat(randomPrice),
+                change: (Math.random() * 10 - 5).toFixed(2),
+                base: 'USDT',
+                asset: assetName
+            };
+            
+            spotPairs.push(newPair);
+            input.value = '';
+            renderUnifiedPairList(document.getElementById('pairSearchInput').value);
+            
+            alert(`✅ 已添加新交易对: ${newPair}\n价格: $${randomPrice}`);
+        }
+        
+        // 保存交易对选择
+        function savePairSelection() {
+            spotRenderSymbols();
+            closeUnifiedPairModal();
+            alert(`✅ 交易对列表已保存\n当前共 ${spotPairs.length} 个交易对`);
+        }
+        
+        // ============================================================
+        //  快捷金额
+        // ============================================================
         function setQuickAmount(value) {
             const input = document.getElementById('tradeAmountInput');
             if (value === 'max') {
@@ -1080,6 +1265,9 @@
             return value;
         }
         
+        // ============================================================
+        //  止盈止损
+        // ============================================================
         function setTpSl() {
             const tpInput = document.getElementById('takeProfitInput');
             const slInput = document.getElementById('stopLossInput');
@@ -1182,6 +1370,9 @@
             spotRenderOrders();
         }
         
+        // ============================================================
+        //  渲染交易对列表
+        // ============================================================
         function spotRenderSymbols() {
             const container = document.getElementById('spotSymbolList');
             if (container) {
@@ -1191,9 +1382,15 @@
                     html += `<span class="symbol-item ${activeClass}" onclick="spotSelectSymbol(this, '${symbol}')">${symbol}</span>`;
                 });
                 container.innerHTML = html;
+                if (spotPairs.length > 0) {
+                    spotCurrentSymbol = spotPairs[0];
+                }
             }
         }
         
+        // ============================================================
+        //  选择交易对
+        // ============================================================
         function spotSelectSymbol(el, symbol) {
             document.querySelectorAll('#spotSymbolList .symbol-item').forEach(s => s.classList.remove('active'));
             el.classList.add('active');
@@ -1217,6 +1414,9 @@
             spotUpdateDisplay();
         }
         
+        // ============================================================
+        //  图表功能
+        // ============================================================
         function switchChartType(type, el) {
             spotChartType = type;
             document.querySelectorAll('.chart-type-tab').forEach(tab => {
@@ -1355,6 +1555,9 @@
             };
         }
         
+        // ============================================================
+        //  账户显示
+        // ============================================================
         function spotUpdateDisplay() {
             const total = spotUsdtBalance + spotBtcBalance * spotBtcPrice;
             const pnl = total - 10000;
@@ -1373,6 +1576,9 @@
             document.getElementById('spotCurrentPriceDisplay').textContent = '$' + spotBtcPrice.toFixed(2);
         }
         
+        // ============================================================
+        //  买入/卖出
+        // ============================================================
         function spotBuy() {
             const assetSymbol = spotCurrentSymbol.split('/')[0];
             const tradeAmount = getTradeAmount();
@@ -1445,6 +1651,9 @@
             document.getElementById('tradeAmountInput').value = '';
         }
         
+        // ============================================================
+        //  订单记录
+        // ============================================================
         function spotRenderOrders() {
             const container = document.getElementById('ordersContainer');
             
@@ -1597,102 +1806,6 @@
             spotRenderOrders();
         }
         
-        function spotAddPair() {
-            document.getElementById('pairSearchInput').value = '';
-            document.getElementById('newPairInput').value = '';
-            spotRenderPairList('');
-            document.getElementById('pairModalOverlay').classList.add('show');
-        }
-        
-        function spotClosePairModal(e) {
-            if (e && e.target !== e.currentTarget) return;
-            document.getElementById('pairModalOverlay').classList.remove('show');
-        }
-        
-        function spotRenderPairList(filter) {
-            const container = document.getElementById('pairModalContent');
-            const filterLower = filter.toLowerCase();
-            const availablePairs = Object.keys(spotPairData);
-            const filteredPairs = availablePairs.filter(pair => pair.toLowerCase().includes(filterLower) && !spotPairs.includes(pair));
-            
-            if (filteredPairs.length === 0) {
-                container.innerHTML = '<div class="no-results">未找到可添加的交易对</div>';
-                return;
-            }
-            
-            let html = '';
-            filteredPairs.forEach(pair => {
-                const price = spotPairData[pair]?.price || 0;
-                html += `
-                    <div class="pair-option" onclick="spotSelectNewPair('${pair}')">
-                        <span class="pair-name">${pair}</span>
-                        <span class="pair-price">$${price.toFixed(2)}</span>
-                        <span class="check-icon">+</span>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function spotFilterPairList() {
-            const filter = document.getElementById('pairSearchInput').value;
-            spotRenderPairList(filter);
-        }
-        
-        function spotSelectNewPair(pair) {
-            if (!spotPairs.includes(pair)) {
-                spotPairs.push(pair);
-                spotRenderSymbols();
-                spotClosePairModal();
-                alert(`✅ 已添加交易对: ${pair}`);
-            }
-        }
-        
-        function spotHandleNewPairKeydown(event) {
-            if (event.key === 'Enter') {
-                spotAddNewPair();
-            }
-        }
-        
-        function spotAddNewPair() {
-            const input = document.getElementById('newPairInput');
-            const newPair = input.value.trim().toUpperCase();
-            
-            if (!newPair) {
-                alert('请输入交易对名称');
-                return;
-            }
-            
-            if (!newPair.includes('/')) {
-                alert('请输入正确格式，如: ATOM/USDT');
-                return;
-            }
-            
-            if (spotPairs.includes(newPair)) {
-                alert('该交易对已在列表中');
-                input.value = '';
-                return;
-            }
-            
-            spotPairs.push(newPair);
-            
-            const randomPrice = (Math.random() * 100 + 1).toFixed(2);
-            const assetName = newPair.split('/')[0];
-            spotPairData[newPair] = {
-                price: parseFloat(randomPrice),
-                change: (Math.random() * 10 - 5).toFixed(2),
-                base: 'USDT',
-                asset: assetName
-            };
-            
-            input.value = '';
-            spotRenderSymbols();
-            spotRenderPairList(document.getElementById('pairSearchInput').value);
-            
-            alert(`✅ 已添加新交易对: ${newPair}\n价格: $${randomPrice}`);
-        }
-        
         // ============================================================
         //  初始化
         // ============================================================
@@ -1707,20 +1820,21 @@
             window.switchChartType = switchChartType;
             window.spotBuy = spotBuy;
             window.spotSell = spotSell;
-            window.spotAddPair = spotAddPair;
-            window.spotClosePairModal = spotClosePairModal;
-            window.spotFilterPairList = spotFilterPairList;
-            window.spotSelectNewPair = spotSelectNewPair;
-            window.spotHandleNewPairKeydown = spotHandleNewPairKeydown;
-            window.spotAddNewPair = spotAddNewPair;
             window.spotCancelOrder = spotCancelOrder;
             window.spotCloseOrder = spotCloseOrder;
             window.setTpSl = setTpSl;
             window.setQuickAmount = setQuickAmount;
+            window.openUnifiedPairModal = openUnifiedPairModal;
+            window.closeUnifiedPairModal = closeUnifiedPairModal;
+            window.filterUnifiedPairList = filterUnifiedPairList;
+            window.togglePairSelection = togglePairSelection;
+            window.handleNewPairKeydown = handleNewPairKeydown;
+            window.addNewPairFromModal = addNewPairFromModal;
+            window.savePairSelection = savePairSelection;
             
             document.getElementById('pairModalOverlay').addEventListener('click', function(e) {
                 if (e.target === this) {
-                    spotClosePairModal();
+                    closeUnifiedPairModal();
                 }
             });
             
