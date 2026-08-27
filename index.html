@@ -3,13 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>AI 金融助手</title>
-    <script src="https://cdn.tailwindcss.com">
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
-    </script>
+    <title>网格量化交易策略 - AI 金融助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        /* ===== 全局重置 & 主应用样式 ===== */
         * {
             margin: 0;
             padding: 0;
@@ -20,8 +17,8 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #0a0a0f;
             color: #e8e8f0;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            overflow-y: auto;
             touch-action: manipulation;
         }
         ::-webkit-scrollbar {
@@ -34,2802 +31,1577 @@
             background: #2a2a3a;
             border-radius: 4px;
         }
-        .message-bubble a {
-            color: #60a5fa;
-            text-decoration: underline;
-        }
-        .typing-cursor::after {
-            content: '▊';
-            animation: blink 1s step-end infinite;
-            color: #6a6a7a;
-        }
-        @keyframes blink {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0;
-            }
-        }
-        .safe-area-bottom {
-            padding-bottom: env(safe-area-inset-bottom, 12px);
-        }
         .tap-active:active {
             transform: scale(0.96);
             opacity: 0.7;
         }
-        .drawer {
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        .drawer.open {
-            transform: translateX(0);
-        }
-        .drawer.closed {
-            transform: translateX(-100%);
-        }
-        .overlay {
-            transition: opacity 0.3s ease;
-        }
-        .overlay.open {
-            opacity: 1;
-            pointer-events: auto;
-        }
-        .overlay.closed {
-            opacity: 0;
-            pointer-events: none;
-        }
 
-        /* ===== 输入框完美适配 ===== */
-        #chatInput {
-            min-height: 24px;
-            max-height: 66px;
-            font-size: 13px;
-            padding: 6px 10px;
-            transition: all 0.2s ease;
-            background: transparent !important;
-            color: #e8e8f0 !important;
-            border: none !important;
-            outline: none !important;
+        /* 容器 */
+        .grid-container {
+            max-width: 900px;
             width: 100%;
-            line-height: 1.4;
-            caret-color: #e8e8f0;
-            box-shadow: none !important;
-            text-shadow: none !important;
-        }
-        #chatInput::before,
-        #chatInput::after {
-            display: none !important;
-            content: none !important;
-        }
-        #chatInput::-webkit-scrollbar {
-            width: 0;
-            height: 0;
-            background: transparent;
-        }
-        #chatInput::-webkit-scrollbar-thumb {
-            background: transparent;
-        }
-        #chatInput::placeholder {
-            color: #5a5a6a;
-        }
-        #chatInput.recording {
-            background: #1a3a2a !important;
-            color: #4ade80 !important;
-            border-radius: 12px;
-            caret-color: #4ade80 !important;
-        }
-        #chatInput.cancel-mode {
-            background: #3a1a1a !important;
-            color: #f87171 !important;
-            border-radius: 12px;
-            caret-color: #f87171 !important;
-        }
-        .input-container {
-            background: #12121f;
-            border-radius: 16px;
-            border: 1px solid #1a1a2a;
-            padding: 2px 4px;
-            display: flex;
-            align-items: flex-end;
-            gap: 4px;
-            transition: border-color 0.2s;
-            flex: 1;
-            box-shadow: none !important;
-        }
-        .input-container:focus-within {
-            border-color: #3b82f6;
-        }
-        .input-container::before,
-        .input-container::after {
-            display: none !important;
-            content: none !important;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
         }
 
-        .quick-scroll {
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-        }
-        .quick-scroll::-webkit-scrollbar {
-            display: none;
-        }
-
-        /* ===== 卡片样式 ===== */
-        .report-card {
-            background: linear-gradient(145deg, #12121f, #0d0d18);
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 16px;
-            margin: 8px 0;
-            width: 100%;
-        }
-        .report-card h3 {
-            color: #60a5fa;
-            font-weight: 600;
-            font-size: 1rem;
-            margin-bottom: 8px;
-        }
-        .report-card ul {
-            list-style: none;
-            padding: 0;
-        }
-        .report-card li {
-            padding: 6px 0;
-            border-bottom: 1px solid #1a1a2a;
-            font-size: 0.85rem;
-            color: #c8c8d8;
-        }
-        .report-card li:last-child {
-            border-bottom: none;
-        }
-        .report-card .highlight {
-            color: #fbbf24;
-            font-weight: 500;
-        }
-        .report-card .tag {
-            display: inline-block;
-            background: #1a1a2a;
-            color: #8a8a9a;
-            font-size: 0.7rem;
-            padding: 2px 10px;
-            border-radius: 20px;
-            margin-top: 4px;
-        }
-        .report-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 8px;
-        }
-        .report-grid .item {
-            background: #0a0a12;
-            padding: 10px;
-            border-radius: 12px;
-            text-align: center;
-            border: 1px solid #1a1a2a;
-        }
-        .report-grid .item .num {
-            font-size: 1.2rem;
-            font-weight: 700;
-            color: #e8e8f0;
-        }
-        .report-grid .item .label {
-            font-size: 0.65rem;
-            color: #6a6a7a;
-        }
-        .report-btn {
-            background: #1a2a3a;
-            border-color: #2a6a4a;
-        }
-        .report-btn:active {
-            background: #2a4a3a;
-        }
-
-        /* ===== 语音样式 ===== */
-        .voice-msg-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 12px 6px 8px;
-            background: #1a2a3a;
-            border-radius: 20px;
+        /* 返回按钮 */
+        .back-btn {
             cursor: pointer;
-            transition: background 0.2s;
-            min-width: 60px;
-            max-width: 200px;
-        }
-        .voice-msg-wrapper:active {
-            background: #2a4a5a;
-        }
-        .voice-msg-wrapper .voice-icon {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px;
-            height: 28px;
-            flex-shrink: 0;
-        }
-        .voice-msg-wrapper .voice-icon svg {
-            width: 20px;
-            height: 20px;
-            fill: #60a5fa;
-        }
-        .voice-msg-wrapper .voice-icon.playing svg {
-            fill: #4ade80;
-        }
-        .voice-msg-wrapper .duration {
-            font-size: 13px;
-            color: #c8c8d8;
-            font-weight: 500;
-            min-width: 32px;
-            text-align: center;
-        }
-        .voice-msg-wrapper .duration.playing {
-            color: #4ade80;
-        }
-        .voice-msg-wrapper .duration .wave {
-            display: inline-block;
-            animation: wave 1.2s ease-in-out infinite;
-        }
-        @keyframes wave {
-            0%,
-            100% {
-                transform: scaleY(0.4);
-            }
-            50% {
-                transform: scaleY(1);
-            }
-        }
-
-        /* 取消提示浮层 */
-        #cancelTip {
-            position: fixed;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #dc2626;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 600;
-            opacity: 0;
-            transition: opacity 0.25s ease, transform 0.25s ease;
-            pointer-events: none;
-            z-index: 100;
-            box-shadow: 0 8px 30px rgba(220, 38, 38, 0.4);
-        }
-        #cancelTip.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(-10px);
-        }
-
-        /* 语音按钮激活样式 */
-        #voiceBtn.active {
-            background: #1a3a2a !important;
-            border-color: #4ade80 !important;
-        }
-        #voiceBtn.active svg {
-            stroke: #4ade80 !important;
-        }
-
-        /* ===== 启动页样式 ===== */
-        #splashContainer {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: #0a0a0f;
-            display: flex;
-            flex-direction: column;
-            transition: opacity 0.6s ease, transform 0.6s ease;
-        }
-        #splashContainer.hide {
-            opacity: 0;
-            transform: scale(1.05);
-            pointer-events: none;
-        }
-        .splash-slide {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            padding: 40px 32px;
-            text-align: center;
-            min-height: 70vh;
-        }
-        .splash-icon {
-            width: 100px;
-            height: 100px;
-            border-radius: 28px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            margin-bottom: 28px;
-            box-shadow: 0 20px 60px rgba(59, 130, 246, 0.3);
-        }
-        .splash-title {
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 12px;
-            background: linear-gradient(to right, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .splash-desc {
-            font-size: 16px;
-            color: #9ca3af;
-            line-height: 1.7;
-            max-width: 320px;
-        }
-        .splash-highlight {
-            color: #fbbf24;
-            font-weight: 600;
-        }
-        .splash-badge {
-            display: inline-block;
-            background: #1e293b;
-            color: #94a3b8;
-            font-size: 12px;
-            padding: 4px 16px;
-            border-radius: 20px;
-            margin-top: 16px;
-            border: 1px solid #334155;
-        }
-        .splash-stats {
-            display: flex;
-            gap: 24px;
-            margin-top: 20px;
-        }
-        .splash-stats .stat {
-            text-align: center;
-        }
-        .splash-stats .stat .num {
-            font-size: 24px;
-            font-weight: 700;
-            color: #e8e8f0;
-        }
-        .splash-stats .stat .label {
-            font-size: 12px;
-            color: #6b7280;
-        }
-        .splash-footer {
-            padding: 20px 32px 40px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-            background: linear-gradient(to top, #0a0a0f 60%, transparent);
-        }
-        .splash-dots {
-            display: flex;
-            gap: 10px;
-        }
-        .splash-dots .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #2a2a3a;
-            transition: all 0.3s;
-            cursor: pointer;
-        }
-        .splash-dots .dot.active {
-            background: #3b82f6;
-            width: 28px;
+            padding: 4px 6px;
             border-radius: 6px;
-        }
-        .splash-btn {
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            color: #fff;
-            font-weight: 600;
-            font-size: 18px;
-            padding: 14px 48px;
-            border-radius: 40px;
-            border: none;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.3);
-            width: 100%;
-            max-width: 300px;
-        }
-        .splash-btn:active {
-            transform: scale(0.96);
-        }
-        .splash-skip {
-            color: #6b7280;
-            font-size: 14px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px 12px;
-        }
-        .splash-skip:active {
-            color: #9ca3af;
-        }
-        .slide-enter {
-            animation: slideUp 0.5s ease forwards;
-        }
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(30px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        #app {
-            display: none;
-            flex-direction: column;
-            height: 100vh;
-            background: #0a0a0f;
-        }
-        #app.show {
-            display: flex;
-        }
-
-        /* ===== 顶部导航高度缩小20% ===== */
-        .top-nav {
-            padding-top: 3.6px !important;
-            padding-bottom: 3.6px !important;
-        }
-        .top-nav-border {
-            border-bottom-width: 1px;
-        }
-        .chat-header {
-            display: flex;
+            transition: background 0.2s;
+            color: #8a8a9a;
+            display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 12px;
-            padding: 2px 0;
-        }
-        .chat-header .label {
-            font-size: 10px;
-            color: #5a5a6a;
-        }
-        .chat-header .label .highlight {
-            color: #4a9a5a;
-        }
-
-        /* ===== 分享面板样式 ===== */
-        .share-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 999;
-            display: none;
-            align-items: flex-end;
-            justify-content: center;
-            animation: fadeIn 0.3s ease;
-        }
-        .share-overlay.show {
-            display: flex;
-        }
-        .share-panel {
-            background: #12121f;
-            border-radius: 24px 24px 0 0;
-            padding: 20px 24px 34px;
-            width: 100%;
-            max-width: 420px;
-            max-height: 80vh;
-            animation: slideUp 0.35s ease;
-            border-top: 1px solid #1a1a2a;
-        }
-        .share-panel .handle {
-            width: 40px;
-            height: 4px;
-            background: #2a2a3a;
-            border-radius: 4px;
-            margin: 0 auto 16px;
-        }
-        .share-panel .title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #e8e8f0;
-            text-align: center;
+            background: transparent;
+            border: none;
             margin-bottom: 16px;
+            font-size: 0;
+            text-decoration: none;
         }
-        .share-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 12px;
-            margin-bottom: 20px;
-        }
-        .share-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            cursor: pointer;
-            padding: 8px 0;
-            border-radius: 12px;
-            transition: background 0.2s;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .share-item:active {
-            background: #1a1a2a;
-            transform: scale(0.95);
-        }
-        .share-item .icon-wrap {
-            width: 48px;
-            height: 48px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            transition: transform 0.2s;
-        }
-        .share-item .icon-wrap svg {
-            width: 26px;
-            height: 26px;
-        }
-        .share-item .label {
-            font-size: 10px;
-            color: #8a8a9a;
-        }
-        .share-cancel {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            background: #1a1a2a;
-            border: none;
-            border-radius: 12px;
-            color: #8a8a9a;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-            text-align: center;
-        }
-        .share-cancel:active {
-            background: #2a2a3a;
-        }
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-            }
-            to {
-                opacity: 1;
-            }
-        }
-        @keyframes slideUp {
-            from {
-                transform: translateY(30px);
-                opacity: 0.5;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
-            }
-        }
-
-        /* ===== 设置面板样式 ===== */
-        .settings-overlay {
-            position: fixed;
-            inset: 0;
-            background: #0a0a0f;
-            z-index: 999;
-            display: none;
-            flex-direction: column;
-            animation: fadeIn 0.25s ease;
-        }
-        .settings-overlay.show {
-            display: flex;
-        }
-        .settings-header {
-            display: flex;
-            align-items: center;
-            padding: 12px 16px;
-            border-bottom: 1px solid #1a1a2a;
-            flex-shrink: 0;
-            background: #0a0a0f;
-            min-height: 52px;
-        }
-        .settings-header .back-btn {
-            cursor: pointer;
-            padding: 6px 8px;
-            border-radius: 8px;
-            transition: background 0.2s;
-            color: #8a8a9a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-tap-highlight-color: transparent;
-            margin-right: 12px;
-        }
-        .settings-header .back-btn:active {
+        .back-btn:active {
             background: #1a1a2a;
         }
-        .settings-header .back-btn svg {
+        .back-btn svg {
             width: 24px;
             height: 24px;
             stroke: #8a8a9a;
             fill: none;
             stroke-width: 2;
         }
-        .settings-header .title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #e8e8f0;
-            flex: 1;
-            text-align: center;
-            margin-right: 40px;
-        }
-        .settings-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px 20px 30px;
-            background: #0a0a0f;
-        }
-        .settings-section {
-            background: #0d0d18;
-            border-radius: 16px;
-            border: 1px solid #1a1a2a;
-            margin-bottom: 12px;
-            overflow: hidden;
-        }
-        .settings-section .section-title {
-            padding: 12px 16px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #8a8a9a;
-            border-bottom: 1px solid #1a1a2a;
-        }
-        .settings-section .section-content {
-            padding: 12px 16px;
-        }
-        .settings-input {
-            width: 100%;
-            background: #1a1a2a;
-            border: 1px solid #2a2a3a;
-            border-radius: 10px;
-            padding: 10px 12px;
-            font-size: 13px;
-            color: #e8e8f0;
-            outline: none;
-            margin-bottom: 8px;
-            transition: border-color 0.2s;
-        }
-        .settings-input:focus {
-            border-color: #3b82f6;
-        }
-        .settings-input::placeholder {
-            color: #4a4a5a;
-        }
-        .info-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 6px 0;
-            font-size: 13px;
-        }
-        .info-row .label {
-            color: #6a6a7a;
-        }
-        .info-row .value {
-            color: #e8e8f0;
-            font-weight: 500;
-        }
-        .settings-btn-primary {
-            width: 100%;
-            background: #3b82f6;
-            color: #fff;
-            border: none;
-            border-radius: 10px;
-            padding: 10px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .settings-btn-primary:active {
-            background: #2563eb;
-        }
-        .settings-btn-secondary {
-            width: 100%;
-            background: #1a1a2a;
-            color: #8a8a9a;
-            border: 1px solid #2a2a3a;
-            border-radius: 10px;
-            padding: 10px;
-            font-size: 13px;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 8px;
-        }
-        .settings-btn-secondary:active {
-            background: #2a2a3a;
-        }
-        .settings-btn-cancel {
-            width: 100%;
-            background: #1a1a2a;
-            color: #6a6a7a;
-            border: none;
-            border-radius: 12px;
-            padding: 12px;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-            margin-top: 8px;
-        }
-        .settings-btn-cancel:active {
-            background: #2a2a3a;
-        }
-        .dashboard-stats {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-        }
-        .dashboard-stats .stat-item {
-            text-align: center;
-            padding: 8px 0;
-            background: #0a0a12;
-            border-radius: 10px;
-        }
-        .dashboard-stats .stat-num {
-            font-size: 18px;
-            font-weight: 700;
-            color: #e8e8f0;
-            display: block;
-        }
-        .dashboard-stats .stat-label {
-            font-size: 10px;
-            color: #5a5a6a;
-        }
-        .toggle-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .toggle-switch {
-            position: relative;
-            width: 44px;
-            height: 24px;
-        }
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        .toggle-switch .slider {
-            position: absolute;
-            cursor: pointer;
-            inset: 0;
-            background: #2a2a3a;
-            border-radius: 24px;
-            transition: background 0.3s;
-        }
-        .toggle-switch .slider::before {
-            content: '';
-            position: absolute;
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background: #6a6a7a;
-            border-radius: 50%;
-            transition: transform 0.3s, background 0.3s;
-        }
-        .toggle-switch input:checked + .slider {
-            background: #3b82f6;
-        }
-        .toggle-switch input:checked + .slider::before {
-            transform: translateX(20px);
-            background: #fff;
-        }
 
-        /* ===== 返利卡片样式 ===== */
-        .rebate-dashboard {
-            background: #0d0d18;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 20px;
-            margin: 12px 0 4px 0;
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        .rebate-dashboard:hover {
-            border-color: #2a3a4a;
-        }
-        .rebate-dashboard::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            right: -50%;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.05), transparent);
-            pointer-events: none;
-        }
-        .rebate-dashboard::after {
-            content: '💰';
-            position: absolute;
-            bottom: -10px;
-            right: -10px;
-            font-size: 60px;
-            opacity: 0.03;
-            pointer-events: none;
-        }
-        .rebate-header {
+        /* 顶部标题 */
+        .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 16px;
-            position: relative;
-            z-index: 1;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 14px 20px;
         }
-        .rebate-item {
-            flex: 1;
-        }
-        .rebate-item-left {
-            text-align: left;
-        }
-        .rebate-item-right {
-            text-align: right;
-        }
-        .rebate-label {
-            font-size: 12px;
-            color: #8a8a9a;
-            margin-bottom: 6px;
+        .page-header .title-area {
             display: flex;
-            align-items: center;
+            flex-direction: column;
             gap: 4px;
         }
-        .rebate-label-left {
-            justify-content: flex-start;
-        }
-        .rebate-label-right {
-            justify-content: flex-end;
-        }
-        .rebate-total-amount {
-            font-size: 32px;
-            font-weight: 800;
-            color: #10b981;
-            text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-            line-height: 1;
-            animation: rebatePulse 3s ease-in-out infinite;
-        }
-        .rebate-pending-amount {
-            font-size: 22px;
+        .page-header .title {
+            font-size: 18px;
             font-weight: 700;
-            color: #f59e0b;
-            line-height: 1;
+            color: #60a5fa;
         }
-        @keyframes rebatePulse {
-            0%,
-            100% {
-                text-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
-            }
-            50% {
-                text-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
-            }
+        .page-header .know-btn {
+            background: #1a2a3a;
+            color: #60a5fa;
+            border: 1px solid #2a3a4a;
+            border-radius: 20px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
         }
-        .rebate-divider {
-            border-top: 1px solid rgba(42, 58, 74, 0.4);
-            margin: 12px 0;
-            position: relative;
-            z-index: 1;
+        .page-header .know-btn:hover {
+            background: #2a3a4a;
+            border-color: #3b82f6;
         }
-        .rebate-footer {
+        .page-header .current-price-info {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+        .page-header .current-price-info .price {
+            font-size: 24px;
+            font-weight: 700;
+            color: #e8e8f0;
+        }
+        .page-header .current-price-info .change {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* 量化了解弹窗 */
+        .knowledge-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 3000;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+        .knowledge-overlay.show {
+            display: flex;
+        }
+        .knowledge-panel {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+            animation: slideUp 0.3s ease;
+        }
+        .knowledge-panel .panel-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            font-size: 12px;
-            color: #8a8a9a;
-            position: relative;
-            z-index: 1;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 12px;
         }
-        .rebate-stat {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .rebate-stat-icon {
-            font-size: 14px;
-        }
-        .rebate-stat-value {
-            color: #e8e8f0;
+        .knowledge-panel .panel-title {
+            color: #60a5fa;
+            font-size: 18px;
             font-weight: 700;
         }
-        .rebate-rate-badge {
-            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
-            border: 1px solid rgba(16, 185, 129, 0.2);
-            color: #10b981;
-            padding: 4px 10px;
-            border-radius: 12px;
-            font-weight: 600;
-            font-size: 11px;
-        }
-        @media (max-width: 360px) {
-            .rebate-total-amount {
-                font-size: 24px;
-            }
-            .rebate-pending-amount {
-                font-size: 18px;
-            }
-        }
-
-        .wave-bars {
-            display: flex;
-            align-items: center;
-            gap: 2px;
-            height: 20px;
-        }
-        .wave-bars span {
-            display: block;
-            width: 3px;
-            height: 100%;
-            background: #4ade80;
-            border-radius: 2px;
-            animation: waveAnim 0.8s ease-in-out infinite alternate;
-        }
-        .wave-bars span:nth-child(1) {
-            animation-delay: 0s;
-            height: 40%;
-        }
-        .wave-bars span:nth-child(2) {
-            animation-delay: 0.2s;
-            height: 70%;
-        }
-        .wave-bars span:nth-child(3) {
-            animation-delay: 0.4s;
-            height: 100%;
-        }
-        .wave-bars span:nth-child(4) {
-            animation-delay: 0.6s;
-            height: 60%;
-        }
-        .wave-bars span:nth-child(5) {
-            animation-delay: 0.3s;
-            height: 80%;
-        }
-        @keyframes waveAnim {
-            0% {
-                transform: scaleY(0.3);
-            }
-            100% {
-                transform: scaleY(1);
-            }
-        }
-
-        /* ===== 消息布局 ===== */
-        .msg-wrapper {
-            display: flex;
-            flex-direction: column;
-            width: 100%;
-            padding: 4px 0;
-        }
-        .msg-wrapper .msg-row-ai {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            width: 100%;
-            padding-left: 12px;
-        }
-        .msg-wrapper .msg-row-ai .msg-avatar {
-            margin-bottom: 4px;
-            margin-left: 2px;
-        }
-        .msg-wrapper .msg-row-ai .msg-bubble {
-            max-width: 96%;
-            padding: 10px 14px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.6;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-top-left-radius: 4px;
-        }
-        .msg-wrapper .msg-row-user {
-            display: flex;
-            align-items: flex-start;
-            justify-content: flex-end;
-            gap: 10px;
-            width: 100%;
-        }
-        .msg-wrapper .msg-row-user .msg-avatar {
-            flex-shrink: 0;
-            order: 2;
-        }
-        .msg-wrapper .msg-row-user .msg-bubble {
-            max-width: 82%;
-            padding: 10px 14px;
-            border-radius: 16px;
-            font-size: 14px;
-            line-height: 1.6;
-            word-wrap: break-word;
-            overflow-wrap: break-word;
-            background: #3b82f6;
-            border-top-right-radius: 4px;
-            color: #fff;
-            order: 1;
-        }
-        .msg-wrapper .msg-avatar {
+        .knowledge-panel .close-btn {
+            background: #1a1a2a;
+            color: #8a8a9a;
+            border: none;
+            border-radius: 50%;
             width: 32px;
             height: 32px;
-            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            transition: background 0.2s;
+        }
+        .knowledge-panel .close-btn:hover {
+            background: #2a2a3a;
+        }
+        .knowledge-panel h2 {
+            color: #60a5fa;
+            font-size: 16px;
             font-weight: 700;
-            flex-shrink: 0;
-            background: #1a1a2a;
-            color: #6a6a7a;
+            margin: 20px 0 10px 0;
         }
-        .msg-wrapper .msg-avatar.user {
-            background: #3b82f6;
-            color: #fff;
+        .knowledge-panel h3 {
+            color: #e8e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 15px 0 8px 0;
         }
-        .msg-wrapper .msg-time {
-            font-size: 10px;
-            color: #4a4a5a;
-            text-align: center;
-            padding-top: 3px;
+        .knowledge-panel p {
+            color: #9ca3af;
+            font-size: 13px;
+            line-height: 1.7;
+            margin-bottom: 8px;
+        }
+        .knowledge-panel pre {
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #c8c8d8;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .knowledge-panel table {
             width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
         }
-        .msg-wrapper .msg-time.ai-time {
+        .knowledge-panel table th {
+            background: #1a1a2a;
+            color: #60a5fa;
+            padding: 8px 12px;
             text-align: left;
-            padding-left: 14px;
+            font-weight: 600;
+            border: 1px solid #2a2a3a;
         }
-        .msg-wrapper .msg-time.user-time {
-            text-align: right;
-            padding-right: 2px;
+        .knowledge-panel table td {
+            padding: 8px 12px;
+            color: #c8c8d8;
+            border: 1px solid #2a2a3a;
         }
-        .msg-wrapper .msg-bubble .report-card {
-            max-width: 100%;
-        }
-        .input-wrapper {
-            display: flex;
-            align-items: flex-end;
-            gap: 6px;
-            width: 100%;
-        }
-        .input-wrapper #voiceBtn {
-            margin-bottom: 0;
-            align-self: flex-end;
-            flex-shrink: 0;
-        }
-        #sendBtn {
-            flex-shrink: 0;
-        }
-        .share-trigger {
-            cursor: pointer;
-            padding: 4px 6px;
+        .knowledge-panel .highlight-box {
+            background: #1a2a3a;
+            border: 1px solid #2a3a4a;
             border-radius: 8px;
-            transition: background 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-            color: #8a8a9a;
-            -webkit-tap-highlight-color: transparent;
+            padding: 12px;
+            margin: 10px 0;
         }
-        .share-trigger:active {
-            background: #1a1a2a;
-        }
-        .share-trigger svg {
-            width: 20px;
-            height: 20px;
-            stroke: #8a8a9a;
-            fill: none;
-            stroke-width: 2;
-        }
-        .share-trigger .label {
-            font-size: 11px;
-            color: #8a8a9a;
-        }
-        .drawer-settings-btn {
-            cursor: pointer;
-            padding: 4px;
-            border-radius: 8px;
-            transition: background 0.2s;
-            color: #6a6a7a;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .drawer-settings-btn:active {
-            background: #1a1a2a;
-        }
-        .drawer-settings-btn svg {
-            width: 22px;
-            height: 22px;
-            stroke: #6a6a7a;
-            fill: none;
-            stroke-width: 2;
+        .knowledge-panel .highlight-box strong {
+            color: #60a5fa;
         }
 
-        /* 系统提示消息样式 */
-        .system-message {
-            color: #f87171;
+        /* 策略选择标签 */
+        .strategy-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 0;
+            margin-bottom: 16px;
+            scrollbar-width: none;
+        }
+        .strategy-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        .strategy-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            border: 1px solid #1a1a2a;
+            background: #12121f;
+            color: #6a6a7a;
+        }
+        .strategy-tab.active {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+        .strategy-tab:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .strategy-tab.active:hover {
+            color: #fff;
+        }
+
+        /* 卡片通用样式 */
+        .card {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 16px;
+        }
+        .card .card-title {
+            color: #60a5fa;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .card .card-title .params-btn {
+            background: #1a1a2a;
+            color: #8a8a9a;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 12px;
             font-size: 12px;
-            padding: 6px 12px;
-            background: transparent !important;
-            border: none !important;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .card .card-title .params-btn:hover {
+            background: #2a2a3a;
+        }
+
+        /* 网格可视化 */
+        .grid-visual {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-bottom: 12px;
+        }
+        .grid-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            font-size: 12px;
+        }
+        .grid-row.sell {
+            border-left: 3px solid #ef4444;
+        }
+        .grid-row.buy {
+            border-left: 3px solid #10b981;
+        }
+        .grid-row .grid-price {
+            flex: 1;
+            color: #e8e8f0;
+            font-weight: 600;
+        }
+        .grid-row .grid-status {
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        .grid-row .grid-status.filled {
+            background: #1a3a2a;
+            color: #10b981;
+        }
+        .grid-row .grid-status.pending {
+            background: #1a1a2a;
+            color: #6a6a7a;
+        }
+        .grid-row .grid-status.triggered {
+            background: #3a1a1a;
+            color: #ef4444;
+        }
+
+        /* 账户信息 */
+        .account-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .account-row .label {
+            color: #6a6a7a;
+        }
+        .account-row .value {
+            font-weight: 600;
+            color: #e8e8f0;
+        }
+        .account-row .value.green {
+            color: #10b981;
+        }
+        .account-row .value.red {
+            color: #ef4444;
+        }
+
+        /* 按钮 */
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .btn {
+            flex: 1;
+            text-align: center;
+            padding: 10px 18px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            color: white;
+        }
+        .btn:hover {
+            opacity: 0.85;
+        }
+        .btn-primary {
+            background: #3b82f6;
+        }
+        .btn-success {
+            background: #10b981;
+        }
+        .btn-danger {
+            background: #ef4444;
+        }
+        .btn-secondary {
+            background: #1a1a2a;
+            color: #8a8a9a;
+        }
+
+        /* 状态指示器 */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            color: #9ca3af;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #6a6a7a;
+        }
+        .status-dot.active {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
+        }
+
+        /* 日志 */
+        .log-box {
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 12px;
+            height: 140px;
+            overflow-y: auto;
+            font-family: 'Consolas', monospace;
+            font-size: 12px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
+            color: #9ca3af;
+        }
+
+        /* 图表容器 */
+        .chart-wrapper {
+            position: relative;
+            height: 200px;
+        }
+        .chart-wrapper canvas {
+            width: 100% !important;
+            height: 200px !important;
+        }
+
+        /* 信号指示 */
+        .signal-indicator {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .signal-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            background: #1a1a2a;
+            color: #6a6a7a;
+        }
+        .signal-badge.active {
+            background: #1a3a2a;
+            color: #10b981;
+        }
+
+        /* 参数设置弹窗样式 */
+        .params-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+        }
+        .params-modal-overlay.show {
+            display: flex;
+        }
+        .params-modal {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 20px;
+            width: 90%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+        .params-modal .modal-title {
+            color: #60a5fa;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .params-modal .param-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .params-modal .param-row .param-label {
+            font-size: 13px;
+            color: #6a6a7a;
+        }
+        .params-modal .param-row .param-input {
+            width: 120px;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 13px;
+            color: #e8e8f0;
+            outline: none;
+            text-align: right;
+            transition: border-color 0.2s;
+        }
+        .params-modal .param-row .param-input:focus {
+            border-color: #3b82f6;
+        }
+        .params-modal .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .params-modal .modal-buttons .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .params-modal .modal-buttons .btn-confirm {
+            background: #3b82f6;
+            color: #0a0a0f;
+        }
+        .params-modal .modal-buttons .btn-cancel {
+            background: #1a1a2a;
+            color: #6a6a7a;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0.5; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .grid-container {
+                padding: 12px;
+            }
+            .page-header .title {
+                font-size: 15px;
+            }
+            .page-header .current-price-info .price {
+                font-size: 20px;
+            }
+            .knowledge-panel {
+                padding: 16px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="grid-container">
+        <!-- 返回按钮 -->
+        <a class="back-btn" href="index.html" title="返回">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </a>
 
-    <!-- ============================================================ -->
-    <!-- 启动页容器 -->
-    <!-- ============================================================ -->
-    <div id="splashContainer">
-        <div id="splashSlides" class="flex-1 relative overflow-hidden">
-            <div class="splash-slide slide-enter" data-index="0">
-                <div class="splash-icon">🧠</div>
-                <div class="splash-title">你的 AI 金融管家</div>
-                <div class="splash-desc">
-                    把你的加密资产交给 AI，<br>
-                    它替你 <span class="splash-highlight">24/7 智能管理</span>，<br>
-                    让你真正实现 <span class="splash-highlight">「睡后收入」</span>
-                </div>
-                <div class="splash-stats">
-                    <div class="stat"><div class="num">47%</div><div class="label">平均收益提升</div></div>
-                    <div class="stat"><div class="num">99.6%</div><div class="label">风险拦截率</div></div>
-                </div>
-                <div class="splash-badge">已保护 12,000+ 钱包</div>
+        <!-- 1. 顶部总收益卡片 -->
+        <div class="page-header">
+            <div class="title-area">
+                <span class="title">📊 网格量化交易策略</span>
+                <button class="know-btn" onclick="openKnowledgePanel()">📖 量化了解</button>
             </div>
-            <div class="splash-slide" data-index="1" style="display:none;">
-                <div class="splash-icon">⚡</div>
-                <div class="splash-title">能力全开，一键搞定</div>
-                <div class="splash-desc" style="max-width:340px;">
-                    <strong style="color:#60a5fa;">收益优化</strong> · 自动扫链，存入最高 APY 协议<br>
-                    <strong style="color:#60a5fa;">风险守护</strong> · 拦截钓鱼，预警清算<br>
-                    <strong style="color:#60a5fa;">持仓分析</strong> · 跨链汇总，一目了然<br>
-                    <strong style="color:#60a5fa;">AI 自动化</strong> · 你睡觉，它打工
-                </div>
-                <div class="splash-badge">支持 Ethereum · Solana · Arbitrum 等</div>
-            </div>
-            <div class="splash-slide" data-index="2" style="display:none;">
-                <div class="splash-icon">🚀</div>
-                <div class="splash-title">立即开启智能管理</div>
-                <div class="splash-desc">
-                    3 分钟设置，AI 即刻为你工作。<br>
-                    <span class="splash-highlight">首周免费体验</span>，不满意随时取消。
-                </div>
-                <div style="margin-top:24px; display:flex; gap:16px; flex-wrap:wrap; justify-content:center;">
-                    <span style="background:#1e293b; padding:6px 18px; border-radius:30px; font-size:13px; color:#94a3b8;">非托管 · 私钥自持</span>
-                    <span style="background:#1e293b; padding:6px 18px; border-radius:30px; font-size:13px; color:#94a3b8;">手机 / 网页 通用</span>
-                </div>
-                <div class="splash-badge">7 天免费试用 · 随时取消</div>
+            <div class="current-price-info">
+                <span class="price" id="gridCurrentPrice">$65,432.10</span>
+                <span class="change" id="gridPriceChange" style="color:#10b981;">+3.21%</span>
             </div>
         </div>
-        <div class="splash-footer">
-            <div class="splash-dots" id="splashDots">
-                <span class="dot active" data-index="0"></span>
-                <span class="dot" data-index="1"></span>
-                <span class="dot" data-index="2"></span>
-            </div>
-            <button class="splash-btn" id="splashBtn">开始使用</button>
-            <button class="splash-skip" id="splashSkip">跳过介绍</button>
-        </div>
-    </div>
 
-    <!-- ============================================================ -->
-    <!-- 分享面板 -->
-    <!-- ============================================================ -->
-    <div class="share-overlay" id="shareOverlay" onclick="closeShare(event)">
-        <div class="share-panel" onclick="event.stopPropagation()">
-            <div class="handle"></div>
-            <div class="title">分享 AI 金融助手</div>
-            <div class="share-grid">
-                <div class="share-item" onclick="shareTo('link')">
-                    <div class="icon-wrap" style="background:#1a1a2a;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                        </svg>
-                    </div>
-                    <span class="label">复制链接</span>
-                </div>
-                <div class="share-item" onclick="shareTo('telegram')">
-                    <div class="icon-wrap" style="background:#1a3a3a;">
-                        <svg viewBox="0 0 24 24" fill="#26A5E4">
-                            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                        </svg>
-                    </div>
-                    <span class="label">Telegram</span>
-                </div>
-                <div class="share-item" onclick="shareTo('twitter')">
-                    <div class="icon-wrap" style="background:#1a2a3a;">
-                        <svg viewBox="0 0 24 24" fill="#1DA1F2">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
-                        </svg>
-                    </div>
-                    <span class="label">Twitter/X</span>
-                </div>
-                <div class="share-item" onclick="shareTo('wechat')">
-                    <div class="icon-wrap" style="background:#1a2a1a;">
-                        <svg viewBox="0 0 24 24" fill="#07C160">
-                            <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 0 1 .213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 0 0 .167-.054l1.903-1.114a.864.864 0 0 1 .717-.098 10.16 10.16 0 0 0 2.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178A1.17 1.17 0 0 1 4.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 0 1-1.162 1.178 1.17 1.17 0 0 1-1.162-1.178c0-.651.52-1.18 1.162-1.18zm7.361 2.528c-3.68 0-6.662 2.63-6.662 5.872 0 3.242 2.982 5.872 6.662 5.872.658 0 1.292-.1 1.888-.269a.577.577 0 0 1 .478.065l1.267.742c.086.049.178.036.236-.036a.292.292 0 0 0 .027-.27l-.26-.986a.39.39 0 0 1 .057-.373c1.222-1.311 1.928-2.902 1.928-4.745 0-3.242-2.982-5.872-6.662-5.872zm-3.297 3.717c.428 0 .774.353.774.787a.78.78 0 0 1-.774.785.78.78 0 0 1-.774-.785c0-.434.346-.787.774-.787zm2.997 0c.428 0 .774.353.774.787a.78.78 0 0 1-.774.785.78.78 0 0 1-.774-.785c0-.434.346-.787.774-.787z"/>
-                        </svg>
-                    </div>
-                    <span class="label">微信</span>
-                </div>
-                <div class="share-item" onclick="shareTo('qrcode')">
-                    <div class="icon-wrap" style="background:#1a1a2a;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#8a8a9a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="7" height="7" rx="1"/>
-                            <rect x="14" y="3" width="7" height="7" rx="1"/>
-                            <rect x="3" y="14" width="7" height="7" rx="1"/>
-                            <line x1="14" y1="14" x2="18" y2="18"/>
-                            <line x1="18" y1="14" x2="14" y2="18"/>
-                            <rect x="14" y="14" width="4" height="4" rx="0" stroke-dasharray="2,2"/>
-                        </svg>
-                    </div>
-                    <span class="label">二维码</span>
-                </div>
+        <!-- 2. 账户信息卡片 -->
+        <div class="card" id="accountCard">
+            <div class="card-title">💰 账户信息</div>
+            <div class="account-row">
+                <span class="label">总资产</span>
+                <span class="value" id="gridTotalBalance">$10,000.00</span>
             </div>
-            <button class="share-cancel" onclick="closeShare()">取消</button>
+            <div class="account-row">
+                <span class="label">USDT 余额</span>
+                <span class="value" id="gridUsdtBalance">10,000.00</span>
+            </div>
+            <div class="account-row">
+                <span class="label">BTC 持仓</span>
+                <span class="value" id="gridBtcBalance">0.0000</span>
+            </div>
+            <div class="account-row">
+                <span class="label">总盈亏</span>
+                <span class="value green" id="gridTotalPnl">+$0.00</span>
+            </div>
+            <div class="status-indicator" style="margin-top:12px;">
+                <span class="status-dot" id="gridStatusDot"></span>
+                <span id="gridStatusText">策略已停止</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="startGridStrategy()">▶ 启动策略</button>
+                <button class="btn btn-secondary" onclick="stopGridStrategy()">⏹ 停止</button>
+            </div>
+        </div>
+
+        <!-- 3. RSI网格策略卡片 -->
+        <div class="card" id="strategyCard">
+            <div class="card-title">
+                <span id="strategyCardTitle">RSI网格策略</span>
+                <button class="params-btn" onclick="openParamsModal()">⚙️ 参数设置</button>
+            </div>
+            <p style="font-size:13px;color:#9ca3af;margin-bottom:12px;" id="strategyCardDesc">基于RSI超买超卖信号的网格交易</p>
+            <div class="signal-indicator" id="strategyCardSignals">
+                <span class="signal-badge">超卖买入</span>
+                <span class="signal-badge">超买卖出</span>
+                <span class="signal-badge">中性持有</span>
+            </div>
+            <!-- 策略选择标签 -->
+            <div class="strategy-tabs" id="strategyTabs" style="margin-bottom:0;">
+                <span class="strategy-tab active" data-strategy="rsi" onclick="switchStrategy('rsi')">RSI网格</span>
+                <span class="strategy-tab" data-strategy="bollinger" onclick="switchStrategy('bollinger')">布林带网格</span>
+                <span class="strategy-tab" data-strategy="ema" onclick="switchStrategy('ema')">EMA趋势网格</span>
+                <span class="strategy-tab" data-strategy="kdj" onclick="switchStrategy('kdj')">KDJ网格</span>
+                <span class="strategy-tab" data-strategy="macd" onclick="switchStrategy('macd')">MACD网格</span>
+                <span class="strategy-tab" data-strategy="multi" onclick="switchStrategy('multi')">多周期网格</span>
+            </div>
+        </div>
+
+        <!-- 4. 网格布局卡片 -->
+        <div class="card">
+            <div class="card-title">📐 网格布局</div>
+            <div class="grid-visual" id="gridVisualContainer">
+                <!-- 由JS渲染 -->
+            </div>
+        </div>
+
+        <!-- 5. 价格走势卡片 -->
+        <div class="card">
+            <div class="card-title">📈 价格走势</div>
+            <div class="chart-wrapper">
+                <canvas id="gridPriceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 6. 交易日志卡片 -->
+        <div class="card">
+            <div class="card-title">📋 交易日志</div>
+            <div class="log-box" id="gridLogBox">[系统] 网格策略已初始化，等待价格数据...</div>
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- 设置面板 -->
-    <!-- ============================================================ -->
-    <div class="settings-overlay" id="settingsOverlay">
-        <div class="settings-header">
-            <div class="back-btn" onclick="closeSettings()" title="返回">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <polyline points="15 18 9 12 15 6"/>
-                </svg>
+    <!-- 量化了解弹窗 -->
+    <div class="knowledge-overlay" id="knowledgeOverlay" onclick="closeKnowledgePanel(event)">
+        <div class="knowledge-panel" onclick="event.stopPropagation()">
+            <div class="panel-header">
+                <span class="panel-title">📖 市场最优网格量化交易规则分析</span>
+                <button class="close-btn" onclick="closeKnowledgePanel()">✕</button>
             </div>
-            <span class="title">⚙️ 设置</span>
-        </div>
+            
+            <h2>一、经典网格策略</h2>
+            
+            <h3>1. 等差网格（Equal Spacing Grid）</h3>
+            <pre>规则：固定价格间距，每个格子买卖数量相同
+适用：震荡市
+特点：简单、稳定，但资金利用率较低</pre>
 
-        <div class="settings-body">
-            <div class="settings-section">
-                <div class="section-title">👤 用户信息</div>
-                <div class="section-content">
-                    <div class="info-row">
-                        <span class="label">用户ID</span>
-                        <span class="value" id="userIdDisplay">user_001</span>
-                    </div>
-                    <div class="info-row">
-                        <span class="label">推广员ID</span>
-                        <input type="text" id="promoterIdInput" placeholder="输入推广员ID" class="settings-input">
-                    </div>
-                </div>
+            <h3>2. 等比网格（Geometric Grid）</h3>
+            <pre>规则：固定百分比间距，价格越高格子越宽
+适用：波动较大的市场
+特点：适应价格波动，但需要更多资金</pre>
+
+            <h3>3. 动态网格（Adaptive Grid）</h3>
+            <pre>规则：根据ATR/波动率动态调整网格间距
+适用：波动率变化的市场
+特点：自适应，但实现复杂</pre>
+
+            <h2>二、主流网格策略</h2>
+
+            <h3>策略1：RSI趋势网格</h3>
+            <pre>触发条件：
+- RSI < 30（超卖）→ 买入
+- RSI > 70（超买）→ 卖出
+- 30 ≤ RSI ≤ 70 → 持有不动
+
+参数设置：
+- RSI周期：14
+- 超卖阈值：30
+- 超买阈值：70
+- 网格间距：2-3%
+
+优点：过滤震荡噪音，只在极端点位操作
+缺点：可能错过趋势行情</pre>
+
+            <h3>策略2：布林带网格</h3>
+            <pre>触发条件：
+- 价格触及下轨 → 买入
+- 价格触及上轨 → 卖出
+- 价格回归中轨 → 平仓
+
+参数设置：
+- 布林带周期：20
+- 标准差倍数：2
+- 网格间距：1-2%
+
+优点：统计学基础，适合均值回归
+缺点：单边趋势中可能连续止损</pre>
+
+            <h3>策略3：EMA趋势+网格混合</h3>
+            <pre>核心逻辑：
+- EMA20 > EMA50 → 只做多（金叉买入，回调加仓）
+- EMA20 < EMA50 → 只做空（死叉卖出，反弹减仓）
+- EMA20 ≈ EMA50 → 纯网格（高抛低吸）
+
+参数设置：
+- EMA短期：20
+- EMA长期：50
+- 网格间距：1.5-3%
+- 仓位管理：每格10-20%</pre>
+
+            <h2>三、专业量化网格策略</h2>
+
+            <h3>策略1：KDJ+网格</h3>
+            <pre>信号判断：
+- K线从下方穿越D线（金叉）→ 买入
+- K线从上方穿越D线（死叉）→ 卖出
+- J值 > 90 → 超买减仓
+- J值 < 10 → 超卖加仓
+
+参数设置：
+- KDJ参数：9,3,3
+- 网格间距：2%
+- 单格仓位：5-10%</pre>
+
+            <h3>策略2：MACD+网格</h3>
+            <pre>信号判断：
+- MACD金叉 → 开启做多网格
+- MACD死叉 → 开启做空网格
+- MACD柱状图缩量 → 网格间距收窄
+
+参数设置：
+- MACD参数：12,26,9
+- 网格间距：动态1-3%</pre>
+
+            <h3>策略3：多重时间框架网格</h3>
+            <pre>核心逻辑：
+- 4小时级别判断趋势方向
+- 1小时级别确定网格区间
+- 15分钟级别执行网格交易
+
+执行规则：
+- 4H趋势向上 → 只做多网格
+- 4H趋势向下 → 只做空网格
+- 4H震荡 → 双向网格</pre>
+
+            <h2>四、风控规则（必须包含）</h2>
+
+            <h3>1. 止损规则</h3>
+            <pre>硬止损：单格亏损超过5%强制平仓
+总止损：账户回撤超过15%停止策略
+移动止损：盈利超过10%后，回撤50%止盈</pre>
+
+            <h3>2. 仓位管理</h3>
+            <pre>单格仓位：总资金的5-10%
+最大持仓：不超过总资金的60%
+加仓规则：价格每下跌一格加仓一次
+减仓规则：价格每上涨一格减仓一次</pre>
+
+            <h3>3. 资金分配</h3>
+            <pre>网格区间资金：60%
+趋势跟踪资金：20%
+备用资金：20%</pre>
+
+            <h2>五、最优网格策略推荐</h2>
+
+            <h3>推荐策略：EMA趋势过滤+动态网格</h3>
+            <pre>完整规则：
+
+1. 趋势判断（4小时级别）
+   - EMA20 > EMA50 → 上升趋势，只做多网格
+   - EMA20 < EMA50 → 下降趋势，只做空网格
+   - |EMA20-EMA50| < 0.5% → 震荡，双向网格
+
+2. 网格设置
+   - 网格间距：ATR(14) × 0.5
+   - 网格数量：20-30格
+   - 单格仓位：总资金5%
+
+3. 买入条件（做多网格）
+   - 趋势向上
+   - 价格触及网格下沿
+   - RSI < 60（避免追高）
+
+4. 卖出条件（做多网格）
+   - 价格触及网格上沿
+   - 或RSI > 70超买
+
+5. 止损条件
+   - 价格跌破网格下限5%
+   - 或趋势反转（EMA死叉）
+
+6. 止盈条件
+   - 网格全部成交后
+   - 或收益率达到20%</pre>
+
+            <h2>六、实战参数参考</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>参数</th>
+                        <th>保守</th>
+                        <th>均衡</th>
+                        <th>激进</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>网格间距</td>
+                        <td>3%</td>
+                        <td>2%</td>
+                        <td>1%</td>
+                    </tr>
+                    <tr>
+                        <td>单格仓位</td>
+                        <td>3%</td>
+                        <td>5%</td>
+                        <td>10%</td>
+                    </tr>
+                    <tr>
+                        <td>网格数量</td>
+                        <td>30</td>
+                        <td>20</td>
+                        <td>15</td>
+                    </tr>
+                    <tr>
+                        <td>止损比例</td>
+                        <td>3%</td>
+                        <td>5%</td>
+                        <td>8%</td>
+                    </tr>
+                    <tr>
+                        <td>止盈比例</td>
+                        <td>10%</td>
+                        <td>15%</td>
+                        <td>25%</td>
+                    </tr>
+                    <tr>
+                        <td>最大回撤</td>
+                        <td>10%</td>
+                        <td>15%</td>
+                        <td>20%</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <strong>最优网格策略核心要素：</strong><br>
+                1. <strong>趋势过滤</strong> - 用EMA判断方向，避免逆势操作<br>
+                2. <strong>动态间距</strong> - 根据ATR调整网格间距<br>
+                3. <strong>风控止损</strong> - 必须有硬止损和总回撤控制<br>
+                4. <strong>仓位管理</strong> - 单格仓位控制在5-10%<br>
+                5. <strong>信号过滤</strong> - RSI/KDJ辅助判断买卖点
             </div>
-
-            <div class="settings-section">
-                <div class="section-title">🔑 API配置</div>
-                <div class="section-content">
-                    <input type="text" id="apiKeyInput" placeholder="API Key" class="settings-input">
-                    <input type="password" id="apiSecretInput" placeholder="API Secret" class="settings-input">
-                    <input type="password" id="apiPassphraseInput" placeholder="Passphrase (Gate.io)" class="settings-input">
-                    <button onclick="saveApiConfig()" class="settings-btn-primary">💾 保存配置</button>
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <div class="section-title">📊 推广员看板</div>
-                <div class="section-content" id="dashboardMini">
-                    <div class="dashboard-stats">
-                        <div class="stat-item">
-                            <span class="stat-num" id="statTrades">0</span>
-                            <span class="stat-label">交易笔数</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-num" id="statVolume">$0</span>
-                            <span class="stat-label">总交易额</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-num" id="statRebate">$0</span>
-                            <span class="stat-label">预估返利</span>
-                        </div>
-                    </div>
-                    <button onclick="openFullDashboard()" class="settings-btn-secondary">📈 查看完整看板</button>
-                </div>
-            </div>
-
-            <div class="rebate-dashboard" id="rebateDashboard">
-                <div class="rebate-header">
-                    <div class="rebate-item rebate-item-left">
-                        <div class="rebate-label rebate-label-left">
-                            <span>💰</span>
-                            <span>累计返利</span>
-                        </div>
-                        <div class="rebate-total-amount" id="totalRebate">$0.00</div>
-                    </div>
-                    <div class="rebate-item rebate-item-right">
-                        <div class="rebate-label rebate-label-right">
-                            <span>⏳</span>
-                            <span>待结算</span>
-                        </div>
-                        <div class="rebate-pending-amount" id="pendingRebate">$0.00</div>
-                    </div>
-                </div>
-                <div class="rebate-divider"></div>
-                <div class="rebate-footer">
-                    <div class="rebate-stat">
-                        <span class="rebate-stat-icon">👥</span>
-                        <span>推广用户：</span>
-                        <span class="rebate-stat-value" id="totalUsers">0</span>
-                        <span>人</span>
-                    </div>
-                    <div class="rebate-rate-badge">💎 返利比例：2%</div>
-                </div>
-            </div>
-
-            <div class="settings-section">
-                <div class="section-title">🌙 深色模式</div>
-                <div class="section-content">
-                    <div class="toggle-row">
-                        <span class="label">启用深色模式</span>
-                        <label class="toggle-switch">
-                            <input type="checkbox" id="darkModeToggle" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </div>
-                </div>
+            
+            <div class="highlight-box">
+                <strong>最适合当前市场的策略：</strong><br>
+                EMA趋势过滤 + 动态ATR网格 + RSI辅助确认
             </div>
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- 主应用 -->
-    <!-- ============================================================ -->
-    <div id="app">
-        <div id="overlay" class="overlay closed fixed inset-0 bg-black/60 z-40" onclick="closeDrawer()"></div>
-
-        <div id="drawer" class="drawer closed fixed top-0 left-0 h-full w-[280px] bg-[#0f0f1a] border-r border-[#1a1a2a] z-50 p-5 flex flex-col overflow-y-auto">
-            <div class="flex items-center justify-between mb-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">AI</div>
-                    <div>
-                        <h1 class="text-lg font-semibold">金融助手</h1>
-                        <p class="text-xs text-[#6a6a7a]">在线 · 4 条链</p>
-                    </div>
-                </div>
-                <div class="drawer-settings-btn" onclick="openSettings()" title="设置">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
-                    </svg>
-                </div>
+    <!-- 参数设置弹窗 -->
+    <div class="params-modal-overlay" id="paramsModalOverlay" onclick="closeParamsModal(event)">
+        <div class="params-modal" onclick="event.stopPropagation()">
+            <div class="modal-title">⚙️ 参数设置</div>
+            <div id="paramsModalContent">
+                <!-- 由JS动态渲染 -->
             </div>
-            <div id="assetOverview" class="space-y-4 flex-1"></div>
-            <div class="pt-4 border-t border-[#1a1a2a] mt-auto">
-                <div class="flex items-center gap-2 text-xs text-[#5a5a6a]">
-                    <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    安全模式 · 非托管
-                </div>
-                <p class="text-[10px] text-[#3a3a4a] mt-1">AI 可准备交易，执行需确认</p>
+            <div class="modal-buttons">
+                <button class="btn btn-cancel" onclick="closeParamsModal()">取消</button>
+                <button class="btn btn-confirm" onclick="saveParams()">保存</button>
             </div>
         </div>
-
-        <div class="top-nav flex items-center justify-between px-4 border-b border-[#1a1a2a] bg-[#0a0a0f] z-10 flex-shrink-0 top-nav-border">
-            <button onclick="toggleDrawer()" class="p-1.5 -ml-2 tap-active" aria-label="打开菜单">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-            </button>
-            <div class="flex flex-col items-center">
-                <span class="text-sm font-medium text-[#8a8a9a]">对话</span>
-                <div class="chat-header">
-                    <span class="label"><span class="highlight">●</span> AI 可读持仓，执行需确认</span>
-                </div>
-            </div>
-            <div class="share-trigger" onclick="openShare()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                    <polyline points="16 6 12 2 8 6"/>
-                    <line x1="12" y1="2" x2="12" y2="15"/>
-                </svg>
-                <span class="label">分享</span>
-            </div>
-        </div>
-
-        <div class="px-4 py-2 border-b border-[#1a1a2a] bg-[#0a0a0f] flex-shrink-0">
-            <div id="quickActions" class="flex gap-2 overflow-x-auto quick-scroll"></div>
-        </div>
-
-        <div id="messageList" class="flex-1 overflow-y-auto px-4 py-3 space-y-3"></div>
-
-        <div class="border-t border-[#1a1a2a] p-2 bg-[#0a0a0f] flex-shrink-0 safe-area-bottom">
-            <div class="input-wrapper">
-                <button id="voiceBtn" class="p-2 rounded-xl transition-all flex-shrink-0 bg-[#1a1a2a] text-[#4a4a5a] hover:bg-[#2a2a3a] tap-active" title="语音输入">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="9" y="2" width="6" height="12" rx="3"/>
-                        <path d="M5 10v1a7 7 0 0 0 14 0v-1"/>
-                        <line x1="12" y1="19" x2="12" y2="22"/>
-                    </svg>
-                </button>
-                <div class="input-container">
-                    <textarea id="chatInput" rows="1" placeholder="输入指令..." class="bg-transparent outline-none resize-none text-sm min-h-[24px] max-h-[66px] px-2 py-1.5 text-[#e8e8f0] placeholder-[#4a4a5a] leading-4 w-full"></textarea>
-                </div>
-                <button id="sendBtn" class="p-2 rounded-xl transition-all flex-shrink-0 bg-[#1a1a2a] text-[#4a4a5a] cursor-not-allowed tap-active">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>
-                </button>
-            </div>
-        </div>
-        <div id="cancelTip">请说话...</div>
     </div>
 
     <script>
         // ============================================================
-        //  DeepSeek API 硬编码配置
+        //  网格策略核心逻辑
         // ============================================================
-        const DEEPSEEK_CONFIG = {
-            apiKey: 'sk-30c5f0dd773b4c1c800c6ec1faf4ffb7',
-            baseUrl: 'https://api.deepseek.com/v1/chat/completions',
-            model: 'deepseek-chat'
+        
+        // 全局状态
+        let currentStrategy = 'rsi';
+        let gridUsdtBalance = 10000;
+        let gridBtcBalance = 0;
+        let gridBtcPrice = 65432.10;
+        let gridRunning = false;
+        let gridInterval = null;
+        let gridLogEntries = [];
+        let priceHistory = [];
+        let gridOrders = [];
+
+        // 策略参数配置
+        const strategyConfigs = {
+            rsi: {
+                name: 'RSI网格策略',
+                description: '基于RSI超买超卖信号的网格交易',
+                params: {
+                    rsiPeriod: { label: 'RSI周期', value: 14, min: 5, max: 30 },
+                    oversold: { label: '超卖阈值', value: 30, min: 10, max: 40 },
+                    overbought: { label: '超买阈值', value: 70, min: 60, max: 90 },
+                    gridSpacing: { label: '网格间距(%)', value: 2, min: 0.5, max: 5 },
+                    positionSize: { label: '单格仓位(%)', value: 10, min: 5, max: 20 }
+                },
+                signals: ['超卖买入', '超买卖出', '中性持有']
+            },
+            bollinger: {
+                name: '布林带网格策略',
+                description: '基于布林带上下轨的均值回归网格',
+                params: {
+                    bbPeriod: { label: '布林带周期', value: 20, min: 10, max: 50 },
+                    stdDev: { label: '标准差倍数', value: 2, min: 1, max: 3 },
+                    gridSpacing: { label: '网格间距(%)', value: 1.5, min: 0.5, max: 4 },
+                    positionSize: { label: '单格仓位(%)', value: 8, min: 5, max: 15 }
+                },
+                signals: ['下轨买入', '上轨卖出', '中轨平仓']
+            },
+            ema: {
+                name: 'EMA趋势网格策略',
+                description: 'EMA趋势过滤+动态网格',
+                params: {
+                    emaShort: { label: 'EMA短期', value: 20, min: 5, max: 50 },
+                    emaLong: { label: 'EMA长期', value: 50, min: 20, max: 200 },
+                    gridSpacing: { label: '网格间距(%)', value: 2, min: 0.5, max: 5 },
+                    positionSize: { label: '单格仓位(%)', value: 10, min: 5, max: 20 },
+                    stopLoss: { label: '止损(%)', value: 5, min: 2, max: 10 }
+                },
+                signals: ['金叉买入', '死叉卖出', '趋势过滤']
+            },
+            kdj: {
+                name: 'KDJ网格策略',
+                description: 'KDJ指标+网格交易',
+                params: {
+                    kdjPeriod: { label: 'KDJ周期', value: 9, min: 5, max: 20 },
+                    kParam: { label: 'K值参数', value: 3, min: 2, max: 5 },
+                    dParam: { label: 'D值参数', value: 3, min: 2, max: 5 },
+                    gridSpacing: { label: '网格间距(%)', value: 2, min: 0.5, max: 5 },
+                    positionSize: { label: '单格仓位(%)', value: 8, min: 5, max: 15 }
+                },
+                signals: ['K上穿D买入', 'K下穿D卖出', 'J值超买超卖']
+            },
+            macd: {
+                name: 'MACD网格策略',
+                description: 'MACD趋势判断+网格执行',
+                params: {
+                    fastPeriod: { label: '快线周期', value: 12, min: 5, max: 30 },
+                    slowPeriod: { label: '慢线周期', value: 26, min: 10, max: 50 },
+                    signalPeriod: { label: '信号周期', value: 9, min: 3, max: 20 },
+                    gridSpacing: { label: '网格间距(%)', value: 2, min: 0.5, max: 5 },
+                    positionSize: { label: '单格仓位(%)', value: 10, min: 5, max: 20 }
+                },
+                signals: ['MACD金叉买入', 'MACD死叉卖出', '柱状图缩量']
+            },
+            multi: {
+                name: '多周期网格策略',
+                description: '多重时间框架+网格交易',
+                params: {
+                    trendPeriod: { label: '趋势周期(小时)', value: 4, min: 1, max: 24 },
+                    gridPeriod: { label: '网格周期(分钟)', value: 15, min: 5, max: 60 },
+                    gridSpacing: { label: '网格间距(%)', value: 1.5, min: 0.5, max: 4 },
+                    positionSize: { label: '单格仓位(%)', value: 8, min: 5, max: 15 },
+                    maxPositions: { label: '最大持仓(%)', value: 60, min: 30, max: 80 }
+                },
+                signals: ['4H趋势判断', '1H网格区间', '15M执行']
+            }
         };
 
-        // ============================================================
-        //  DeepSeek API 调用函数
-        // ============================================================
-        async function callDeepSeek(userMessage) {
-            const systemPrompt = `你是一个专业的AI金融助手，擅长加密货币分析、DeFi策略优化、风险管理和市场趋势分析。
+        // 计算RSI
+        function calculateRSI(data, period) {
+            if (data.length < period + 1) return null;
+            let gains = 0;
+            let losses = 0;
+            for (let i = data.length - period; i < data.length; i++) {
+                const diff = data[i] - data[i - 1];
+                if (diff > 0) gains += diff;
+                else losses -= diff;
+            }
+            if (losses === 0) return 100;
+            const rs = gains / losses;
+            return 100 - (100 / (1 + rs));
+        }
 
-你的核心能力：
-1. 加密货币市场分析 - 分析BTC、ETH等主流币种趋势
-2. DeFi收益优化 - 对比Aave、Compound、Ethena等协议APY
-3. 风险分析 - 识别市场风险、清算预警
-4. 持仓管理 - 跨链资产汇总和配置建议
-5. 黄金等贵金属分析 - 价格、趋势、驱动因素
+        // 计算EMA
+        function calculateEMA(data, period) {
+            if (data.length < period) return null;
+            const k = 2 / (period + 1);
+            let ema = data[0];
+            for (let i = 1; i < data.length; i++) {
+                ema = data[i] * k + ema * (1 - k);
+            }
+            return ema;
+        }
 
-回复要求：
-- 使用中文，简洁专业
-- 用**加粗**强调关键数据
-- 结构化展示（使用换行和符号）
-- 涉及金融建议时，标注"不构成投资建议"`;
+        // 计算布林带
+        function calculateBollinger(data, period, stdDev) {
+            if (data.length < period) return null;
+            const slice = data.slice(-period);
+            const mean = slice.reduce((a, b) => a + b, 0) / period;
+            const variance = slice.reduce((a, b) => a + (b - mean) ** 2, 0) / period;
+            const std = Math.sqrt(variance);
+            return {
+                upper: mean + stdDev * std,
+                middle: mean,
+                lower: mean - stdDev * std
+            };
+        }
 
-            const response = await fetch(DEEPSEEK_CONFIG.baseUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${DEEPSEEK_CONFIG.apiKey}`
-                },
-                body: JSON.stringify({
-                    model: DEEPSEEK_CONFIG.model,
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: userMessage }
-                    ],
-                    max_tokens: 2000,
-                    temperature: 0.7
-                })
+        // 计算KDJ
+        function calculateKDJ(data, period) {
+            if (data.length < period) return null;
+            const highs = data.slice(-period);
+            const lows = data.slice(-period);
+            const highest = Math.max(...highs);
+            const lowest = Math.min(...lows);
+            const current = data[data.length - 1];
+            const rsv = ((current - lowest) / (highest - lowest)) * 100;
+            return {
+                k: rsv,
+                d: rsv * 0.7,
+                j: rsv * 3 - rsv * 0.7 * 2
+            };
+        }
+
+        // 计算MACD
+        function calculateMACD(data, fast, slow, signal) {
+            if (data.length < slow + signal) return null;
+            const fastEMA = calculateEMA(data, fast);
+            const slowEMA = calculateEMA(data, slow);
+            const macdLine = fastEMA - slowEMA;
+            const signalLine = macdLine * 0.8;
+            return {
+                macd: macdLine,
+                signal: signalLine,
+                histogram: macdLine - signalLine
+            };
+        }
+
+        // 添加日志
+        function gridAddLog(msg) {
+            const time = new Date().toLocaleTimeString();
+            const entry = `[${time}] ${msg}`;
+            gridLogEntries.push(entry);
+            if (gridLogEntries.length > 100) gridLogEntries.shift();
+            const box = document.getElementById('gridLogBox');
+            if (box) box.textContent = gridLogEntries.join('\n');
+            if (box) box.scrollTop = box.scrollHeight;
+        }
+
+        // 切换策略
+        function switchStrategy(strategy) {
+            currentStrategy = strategy;
+            const config = strategyConfigs[strategy];
+            
+            document.getElementById('strategyCardTitle').textContent = config.name;
+            document.getElementById('strategyCardDesc').textContent = config.description;
+            
+            const signalsContainer = document.getElementById('strategyCardSignals');
+            signalsContainer.innerHTML = config.signals.map(s => `<span class="signal-badge">${s}</span>`).join('');
+            
+            document.querySelectorAll('.strategy-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.strategy === strategy);
             });
-
-            if (!response.ok) {
-                const error = await response.json();
-                console.error('DeepSeek API 错误:', error);
-                throw new Error(error.error?.message || 'API调用失败');
-            }
-
-            const data = await response.json();
-            return data.choices[0].message.content;
+            
+            updateGridVisual();
+            
+            gridAddLog(`📊 切换至${config.name}`);
         }
 
-        // ============================================================
-        //  语音转文字（Web Speech API）
-        // ============================================================
-        let recognition = null;
-        let isListening = false;
-
-        function initSpeechRecognition() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if (!SpeechRecognition) {
-                console.warn('浏览器不支持语音识别');
-                return false;
-            }
-            if (recognition) {
-                try {
-                    recognition.stop();
-                } catch (e) {}
-                recognition = null;
-            }
-            recognition = new SpeechRecognition();
-            recognition.lang = 'zh-CN';
-            recognition.continuous = false;
-            recognition.interimResults = true;
-            recognition.maxAlternatives = 1;
-            return true;
-        }
-
-        function startSpeechToText(onResult, onError) {
-            if (!recognition) {
-                if (!initSpeechRecognition()) {
-                    if (onError) onError('浏览器不支持语音识别，请使用Chrome或Edge浏览器');
-                    return;
-                }
-            }
-
-            if (isListening) {
-                try {
-                    recognition.stop();
-                } catch (e) {}
-                isListening = false;
-                setTimeout(() => {
-                    startSpeechToText(onResult, onError);
-                }, 100);
-                return;
-            }
-
-            recognition.onresult = null;
-            recognition.onerror = null;
-            recognition.onend = null;
-
-            recognition.onresult = function(event) {
-                let transcript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    transcript += event.results[i][0].transcript;
-                    if (event.results[i].isFinal) {
-                        if (onResult) onResult(transcript, true);
-                    } else {
-                        if (onResult) onResult(transcript, false);
-                    }
-                }
-            };
-
-            recognition.onerror = function(event) {
-                if (onError) {
-                    let msg = '语音识别错误';
-                    if (event.error === 'not-allowed') msg = '请允许使用麦克风权限';
-                    else if (event.error === 'no-speech') msg = '未检测到语音，请重新尝试';
-                    else if (event.error === 'audio-capture') msg = '无法访问麦克风';
-                    else if (event.error === 'aborted') {
-                        return;
-                    } else msg = '语音识别失败：' + event.error;
-                    onError(msg);
-                }
-            };
-
-            recognition.onend = function() {
-                isListening = false;
-            };
-
-            try {
-                recognition.start();
-                isListening = true;
-            } catch (e) {
-                if (onError) onError('启动语音识别失败：' + e.message);
-            }
-        }
-
-        function stopSpeechToText() {
-            if (recognition) {
-                try {
-                    recognition.stop();
-                } catch (e) {}
-            }
-            isListening = false;
-        }
-
-        // ============================================================
-        //  启动页逻辑
-        // ============================================================
-        (function() {
-            const container = document.getElementById('splashContainer');
-            const slides = document.querySelectorAll('.splash-slide');
-            const dots = document.querySelectorAll('.dot');
-            const btn = document.getElementById('splashBtn');
-            const skipBtn = document.getElementById('splashSkip');
-            const app = document.getElementById('app');
-            let current = 0;
-            const total = slides.length;
-
-            function showSlide(index) {
-                slides.forEach((el, i) => {
-                    el.style.display = i === index ? 'flex' : 'none';
-                    el.classList.remove('slide-enter');
-                    if (i === index) {
-                        requestAnimationFrame(() => {
-                            el.classList.add('slide-enter');
-                        });
-                    }
-                });
-                dots.forEach((dot, i) => {
-                    dot.classList.toggle('active', i === index);
-                });
-                if (index === total - 1) {
-                    btn.textContent = '立即开始';
-                } else {
-                    btn.textContent = '下一步';
-                }
-                current = index;
-            }
-
-            function enterApp() {
-                container.classList.add('hide');
-                setTimeout(() => {
-                    container.style.display = 'none';
-                    app.classList.add('show');
-                    app.style.display = 'flex';
-                }, 600);
-            }
-
-            function nextSlide() {
-                const next = (current + 1) % total;
-                showSlide(next);
-            }
-
-            function prevSlide() {
-                const prev = (current - 1 + total) % total;
-                showSlide(prev);
-            }
-
-            dots.forEach((dot) => {
-                dot.addEventListener('click', function() {
-                    const idx = parseInt(this.dataset.index);
-                    if (idx !== current) showSlide(idx);
-                });
-            });
-
-            btn.addEventListener('click', function() {
-                if (current === total - 1) {
-                    enterApp();
-                } else {
-                    nextSlide();
-                }
-            });
-
-            skipBtn.addEventListener('click', function() {
-                enterApp();
-            });
-
-            let startX = 0;
-            let startY = 0;
-            container.addEventListener('touchstart', function(e) {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-            });
-            container.addEventListener('touchend', function(e) {
-                if (startX === 0) return;
-                const endX = e.changedTouches[0].clientX;
-                const endY = e.changedTouches[0].clientY;
-                const diffX = startX - endX;
-                const diffY = startY - endY;
-                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
-                    if (diffX > 0) nextSlide();
-                    else prevSlide();
-                }
-                startX = 0;
-            });
-
-            showSlide(0);
-        })();
-
-        // ============================================================
-        //  分享功能
-        // ============================================================
-        function openShare() {
-            document.getElementById('shareOverlay').classList.add('show');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeShare(e) {
-            document.getElementById('shareOverlay').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-
-        document.getElementById('shareOverlay').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closeShare();
-            }
-        });
-
-        function shareTo(platform) {
-            const url = 'https://angnlangnlangnl.github.io/ai-finance-assistant/';
-            const text = '发现一个超好用的 AI 金融助手！自动优化收益、守护资产安全，来试试吧！';
-
-            const shareMap = {
-                'link': function() {
-                    navigator.clipboard.writeText(url + '?ref=share').then(() => {
-                        alert('链接已复制！分享给好友吧');
-                    }).catch(() => {
-                        const input = document.createElement('input');
-                        input.value = url + '?ref=share';
-                        document.body.appendChild(input);
-                        input.select();
-                        document.execCommand('copy');
-                        document.body.removeChild(input);
-                        alert('链接已复制！分享给好友吧');
-                    });
-                },
-                'telegram': function() {
-                    window.open('https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(
-                        text), '_blank');
-                },
-                'twitter': function() {
-                    window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' +
-                        encodeURIComponent(url), '_blank');
-                },
-                'wechat': function() {
-                    alert('请打开微信扫一扫或搜索"AI金融助手"小程序');
-                },
-                'qrcode': function() {
-                    alert('二维码功能：\n\n请访问 ' + url + ' 或扫描应用内二维码下载');
-                }
-            };
-
-            if (shareMap[platform]) {
-                shareMap[platform]();
-            }
-        }
-
-        // ============================================================
-        //  设置面板功能
-        // ============================================================
-        function openSettings() {
-            document.getElementById('settingsOverlay').classList.add('show');
-            document.body.style.overflow = 'hidden';
-            loadSettingsData();
-            loadRebateData();
-        }
-
-        function closeSettings() {
-            document.getElementById('settingsOverlay').classList.remove('show');
-            document.body.style.overflow = '';
-        }
-
-        function loadSettingsData() {
-            const userId = localStorage.getItem('userId') || 'user_' + Date.now().toString(36);
-            document.getElementById('userIdDisplay').textContent = userId;
-            if (!localStorage.getItem('userId')) {
-                localStorage.setItem('userId', userId);
-            }
-
-            const promoterId = localStorage.getItem('promoterId') || '';
-            document.getElementById('promoterIdInput').value = promoterId;
-
-            const apiConfig = JSON.parse(localStorage.getItem('gateApiConfig') || '{}');
-            document.getElementById('apiKeyInput').value = apiConfig.apiKey || '';
-            document.getElementById('apiSecretInput').value = apiConfig.apiSecret || '';
-            document.getElementById('apiPassphraseInput').value = apiConfig.passphrase || '';
-
-            const darkMode = localStorage.getItem('darkMode') !== 'false';
-            document.getElementById('darkModeToggle').checked = darkMode;
-
-            loadDashboardStats();
-        }
-
-        function saveApiConfig() {
-            const apiKey = document.getElementById('apiKeyInput').value.trim();
-            const apiSecret = document.getElementById('apiSecretInput').value.trim();
-            const passphrase = document.getElementById('apiPassphraseInput').value.trim();
-
-            if (!apiKey || !apiSecret) {
-                alert('请填写完整的API Key和Secret');
-                return;
-            }
-
-            const apiConfig = { apiKey, apiSecret, passphrase };
-            localStorage.setItem('gateApiConfig', JSON.stringify(apiConfig));
-            alert('API配置已保存（本地加密存储）');
-        }
-
-        function loadDashboardStats() {
-            const stats = {
-                trades: 0,
-                volume: 0,
-                rebate: 0
-            };
-            document.getElementById('statTrades').textContent = stats.trades;
-            document.getElementById('statVolume').textContent = '$' + stats.volume.toFixed(2);
-            document.getElementById('statRebate').textContent = '$' + stats.rebate.toFixed(2);
-        }
-
-        function openFullDashboard() {
-            alert('完整看板功能开发中...\n\n当前数据：\n交易笔数：0\n总交易额：$0\n预估返利：$0');
-        }
-
-        // ============================================================
-        //  返利卡片功能
-        // ============================================================
-        let rebateData = {
-            totalRebate: 0,
-            pendingRebate: 0,
-            totalUsers: 0
-        };
-
-        function loadRebateData() {
-            const saved = localStorage.getItem('rebate_data');
-            if (saved) {
-                try {
-                    rebateData = JSON.parse(saved);
-                } catch (e) {
-                    console.error('读取返利数据失败', e);
-                }
-            }
-            updateRebateDisplay();
-        }
-
-        function saveRebateData() {
-            localStorage.setItem('rebate_data', JSON.stringify(rebateData));
-        }
-
-        function updateRebateDisplay() {
-            document.getElementById('totalRebate').textContent = '$' + rebateData.totalRebate.toFixed(2);
-            document.getElementById('pendingRebate').textContent = '$' + rebateData.pendingRebate.toFixed(2);
-            document.getElementById('totalUsers').textContent = rebateData.totalUsers;
-        }
-
-        function addRebate(amount, userId) {
-            rebateData.totalRebate += amount;
-            rebateData.pendingRebate += amount;
-            rebateData.totalUsers += 1;
-            saveRebateData();
-            updateRebateDisplay();
-            animateRebateUpdate();
-        }
-
-        function settleRebate(amount) {
-            if (amount <= rebateData.pendingRebate) {
-                rebateData.pendingRebate -= amount;
-                saveRebateData();
-                updateRebateDisplay();
-                return true;
-            }
-            return false;
-        }
-
-        function resetRebate() {
-            rebateData = {
-                totalRebate: 0,
-                pendingRebate: 0,
-                totalUsers: 0
-            };
-            saveRebateData();
-            updateRebateDisplay();
-        }
-
-        function animateRebateUpdate() {
-            const totalElement = document.getElementById('totalRebate');
-            totalElement.style.transform = 'scale(1.2)';
-            totalElement.style.color = '#34d399';
-            setTimeout(() => {
-                totalElement.style.transform = 'scale(1)';
-                totalElement.style.color = '#10b981';
-            }, 300);
-        }
-
-        // ============================================================
-        //  主应用数据
-        // ============================================================
-        const mockAssets = [
-            { symbol: 'ETH', name: 'Ethereum', balance: 3.42, usdValue: 8243.22, chain: 'Ethereum' },
-            { symbol: 'BTC', name: 'Bitcoin', balance: 0.15, usdValue: 8475.00, chain: 'Bitcoin' },
-            { symbol: 'USDC', name: 'USD Coin', balance: 12500.00, usdValue: 12500.00, chain: 'Ethereum' },
-            { symbol: 'SOL', name: 'Solana', balance: 120.5, usdValue: 3856.00, chain: 'Solana' },
-            { symbol: 'ARB', name: 'Arbitrum', balance: 8500, usdValue: 5100.00, chain: 'Arbitrum' },
-        ];
-        const totalValue = mockAssets.reduce((sum, a) => sum + a.usdValue, 0);
-
-        let messages = [{
-            id: 'welcome',
-            role: 'assistant',
-            content: '你好！我是你的 AI 金融管家。\n\n你目前在 4 条链上持有约 **$38,174** 的资产。\n\n试试说：\n• "优化收益"\n• "分析风险"\n• "查看持仓"\n• "分析黄金"\n• "你能做什么"\n• "市场需求有多大"\n• "抢占市场"',
-            timestamp: new Date(),
-            type: 'text',
-        }];
-        let isProcessing = false;
-
-        // ============================================================
-        //  语音模式相关变量
-        // ============================================================
-        let isVoiceMode = false;
-        let isRecording = false;
-        let isCancelMode = false;
-        let mediaRecorder = null;
-        let audioChunks = [];
-        let recordingDuration = 0;
-        let recordingTimer = null;
-        let pointerStartY = 0;
-        let currentAudio = null;
-        let currentPlayingId = null;
-        let _voiceData = {};
-
-        // ============================================================
-        //  语音功能函数
-        // ============================================================
-
-        function toggleVoiceMode() {
-            const input = document.getElementById('chatInput');
-            const voiceBtn = document.getElementById('voiceBtn');
-
-            if (!isVoiceMode) {
-                if (!initSpeechRecognition()) {
-                    addSystemMessage('当前浏览器不支持语音输入，请使用Chrome或Edge浏览器');
-                    return;
-                }
-
-                isVoiceMode = true;
-                input.placeholder = '点击输入框开始语音输入...';
-                input.readOnly = true;
-                input.style.textAlign = 'center';
-                input.style.userSelect = 'none';
-                input.style.background = '#1a1a2a !important';
-                input.style.color = '#4ade80 !important';
-                input.style.borderRadius = '12px';
-                input.style.border = '1px solid #4ade80';
-                voiceBtn.classList.add('active');
-                voiceBtn.style.background = '#1a3a2a';
-                voiceBtn.style.borderColor = '#4ade80';
-
-                input.addEventListener('click', onVoiceInputClick);
-
-                addSystemMessage('语音模式已开启，点击输入框开始说话');
-            } else {
-                isVoiceMode = false;
-                input.placeholder = '输入指令...';
-                input.readOnly = false;
-                input.style.textAlign = 'left';
-                input.style.userSelect = 'auto';
-                input.style.background = 'transparent !important';
-                input.style.color = '#e8e8f0 !important';
-                input.style.borderRadius = '0';
-                input.style.border = 'none';
-                voiceBtn.classList.remove('active');
-                voiceBtn.style.background = '';
-                voiceBtn.style.borderColor = '';
-
-                input.removeEventListener('click', onVoiceInputClick);
-
-                if (isListening) {
-                    stopSpeechToText();
-                }
-                document.getElementById('cancelTip').classList.remove('show');
-
-                addSystemMessage('已切换回键盘模式');
-            }
-        }
-
-        function onVoiceInputClick(e) {
-            if (!isVoiceMode) return;
-
-            if (isListening) {
-                stopSpeechToText();
-                isListening = false;
-                const input = document.getElementById('chatInput');
-                input.placeholder = '点击输入框开始语音输入...';
-                input.style.background = '#1a1a2a !important';
-                document.getElementById('cancelTip').classList.remove('show');
-                return;
-            }
-
-            const input = document.getElementById('chatInput');
-            input.placeholder = '正在听...';
-            input.style.background = '#2a3a3a !important';
-            input.value = '聆听中...';
-
-            document.getElementById('cancelTip').textContent = '请说话...';
-            document.getElementById('cancelTip').classList.add('show');
-
-            startSpeechToText(
-                function(transcript, isFinal) {
-                    const inputEl = document.getElementById('chatInput');
-                    if (isFinal) {
-                        inputEl.value = transcript;
-                        inputEl.style.background = '#1a3a2a !important';
-                        document.getElementById('cancelTip').classList.remove('show');
-                        isListening = false;
-
-                        if (transcript.trim()) {
-                            sendMessage(transcript.trim());
-                        }
-                        inputEl.placeholder = '点击输入框开始语音输入...';
-                        inputEl.style.background = '#1a1a2a !important';
-                        inputEl.value = '';
-                    } else {
-                        inputEl.value = transcript;
-                    }
-                },
-                function(error) {
-                    const inputEl = document.getElementById('chatInput');
-                    inputEl.placeholder = '点击输入框重新尝试';
-                    inputEl.style.background = '#2a1a1a !important';
-                    inputEl.value = '错误: ' + error;
-                    document.getElementById('cancelTip').classList.remove('show');
-                    isListening = false;
-
-                    setTimeout(() => {
-                        if (!isVoiceMode) return;
-                        inputEl.placeholder = '点击输入框开始语音输入...';
-                        inputEl.style.background = '#1a1a2a !important';
-                        inputEl.value = '';
-                    }, 3000);
-                }
-            );
-        }
-
-        function onPointerDown(e) {
-            e.preventDefault();
-            if (!isVoiceMode || isRecording) return;
-            pointerStartY = e.clientY;
-            isCancelMode = false;
-            startRecording();
-        }
-
-        function onPointerUp(e) {
-            if (isRecording) {
-                stopRecording(!isCancelMode);
-            }
-            isCancelMode = false;
-            document.getElementById('cancelTip').classList.remove('show');
-            const input = document.getElementById('chatInput');
-            input.classList.remove('cancel-mode');
-        }
-
-        function onPointerMove(e) {
-            if (!isRecording) return;
-            const input = document.getElementById('chatInput');
-            const diff = pointerStartY - e.clientY;
-            isCancelMode = diff > 60;
-            if (isCancelMode) {
-                input.classList.add('cancel-mode');
-                document.getElementById('cancelTip').classList.add('show');
-            } else {
-                input.classList.remove('cancel-mode');
-                document.getElementById('cancelTip').classList.remove('show');
-            }
-        }
-
-        function onPointerLeave(e) {
-            if (isRecording) {
-                isCancelMode = true;
-                stopRecording(false);
-                document.getElementById('cancelTip').classList.remove('show');
-                const input = document.getElementById('chatInput');
-                input.classList.remove('cancel-mode', 'recording');
-                input.value = '';
-            }
-        }
-
-        async function startRecording() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                isRecording = true;
-                audioChunks = [];
-                recordingDuration = 0;
-
-                const input = document.getElementById('chatInput');
-                input.classList.add('recording');
-                input.value = '录音中 0s';
-
-                mediaRecorder = new MediaRecorder(stream);
-                mediaRecorder.ondataavailable = function(event) {
-                    if (event.data.size > 0) audioChunks.push(event.data);
-                };
-                mediaRecorder.onstop = function() {
-                    stream.getTracks().forEach(function(track) { track.stop(); });
-                };
-                mediaRecorder.start(100);
-
-                recordingTimer = setInterval(function() {
-                    recordingDuration++;
-                    const inputEl = document.getElementById('chatInput');
-                    if (inputEl && isRecording) {
-                        inputEl.value = '录音中 ' + recordingDuration + 's';
-                    }
-                    if (recordingDuration >= 60) {
-                        stopRecording(true);
-                    }
-                }, 1000);
-
-            } catch (err) {
-                isRecording = false;
-                const input = document.getElementById('chatInput');
-                input.classList.remove('recording');
-                input.value = '';
-                input.placeholder = '按住录音，松开发送';
-                addSystemMessage('无法访问麦克风，请检查权限设置');
-            }
-        }
-
-        function stopRecording(send) {
-            if (!isRecording) return;
-            isRecording = false;
-
-            if (recordingTimer) {
-                clearInterval(recordingTimer);
-                recordingTimer = null;
-            }
-
-            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                mediaRecorder.stop();
-            }
-
-            const input = document.getElementById('chatInput');
-            input.classList.remove('recording', 'cancel-mode');
-            input.value = '';
-            input.placeholder = '按住录音，松开发送';
-            document.getElementById('cancelTip').classList.remove('show');
-
-            const duration = recordingDuration;
-
-            if (send && duration >= 1 && audioChunks.length > 0) {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                addVoiceMessage(duration, audioBlob);
-            } else if (duration < 1 && send) {
-                addSystemMessage('录音太短，请按住久一点再发送');
-            }
-
-            audioChunks = [];
-        }
-
-        function addVoiceMessage(duration, audioBlob) {
-            const msgId = 'voice_' + Date.now();
-            _voiceData[msgId] = audioBlob;
-
-            const durationStr = formatDuration(duration);
-            const voiceWidth = getVoiceWidth(duration);
-            const timeStr = new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-
-            const wrapper = document.createElement('div');
-            wrapper.className = 'msg-wrapper';
-            wrapper.innerHTML = `
-                <div class="msg-row-user">
-                    <div class="msg-avatar user">我</div>
-                    <div class="msg-bubble" style="background:#3b82f6;color:#fff;border-top-right-radius:4px;max-width:82%;padding:6px 12px;">
-                        <div class="voice-msg-wrapper" onclick="playVoiceMessage('${msgId}')" style="width:${voiceWidth}px; background:rgba(255,255,255,0.15);">
-                            <span class="voice-icon" id="voiceIcon_${msgId}">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a1 1 0 0 1 1 1v16a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm-4 3a1 1 0 0 0-1 1v10a1 1 0 0 0 2 0V7a1 1 0 0 0-1-1zm8 0a1 1 0 0 0-1 1v10a1 1 0 0 0 2 0V7a1 1 0 0 0-1-1z"/></svg>
-                            </span>
-                            <span class="duration" id="duration_${msgId}">${durationStr}</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="msg-time user-time">${timeStr}</div>
-            `;
-
-            document.getElementById('messageList').appendChild(wrapper);
-            const container = document.getElementById('messageList');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        function playVoiceMessage(msgId) {
-            const data = _voiceData;
-            if (!data || !data[msgId]) return;
-
-            if (currentAudio) {
-                currentAudio.pause();
-                if (currentPlayingId) updateSpeakerIcon(currentPlayingId, 'idle');
-            }
-
-            const audioBlob = data[msgId];
-            const url = URL.createObjectURL(audioBlob);
-            const audio = new Audio(url);
-
-            currentAudio = audio;
-            currentPlayingId = msgId;
-            updateSpeakerIcon(msgId, 'playing');
-
-            audio.onended = function() {
-                updateSpeakerIcon(msgId, 'idle');
-                currentAudio = null;
-                currentPlayingId = null;
-                URL.revokeObjectURL(url);
-            };
-
-            audio.play().catch(function() {});
-        }
-
-        function updateSpeakerIcon(msgId, state) {
-            const icon = document.getElementById('voiceIcon_' + msgId);
-            const duration = document.getElementById('duration_' + msgId);
-            if (!icon) return;
-
-            if (state === 'playing') {
-                icon.classList.add('playing');
-                icon.innerHTML = `
-                    <div class="wave-bars">
-                        <span></span><span></span><span></span><span></span><span></span>
-                    </div>
-                `;
-                if (duration) duration.classList.add('playing');
-            } else {
-                icon.classList.remove('playing');
-                icon.innerHTML = `
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a1 1 0 0 1 1 1v16a1 1 0 0 1-2 0V4a1 1 0 0 1 1-1zm-4 3a1 1 0 0 0-1 1v10a1 1 0 0 0 2 0V7a1 1 0 0 0-1-1zm8 0a1 1 0 0 0-1 1v10a1 1 0 0 0 2 0V7a1 1 0 0 0-1-1z"/></svg>
-                `;
-                if (duration) duration.classList.remove('playing');
-            }
-        }
-
-        function formatDuration(seconds) {
-            const s = Math.floor(seconds);
-            const m = Math.floor(s / 60);
-            const secs = s % 60;
-            return m > 0 ? m + ':' + String(secs).padStart(2, '0') : '0:' + String(secs).padStart(2, '0');
-        }
-
-        function getVoiceWidth(duration) {
-            const minWidth = 60;
-            const maxWidth = 200;
-            const minDuration = 1;
-            const maxDuration = 60;
-            const width = minWidth + (maxWidth - minWidth) * Math.min(duration - minDuration, maxDuration - minDuration) / (
-                maxDuration - minDuration);
-            return Math.max(minWidth, Math.min(maxWidth, Math.round(width)));
-        }
-
-        function addSystemMessage(text) {
-            const wrapper = document.createElement('div');
-            wrapper.className = 'flex justify-center';
-            wrapper.innerHTML = `<div class="system-message">${text}</div>`;
-            document.getElementById('messageList').appendChild(wrapper);
-            const container = document.getElementById('messageList');
-            container.scrollTop = container.scrollHeight;
-        }
-
-        // ============================================================
-        //  抽屉控制
-        // ============================================================
-        function toggleDrawer() {
-            const drawer = document.getElementById('drawer');
-            const overlay = document.getElementById('overlay');
-            const isOpen = drawer.classList.contains('open');
-            drawer.classList.toggle('open');
-            drawer.classList.toggle('closed');
-            overlay.classList.toggle('open');
-            overlay.classList.toggle('closed');
-            document.body.style.overflow = isOpen ? '' : 'hidden';
-        }
-
-        function closeDrawer() {
-            const drawer = document.getElementById('drawer');
-            const overlay = document.getElementById('overlay');
-            drawer.classList.remove('open');
-            drawer.classList.add('closed');
-            overlay.classList.remove('open');
-            overlay.classList.add('closed');
-            document.body.style.overflow = '';
-        }
-
-        // ============================================================
-        //  数字资产相关关键词（用于筛选）
-        // ============================================================
-        const ASSET_KEYWORDS = [
-            '比特币', 'btc', '以太坊', 'eth', 'usdt', 'usdc', 'sol', 'solana', 'bnb', 'xrp', 'ada', 'dot', 'doge',
-            'avax', 'matic', 'link', 'uni', 'arb', 'op', 'apt', 'sui', 'near', 'atom', 'fil', 'lido',
-            '买入', '卖出', '买', '卖', '交易', '下单', '挂单', '止损', '止盈', '持仓', '空仓', '加仓', '减仓',
-            '行情', '价格', '趋势', '分析', '走势', 'k线', '涨幅', '跌幅', '波动', '反弹', '回调', '突破',
-            '收益', '利润', '亏损', '赚', '赔', '收益率', '利息', 'apy', '年化',
-            '风险', '安全', '清算', '爆仓', '杠杆', '保证金', '仓位', '风控',
-            'defi', '质押', '借贷', '挖矿', '流动性', 'aave', 'compound', 'ethena', 'lido', 'curve',
-            '公链', '主网', 'gas', '手续费', '跨链', '桥接',
-            '黄金', 'gold', '金价', '贵金属',
-            '查询', '查看', '显示', '打开', '开关', '帮助', '功能', '报告', '项目', '市场'
-        ];
-
-        function isAssetRelated(text) {
-            const lower = text.toLowerCase().trim();
-            if (!lower) return false;
-            for (const keyword of ASSET_KEYWORDS) {
-                if (lower.includes(keyword.toLowerCase())) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
-        // ============================================================
-        //  预设回复内容
-        // ============================================================
-
-        function getWhatCanDoContent() {
-            return `我能帮你把「加密资产」变成「睡后收入」
-
-我不是普通的聊天机器人，而是你口袋里的 AI 金融管家。以下是我能为你做的 —— 每一件都直接关系到你的钱袋子：
-
----
-
-智能收益优化
-• 自动扫描你所有链上的闲置资产（比如 USDC、USDT）
-• 实时对比 Aave、Compound、Ethena 等 20+ 协议的 APY
-• 一键将资金存入当前收益最高的地方 — 收益可能提升 2~3 倍
-
-24/7 风险守护
-• 深夜市场暴跌时，自动提醒并给出防御方案
-• 拦截钓鱼网站和恶意合约签名请求
-• 监控你的借款仓位，在清算前主动预警
-
-持仓全景分析
-• 跨链汇总你的所有资产（ETH/BTC/SOL/ARB 等）
-• 清晰展示仓位占比、月度收益、风险敞口
-• 一句话就能问："我的 SOL 仓位健康吗？"
-
-AI 自动化执行
-• 设定策略：比如"当 ETH 跌破 3000 时买入 10%"
-• 我替你盯盘并自动执行 — 你睡觉，我打工
-
----
-
-为什么你应该现在开始用？
-"过去 3 个月，使用 AI 管家的用户平均收益提升 47%，风险事件拦截率 99.6%。"
-
-立即体验：
-• 试试说："优化我的 USDC 收益"
-• 或者："分析我的持仓风险"
-• 或者："分析黄金"
-• 或者："市场需求有多大"
-• 或者："抢占市场"
-
----
-
-付费用户专享（7 天免费试用）
-• 无限次 AI 策略执行
-• 实时市场异动推送
-• 优先享受新功能（如 AI 定投、跨链套利）`;
-        }
-
-        function getMarketDemandContent() {
-            return `项目市场需求量化分析
-
-AI驱动的个人金融助手 · 市场规模测算
-
-一、总市场规模（TAM）
-• 全球加密货币用户：约 5.6亿 人
-• 其中持有稳定币用户：约 1.8亿 人
-• DeFi活跃用户：约 1,200万 人
-• 跨链资产用户：约 3,500万 人
-
-二、可触达市场（SAM）
-• "有资产、少精力"持币者：约 8,000万 人
-• "想参与、怕麻烦"观望者：约 1.2亿 人
-• "跨链多、难打理"活跃用户：约 2,500万 人
-合计可触达用户：约 2.25亿 人
-
-三、可获得市场（SOM）
-• 加密货币用户渗透率 0.5%：约 280万 人
-• 加密货币用户渗透率 2%：约 1,120万 人
-初期（12个月内）目标：50万~100万 注册用户
-
-四、商业化空间估算
-• 订阅制（100万用户 × 5%付费率 × $15/月）：$9,000万/年
-• 策略跟单分成（50万活跃用户 × 10%参与 × 月均$100 × 10%）：$6,000万/年
-综合年收入潜力：$1.5亿 ~ $2亿
-
-面向 2.25亿 潜在用户的千亿级蓝海市场`;
-        }
-
-        function getPricingContent() {
-            return `怎么收费更容易抢占市场
-
-AI驱动的个人金融助手 · 定价与增长策略
-
-核心策略：先用免费建立信任，再用付费放大价值
-定价锚点：「省心」
-
-一、定价逻辑：用户为什么愿意付钱？
-"我不懂DeFi，怕操作错" → 免费试用 + 安全守护
-"我资产不多，但想增值" → 按资产规模收费
-"我已经有收益了，愿意分你一点" → 收益分成模式
-"我需要更高级的功能" → 功能分级
-
-二、推荐定价策略：三段式
-
-阶段一：上线前6个月 → 免费 + 口碑裂变
-• 完全免费，0门槛使用
-• 所有核心功能全部开放
-• 邀请3个好友解锁"无限次AI策略执行"
-
-阶段二：6~12个月 → 分层定价 + 免费裂变
-免费版：¥0，限3次/月策略执行
-Pro版：¥99/月，无限次执行 + 实时推送
-Elite版：¥299/月，1对1私人管家
-邀请裂变：每邀请1人+1次免费执行，满10人免费升级1个月Pro
-
-阶段三：12个月后 → 收益分成 + 差异化增值
-• 基础订阅继续保留（稳定现金流）
-• 收益分成：超额收益的 10%~20%，用户无痛付费
-• 机构/团队版：¥999/月起
-
-三、为什么这套策略能抢占市场？
-• 免费版功能足够强大 — 用户真正在用，形成习惯后付费转化率更高
-• 裂变机制驱动增长 — 用户主动传播，降低获客成本
-• 订阅 + 分成双模式 — 订阅保现金流，分成实现共赢
-• 价格锚定"省心" — ¥99/月 vs 自己操作可能踩坑损失几百上千刀
-• 先免费后付费 — 用户已信任AI管家，付费决策更轻松
-
-四、关键数据预估（用户量100万时）
-• 免费用户：85万（85%）
-• Pro用户（¥99/月）：12万（12%）
-• Elite用户（¥299/月）：2万（2%）
-• 收益分成用户：1万（1%）
-月订阅收入：¥1,188万 + 分成收入
-年收入：¥1.5亿 ~ ¥2亿
-
-免费建立信任 · 付费放大价值 · 裂变驱动增长 · 分成实现共赢`;
-        }
-
-        function getGoldContent() {
-            return `黄金市场趋势分析
-
-实时数据模拟 · 仅供分析参考
-
-当前价格
-• 现货黄金：$2,546.30 ⬆️ +0.42%
-• 黄金期货（12月）：$2,568.20 ⬆️ +0.38%
-• 今日波动区间：$2,528.50 ~ $2,552.80
-
-短期趋势（24h）
-黄金今日震荡上行，受美元指数小幅走弱及地缘政治不确定性支撑。亚盘时段突破 $2,540 阻力位后加速上行，目前测试 $2,555 附近压力。
-
-中期趋势（周线）
-• 周线级别：多头排列，MA5 上穿 MA10 形成金叉
-• 关键支撑：$2,480
-• 关键阻力：$2,580
-• RSI（14）：62.5（中性偏强，未超买）
-
-核心驱动因素
-• 美联储降息预期升温（9月降息概率 68%）
-• 全球央行持续增持黄金（中国连续 18 个月增持）
-• 中东局势紧张，避险资金流入
-• 美元指数反弹可能短期压制金价
-
-今日关注数据
-• 20:30 美国初请失业金人数
-• 22:00 美国成屋销售数据
-
-短期操作参考
-当前金价处于上升通道中，短期偏向逢低做多。
-关键入场区间 $2,530~$2,540，止损 $2,510，目标 $2,580。
-
-以上为市场数据分析，不构成投资建议，请结合自身风险承受能力决策。`;
-        }
-
-        // ============================================================
-        //  渲染函数
-        // ============================================================
-
-        function renderAssetOverview() {
-            const container = document.getElementById('assetOverview');
-            const change = 2.3;
-            const changeColor = change >= 0 ? 'text-emerald-400' : 'text-red-400';
-            let html = `
-                <div class="bg-[#12121f] rounded-2xl p-4 border border-[#1a1a2a]">
-                    <div class="flex items-center justify-between">
-                        <span class="text-sm text-[#6a6a7a]">总资产</span>
-                        <span class="text-sm ${changeColor}">${change >= 0 ? '+' : ''}${change}%</span>
-                    </div>
-                    <div class="text-2xl font-bold mt-1">$${totalValue.toLocaleString()}</div>
-                    <div class="flex items-center gap-2 mt-2 text-xs text-[#5a5a5a]">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M6 6h12M6 18h12"/><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-                        <span>${mockAssets.length} 种 · 4 条链</span>
-                    </div>
-                </div>
-                <div class="space-y-1">
-            `;
-            mockAssets.forEach(asset => {
-                const pct = ((asset.usdValue / totalValue) * 100).toFixed(1);
+        // 更新网格可视化
+        function updateGridVisual() {
+            const config = strategyConfigs[currentStrategy];
+            const spacing = config.params.gridSpacing ? config.params.gridSpacing.value : 2;
+            const currentPrice = gridBtcPrice;
+            const container = document.getElementById('gridVisualContainer');
+            
+            let html = '';
+            
+            for (let i = 4; i >= 1; i--) {
+                const sellPrice = currentPrice * (1 + i * spacing / 100);
                 html += `
-                    <div class="flex items-center justify-between py-2 px-3 rounded-xl active:bg-[#12121f] transition-colors">
-                        <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-full bg-[#1a1a2a] flex items-center justify-center text-xs font-bold text-[#6a6a7a]">${asset.symbol.slice(0, 2)}</div>
-                            <div>
-                                <div class="text-sm font-medium">${asset.symbol}</div>
-                                <div class="text-xs text-[#5a5a6a]">${asset.balance}</div>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-sm font-medium">$${asset.usdValue.toLocaleString()}</div>
-                            <div class="text-xs text-[#5a5a6a]">${pct}%</div>
-                        </div>
+                    <div class="grid-row sell">
+                        <span style="color:#ef4444;font-size:10px;">卖出${i}</span>
+                        <span class="grid-price">$${sellPrice.toFixed(2)}</span>
+                        <span class="grid-status pending">待触发</span>
                     </div>
                 `;
-            });
-            html += `</div>`;
+            }
+            
+            html += `
+                <div class="grid-row" style="border-left:3px solid #3b82f6;">
+                    <span style="color:#3b82f6;font-size:10px;">当前</span>
+                    <span class="grid-price">$${currentPrice.toFixed(2)}</span>
+                    <span class="grid-status" style="background:#1a2a3a;color:#3b82f6;">基准价</span>
+                </div>
+            `;
+            
+            for (let i = 1; i <= 4; i++) {
+                const buyPrice = currentPrice * (1 - i * spacing / 100);
+                html += `
+                    <div class="grid-row buy">
+                        <span style="color:#10b981;font-size:10px;">买入${i}</span>
+                        <span class="grid-price">$${buyPrice.toFixed(2)}</span>
+                        <span class="grid-status pending">待触发</span>
+                    </div>
+                `;
+            }
+            
             container.innerHTML = html;
         }
 
-        // ============================================================
-        //  快捷操作渲染
-        // ============================================================
-        function renderQuickActions() {
-            const container = document.getElementById('quickActions');
-            const actions = [
-                { label: '策略交易', prompt: 'strategy', url: 'strategy.html' },
-                { label: '量化交易', prompt: 'grid', url: 'grid-strategy.html' },
-                { label: '收益排行', prompt: '查看收益排行榜' },
-            ];
-            container.innerHTML = actions.map((a) => {
-                if (a.url) {
-                    return `<button onclick="window.location.href='${a.url}'" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
+        // 初始化图表
+        function initGridChart() {
+            const canvas = document.getElementById('gridPriceChart');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            const initialData = [];
+            let current = gridBtcPrice * 0.97;
+            for (let i = 0; i < 30; i++) {
+                current += (Math.random() - 0.5) * 200;
+                initialData.push(Math.round(current * 100) / 100);
+            }
+            
+            if (window.gridChart) {
+                window.gridChart.destroy();
+            }
+            
+            window.gridChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(30).fill(''),
+                    datasets: [{
+                        label: '价格',
+                        data: initialData,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59,130,246,0.1)',
+                        fill: true,
+                        tension: 0.2,
+                        pointRadius: 0,
+                        borderWidth: 2,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return '$' + context.parsed.y.toFixed(2);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            ticks: {
+                                color: '#6a6a7a',
+                                callback: function(value) { return '$' + value.toFixed(0); }
+                            },
+                            grid: { color: '#1a1a2a' }
+                        }
+                    }
                 }
-                return `<button onclick="sendMessage('${a.prompt}')" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
-            }).join('');
+            });
         }
 
-        // ============================================================
-        //  消息发送逻辑
-        // ============================================================
-        function sendMessage(text) {
-            if (!text || text.trim() === '' || isProcessing) return;
-
-            const trimmedText = text.trim();
-            const lower = trimmedText.toLowerCase();
-
-            if (lower === '你好' || lower === '您好' || lower === 'hi' || lower === 'hello') {
-                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
-                    type: 'text' });
-                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getWhatCanDoContent(), timestamp: new Date(),
-                    type: 'text' });
-                renderMessages();
-                updateSendButton();
-                return;
+        // 更新显示
+        function updateGridDisplay() {
+            const total = gridUsdtBalance + gridBtcBalance * gridBtcPrice;
+            const pnl = total - 10000;
+            
+            document.getElementById('gridCurrentPrice').textContent = '$' + gridBtcPrice.toFixed(2);
+            document.getElementById('gridTotalBalance').textContent = '$' + total.toFixed(2);
+            document.getElementById('gridUsdtBalance').textContent = gridUsdtBalance.toFixed(2);
+            document.getElementById('gridBtcBalance').textContent = gridBtcBalance.toFixed(4);
+            
+            const pnlEl = document.getElementById('gridTotalPnl');
+            if (pnlEl) {
+                pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+                pnlEl.className = 'value ' + (pnl >= 0 ? 'green' : 'red');
             }
-
-            if (lower.includes('你能做什么') || lower.includes('你会什么') || lower.includes('功能介绍') || lower.includes('有什么用') ||
-                lower.includes('帮助')) {
-                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
-                    type: 'text' });
-                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getWhatCanDoContent(), timestamp: new Date(),
-                    type: 'text' });
-                renderMessages();
-                updateSendButton();
-                return;
-            }
-
-            if (lower.includes('市场需求') || lower.includes('市场有多大') || lower.includes('规模') || lower.includes('tam') || lower
-                .includes('市场空间')) {
-                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
-                    type: 'text' });
-                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getMarketDemandContent(), timestamp: new Date(),
-                    type: 'text' });
-                renderMessages();
-                updateSendButton();
-                return;
-            }
-
-            if (lower.includes('抢占市场') || lower.includes('收费') || lower.includes('定价') || lower.includes('怎么赚钱') || lower
-                .includes('商业模式') || lower.includes('付费') || lower.includes('推广') || lower.includes('裂变')) {
-                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
-                    type: 'text' });
-                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getPricingContent(), timestamp: new Date(),
-                    type: 'text' });
-                renderMessages();
-                updateSendButton();
-                return;
-            }
-
-            if (lower.includes('黄金') || lower.includes('gold') || lower.includes('金价') || lower.includes('贵金属') || lower
-                .includes('分析黄金')) {
-                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
-                    type: 'text' });
-                messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: getGoldContent(), timestamp: new Date(),
-                    type: 'text' });
-                renderMessages();
-                updateSendButton();
-                return;
-            }
-
-            if (!isAssetRelated(trimmedText)) {
-                messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
-                    type: 'text' });
-                messages.push({ id: `system-${Date.now()}`, role: 'system',
-                    content: '你已经超出对话范围，请输入数字资产管理相关指令', timestamp: new Date(), type: 'text' });
-                renderMessages();
-                updateSendButton();
-                return;
-            }
-
-            messages.push({ id: `user-${Date.now()}`, role: 'user', content: trimmedText, timestamp: new Date(),
-                type: 'text' });
-            isProcessing = true;
-            renderMessages();
-            updateSendButton();
-
-            callDeepSeek(trimmedText)
-                .then(aiResponse => {
-                    messages.push({ id: `ai-${Date.now()}`, role: 'assistant', content: aiResponse, timestamp: new Date(),
-                        type: 'text' });
-                    isProcessing = false;
-                    renderMessages();
-                    updateSendButton();
-                })
-                .catch(error => {
-                    console.error('DeepSeek API调用失败:', error);
-                    messages.push({ id: `ai-${Date.now()}`, role: 'assistant',
-                        content: `AI服务调用失败：${error.message || '未知错误'}\n\n请检查网络连接或API配置。`,
-                        timestamp: new Date(), type: 'text' });
-                    isProcessing = false;
-                    renderMessages();
-                    updateSendButton();
-                });
         }
 
-        // ============================================================
-        //  渲染消息
-        // ============================================================
-        function renderMessages() {
-            const container = document.getElementById('messageList');
-            const children = container.children;
-            const toRemove = [];
-            for (let i = 0; i < children.length; i++) {
-                const child = children[i];
-                if (!child.querySelector('.voice-msg-wrapper')) {
-                    toRemove.push(child);
+        // 启动策略
+        function startGridStrategy() {
+            if (gridRunning) return;
+            gridRunning = true;
+            
+            const dot = document.getElementById('gridStatusDot');
+            const statusText = document.getElementById('gridStatusText');
+            if (dot) dot.classList.add('active');
+            if (statusText) statusText.textContent = '策略运行中';
+            
+            gridAddLog(`▶️ ${strategyConfigs[currentStrategy].name}已启动`);
+            
+            gridInterval = setInterval(() => {
+                const volatility = 100;
+                const change = (Math.random() - 0.5) * volatility * 2;
+                gridBtcPrice = Math.max(10000, gridBtcPrice + change);
+                gridBtcPrice = Math.round(gridBtcPrice * 100) / 100;
+                
+                priceHistory.push(gridBtcPrice);
+                if (priceHistory.length > 200) priceHistory.shift();
+                
+                updateGridDisplay();
+                executeGridLogic();
+                updateGridVisual();
+                
+                if (window.gridChart) {
+                    window.gridChart.data.datasets[0].data.push(gridBtcPrice);
+                    window.gridChart.data.datasets[0].data.shift();
+                    window.gridChart.update();
+                }
+            }, 3000);
+        }
+
+        // 停止策略
+        function stopGridStrategy() {
+            if (!gridRunning) return;
+            gridRunning = false;
+            
+            if (gridInterval) {
+                clearInterval(gridInterval);
+                gridInterval = null;
+            }
+            
+            const dot = document.getElementById('gridStatusDot');
+            const statusText = document.getElementById('gridStatusText');
+            if (dot) dot.classList.remove('active');
+            if (statusText) statusText.textContent = '策略已停止';
+            
+            gridAddLog('⏹️ 策略已停止');
+        }
+
+        // 执行网格逻辑
+        function executeGridLogic() {
+            const config = strategyConfigs[currentStrategy];
+            
+            switch (currentStrategy) {
+                case 'rsi':
+                    executeRSIGrid(config.params);
+                    break;
+                case 'bollinger':
+                    executeBollingerGrid(config.params);
+                    break;
+                case 'ema':
+                    executeEMAGrid(config.params);
+                    break;
+                case 'kdj':
+                    executeKDJGrid(config.params);
+                    break;
+                case 'macd':
+                    executeMACDGrid(config.params);
+                    break;
+                case 'multi':
+                    executeMultiGrid(config.params);
+                    break;
+            }
+        }
+
+        // RSI网格执行
+        function executeRSIGrid(params) {
+            const rsiPeriod = parseInt(params.rsiPeriod.value);
+            const oversold = parseFloat(params.oversold.value);
+            const overbought = parseFloat(params.overbought.value);
+            const positionSize = parseFloat(params.positionSize.value);
+            
+            const rsi = calculateRSI(priceHistory, rsiPeriod);
+            if (rsi === null) return;
+            
+            if (rsi < oversold && gridUsdtBalance > 100) {
+                const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
+                const quantity = buyAmount / gridBtcPrice;
+                if (quantity > 0.001) {
+                    gridBtcBalance += quantity;
+                    gridUsdtBalance -= buyAmount;
+                    gridAddLog(`📈 RSI=${rsi.toFixed(1)} 超卖，买入 ${quantity.toFixed(6)} BTC`);
+                }
+            } else if (rsi > overbought && gridBtcBalance > 0.001) {
+                const sellQuantity = gridBtcBalance * positionSize / 100;
+                if (sellQuantity > 0.001) {
+                    const sellAmount = sellQuantity * gridBtcPrice;
+                    gridBtcBalance -= sellQuantity;
+                    gridUsdtBalance += sellAmount;
+                    gridAddLog(`📉 RSI=${rsi.toFixed(1)} 超买，卖出 ${sellQuantity.toFixed(6)} BTC`);
                 }
             }
-            toRemove.forEach(el => el.remove());
+        }
 
+        // 布林带网格执行
+        function executeBollingerGrid(params) {
+            const bbPeriod = parseInt(params.bbPeriod.value);
+            const stdDev = parseFloat(params.stdDev.value);
+            const positionSize = parseFloat(params.positionSize.value);
+            
+            const bb = calculateBollinger(priceHistory, bbPeriod, stdDev);
+            if (bb === null) return;
+            
+            if (gridBtcPrice <= bb.lower && gridUsdtBalance > 100) {
+                const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
+                const quantity = buyAmount / gridBtcPrice;
+                if (quantity > 0.001) {
+                    gridBtcBalance += quantity;
+                    gridUsdtBalance -= buyAmount;
+                    gridAddLog(`📈 触及布林带下轨($${bb.lower.toFixed(2)})，买入`);
+                }
+            } else if (gridBtcPrice >= bb.upper && gridBtcBalance > 0.001) {
+                const sellQuantity = gridBtcBalance * positionSize / 100;
+                if (sellQuantity > 0.001) {
+                    const sellAmount = sellQuantity * gridBtcPrice;
+                    gridBtcBalance -= sellQuantity;
+                    gridUsdtBalance += sellAmount;
+                    gridAddLog(`📉 触及布林带上轨($${bb.upper.toFixed(2)})，卖出`);
+                }
+            }
+        }
+
+        // EMA趋势网格执行
+        function executeEMAGrid(params) {
+            const emaShort = parseInt(params.emaShort.value);
+            const emaLong = parseInt(params.emaLong.value);
+            const positionSize = parseFloat(params.positionSize.value);
+            
+            const shortEMA = calculateEMA(priceHistory, emaShort);
+            const longEMA = calculateEMA(priceHistory, emaLong);
+            if (shortEMA === null || longEMA === null) return;
+            
+            const diffPercent = Math.abs(shortEMA - longEMA) / longEMA * 100;
+            
+            if (diffPercent < 0.5) {
+                if (gridUsdtBalance > 100 && gridBtcBalance < 0.1) {
+                    const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
+                    const quantity = buyAmount / gridBtcPrice;
+                    if (quantity > 0.001) {
+                        gridBtcBalance += quantity;
+                        gridUsdtBalance -= buyAmount;
+                        gridAddLog(`📈 震荡市网格买入`);
+                    }
+                } else if (gridBtcBalance > 0.001) {
+                    const sellQuantity = gridBtcBalance * positionSize / 100;
+                    if (sellQuantity > 0.001) {
+                        const sellAmount = sellQuantity * gridBtcPrice;
+                        gridBtcBalance -= sellQuantity;
+                        gridUsdtBalance += sellAmount;
+                        gridAddLog(`📉 震荡市网格卖出`);
+                    }
+                }
+            } else if (shortEMA > longEMA) {
+                if (gridBtcPrice <= shortEMA * 1.01 && gridUsdtBalance > 100) {
+                    const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
+                    const quantity = buyAmount / gridBtcPrice;
+                    if (quantity > 0.001) {
+                        gridBtcBalance += quantity;
+                        gridUsdtBalance -= buyAmount;
+                        gridAddLog(`📈 上升趋势回调买入`);
+                    }
+                }
+            } else {
+                if (gridBtcBalance > 0.001) {
+                    const sellQuantity = gridBtcBalance;
+                    const sellAmount = sellQuantity * gridBtcPrice;
+                    gridBtcBalance = 0;
+                    gridUsdtBalance += sellAmount;
+                    gridAddLog(`📉 下降趋势清仓卖出`);
+                }
+            }
+        }
+
+        // KDJ网格执行
+        function executeKDJGrid(params) {
+            const kdjPeriod = parseInt(params.kdjPeriod.value);
+            const positionSize = parseFloat(params.positionSize.value);
+            
+            const kdj = calculateKDJ(priceHistory, kdjPeriod);
+            if (kdj === null) return;
+            
+            if (kdj.j < 10 && gridUsdtBalance > 100) {
+                const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
+                const quantity = buyAmount / gridBtcPrice;
+                if (quantity > 0.001) {
+                    gridBtcBalance += quantity;
+                    gridUsdtBalance -= buyAmount;
+                    gridAddLog(`📈 J值=${kdj.j.toFixed(1)} 超卖，买入`);
+                }
+            } else if (kdj.j > 90 && gridBtcBalance > 0.001) {
+                const sellQuantity = gridBtcBalance * positionSize / 100;
+                if (sellQuantity > 0.001) {
+                    const sellAmount = sellQuantity * gridBtcPrice;
+                    gridBtcBalance -= sellQuantity;
+                    gridUsdtBalance += sellAmount;
+                    gridAddLog(`📉 J值=${kdj.j.toFixed(1)} 超买，卖出`);
+                }
+            }
+        }
+
+        // MACD网格执行
+        function executeMACDGrid(params) {
+            const fastPeriod = parseInt(params.fastPeriod.value);
+            const slowPeriod = parseInt(params.slowPeriod.value);
+            const signalPeriod = parseInt(params.signalPeriod.value);
+            const positionSize = parseFloat(params.positionSize.value);
+            
+            const macd = calculateMACD(priceHistory, fastPeriod, slowPeriod, signalPeriod);
+            if (macd === null) return;
+            
+            if (macd.histogram > 0 && macd.histogram > macd.signal * 0.1 && gridUsdtBalance > 100) {
+                const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
+                const quantity = buyAmount / gridBtcPrice;
+                if (quantity > 0.001) {
+                    gridBtcBalance += quantity;
+                    gridUsdtBalance -= buyAmount;
+                    gridAddLog(`📈 MACD柱状图放大，买入`);
+                }
+            } else if (macd.histogram < 0 && Math.abs(macd.histogram) > macd.signal * 0.1 && gridBtcBalance > 0.001) {
+                const sellQuantity = gridBtcBalance * positionSize / 100;
+                if (sellQuantity > 0.001) {
+                    const sellAmount = sellQuantity * gridBtcPrice;
+                    gridBtcBalance -= sellQuantity;
+                    gridUsdtBalance += sellAmount;
+                    gridAddLog(`📉 MACD柱状图缩小，卖出`);
+                }
+            }
+        }
+
+        // 多周期网格执行
+        function executeMultiGrid(params) {
+            const positionSize = parseFloat(params.positionSize.value);
+            const maxPositions = parseFloat(params.maxPositions.value);
+            
+            const totalValue = gridUsdtBalance + gridBtcBalance * gridBtcPrice;
+            const currentPositionPercent = (gridBtcBalance * gridBtcPrice / totalValue) * 100;
+            
+            if (currentPositionPercent < maxPositions && gridUsdtBalance > 100) {
+                const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
+                const quantity = buyAmount / gridBtcPrice;
+                if (quantity > 0.001) {
+                    gridBtcBalance += quantity;
+                    gridUsdtBalance -= buyAmount;
+                    gridAddLog(`📈 多周期网格买入，仓位${currentPositionPercent.toFixed(1)}%`);
+                }
+            } else if (currentPositionPercent > maxPositions && gridBtcBalance > 0.001) {
+                const sellQuantity = gridBtcBalance * positionSize / 100;
+                if (sellQuantity > 0.001) {
+                    const sellAmount = sellQuantity * gridBtcPrice;
+                    gridBtcBalance -= sellQuantity;
+                    gridUsdtBalance += sellAmount;
+                    gridAddLog(`📉 多周期网格卖出，仓位${currentPositionPercent.toFixed(1)}%`);
+                }
+            }
+        }
+
+        // 打开量化了解弹窗
+        function openKnowledgePanel() {
+            document.getElementById('knowledgeOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭量化了解弹窗
+        function closeKnowledgePanel(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('knowledgeOverlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        // 打开参数设置弹窗
+        function openParamsModal() {
+            const config = strategyConfigs[currentStrategy];
+            const container = document.getElementById('paramsModalContent');
+            
             let html = '';
-            messages.forEach(msg => {
-                const isUser = msg.role === 'user';
-                const isSystem = msg.role === 'system';
-                const isReport = msg.type === 'report';
-                const isTransaction = msg.type === 'transaction_preview';
-                const isAlert = msg.type === 'alert';
-                const isAssetSummary = msg.type === 'asset_summary';
-
-                if (isSystem) {
-                    html +=
-                        `<div class="flex justify-center"><div class="system-message">${msg.content}</div></div>`;
-                    return;
-                }
-
-                const timeStr = msg.timestamp.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-                const contentHtml = (msg.content || '').replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
-                    .replace(/\n/g, '<br>');
-
-                if (isReport) {
-                    html += `
-                        <div class="msg-wrapper">
-                            <div class="msg-row-ai">
-                                <div class="msg-avatar">AI</div>
-                                <div class="msg-bubble" style="max-width:96%;">
-                                    ${msg.content}
-                                </div>
-                            </div>
-                            <div class="msg-time ai-time">${timeStr}</div>
-                        </div>
-                    `;
-                    return;
-                }
-
-                let typeLabel = '';
-                let typeColor = '';
-                if (isTransaction) { typeLabel = '交易预览 · 待确认';
-                    typeColor = 'text-emerald-400'; } else if (isAlert) { typeLabel = '风险提醒';
-                    typeColor = 'text-amber-400'; } else if (isAssetSummary) { typeLabel = '持仓分析';
-                    typeColor = 'text-blue-400'; }
-
-                if (isUser) {
-                    html += `
-                        <div class="msg-wrapper">
-                            <div class="msg-row-user">
-                                <div class="msg-avatar user">我</div>
-                                <div class="msg-bubble" style="background:#3b82f6;color:#fff;border-top-right-radius:4px;max-width:82%;">${contentHtml}</div>
-                            </div>
-                            <div class="msg-time user-time">${timeStr}</div>
-                        </div>
-                    `;
-                    return;
-                }
-
+            Object.entries(config.params).forEach(([key, param]) => {
                 html += `
-                    <div class="msg-wrapper">
-                        <div class="msg-row-ai">
-                            <div class="msg-avatar">AI</div>
-                            <div class="msg-bubble" style="max-width:96%;">
-                                ${typeLabel ? `<div class="text-xs ${typeColor} mb-1">${typeLabel}</div>` : ''}
-                                <div class="text-[#d0d0e0] text-sm leading-relaxed">${contentHtml}</div>
-                                ${isTransaction ? `
-                                    <div class="flex gap-2 mt-2.5">
-                                        <button class="text-xs bg-emerald-500/20 text-emerald-400 px-3 py-1.5 rounded-lg active:bg-emerald-500/30 transition-colors tap-active" onclick="alert('交易已模拟执行（演示版）')">确认执行</button>
-                                        <button class="text-xs bg-[#1a1a2a] text-[#6a6a7a] px-3 py-1.5 rounded-lg active:bg-[#2a2a3a] transition-colors tap-active" onclick="alert('修改参数功能（演示版）')">修改参数</button>
-                                    </div>
-                                ` : ''}
-                            </div>
-                        </div>
-                        <div class="msg-time ai-time">${timeStr}</div>
+                    <div class="param-row">
+                        <span class="param-label">${param.label}</span>
+                        <input type="number" class="param-input" 
+                            id="modalParam_${key}" 
+                            value="${param.value}" 
+                            min="${param.min}" 
+                            max="${param.max}" 
+                            step="0.1">
                     </div>
                 `;
             });
-
-            if (isProcessing) {
-                html += `
-                    <div class="msg-wrapper">
-                        <div class="msg-row-ai">
-                            <div class="msg-avatar">AI</div>
-                            <div class="msg-bubble" style="max-width:96%;">
-                                <div class="typing-cursor text-[#4a4a5a] text-sm">思考中</div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-
-            container.insertAdjacentHTML('beforeend', html);
-            container.scrollTop = container.scrollHeight;
+            
+            container.innerHTML = html;
+            document.getElementById('paramsModalOverlay').classList.add('show');
         }
 
-        // ============================================================
-        //  UI 控制
-        // ============================================================
-        function updateSendButton() {
-            const input = document.getElementById('chatInput');
-            const btn = document.getElementById('sendBtn');
-            const hasText = input.value.trim() !== '';
-            if (hasText && !isProcessing && !isVoiceMode) {
-                btn.disabled = false;
-                btn.className = 'p-2 rounded-xl transition-all flex-shrink-0 bg-blue-500 text-white active:bg-blue-600 tap-active';
-                btn.innerHTML =
-                    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>`;
-            } else {
-                btn.disabled = true;
-                btn.className = 'p-2 rounded-xl transition-all flex-shrink-0 bg-[#1a1a2a] text-[#4a4a5a] cursor-not-allowed';
-                btn.innerHTML =
-                    `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4 20-7z"/><path d="M22 2 11 13"/></svg>`;
-            }
+        // 关闭参数设置弹窗
+        function closeParamsModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('paramsModalOverlay').classList.remove('show');
+        }
+
+        // 保存参数
+        function saveParams() {
+            const config = strategyConfigs[currentStrategy];
+            
+            Object.keys(config.params).forEach(key => {
+                const input = document.getElementById('modalParam_' + key);
+                if (input) {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value)) {
+                        config.params[key].value = value;
+                    }
+                }
+            });
+            
+            closeParamsModal();
+            updateGridVisual();
+            gridAddLog(`⚙️ ${config.name}参数已更新`);
         }
 
         // ============================================================
         //  初始化
         // ============================================================
         document.addEventListener('DOMContentLoaded', function() {
-            const input = document.getElementById('chatInput');
-            const sendBtn = document.getElementById('sendBtn');
-            const voiceBtn = document.getElementById('voiceBtn');
-
-            voiceBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                toggleVoiceMode();
-            });
-
-            input.addEventListener('input', function() {
-                this.style.height = 'auto';
-                this.style.height = Math.min(this.scrollHeight, 66) + 'px';
-                updateSendButton();
-            });
-
-            sendBtn.addEventListener('click', function() {
-                if (isVoiceMode) {
-                    return;
-                }
-                const text = input.value.trim();
-                if (text && !isProcessing) {
-                    sendMessage(text);
-                    input.value = '';
-                    input.style.height = 'auto';
-                    updateSendButton();
-                }
-            });
-
-            input.addEventListener('keydown', function(e) {
-                if (isVoiceMode) return;
-                if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendBtn.click();
+            // 初始化价格历史
+            for (let i = 0; i < 60; i++) {
+                priceHistory.push(gridBtcPrice + (Math.random() - 0.5) * 200);
+            }
+            
+            // 初始化网格布局
+            updateGridVisual();
+            
+            // 初始化图表
+            initGridChart();
+            
+            // 更新显示
+            updateGridDisplay();
+            
+            gridAddLog('✅ 网格策略面板已就绪');
+            gridAddLog(`📊 当前BTC价格: $${gridBtcPrice.toFixed(2)}`);
+            
+            // 暴露全局函数
+            window.switchStrategy = switchStrategy;
+            window.startGridStrategy = startGridStrategy;
+            window.stopGridStrategy = stopGridStrategy;
+            window.openParamsModal = openParamsModal;
+            window.closeParamsModal = closeParamsModal;
+            window.saveParams = saveParams;
+            window.openKnowledgePanel = openKnowledgePanel;
+            window.closeKnowledgePanel = closeKnowledgePanel;
+            
+            // 弹窗外部点击关闭
+            document.getElementById('paramsModalOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeParamsModal();
                 }
             });
-
-            renderAssetOverview();
-            renderQuickActions();
-            renderMessages();
-            updateSendButton();
-
-            window.sendMessage = sendMessage;
-            window.toggleDrawer = toggleDrawer;
-            window.closeDrawer = closeDrawer;
-            window.toggleVoiceMode = toggleVoiceMode;
-            window.playVoiceMessage = playVoiceMessage;
-            window.openShare = openShare;
-            window.closeShare = closeShare;
-            window.shareTo = shareTo;
-            window.openSettings = openSettings;
-            window.closeSettings = closeSettings;
-            window.saveApiConfig = saveApiConfig;
-            window.openFullDashboard = openFullDashboard;
-            window.addRebate = addRebate;
-            window.settleRebate = settleRebate;
-            window.resetRebate = resetRebate;
-
-            document.getElementById('overlay').addEventListener('click', closeDrawer);
+            document.getElementById('knowledgeOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeKnowledgePanel();
+                }
+            });
         });
     </script>
-
 </body>
 </html>
