@@ -1148,13 +1148,13 @@
             stroke-width: 2;
         }
 
-        /* ===== 策略交易面板样式 ===== */
+        /* ===== 策略交易面板样式 - 与启动页统一配色 ===== */
         #strategyPanel {
             display: none;
             position: fixed;
             inset: 0;
             z-index: 1000;
-            background: #0d1117;
+            background: #0a0a0f;
             overflow-y: auto;
             padding: 20px;
         }
@@ -1197,7 +1197,7 @@
             display: flex;
             align-items: center;
             width: 100%;
-            border-bottom: 1px solid #333333;
+            border-bottom: 1px solid #1a1a2a;
             padding: 12px 0 8px 0;
             margin-bottom: 12px;
             position: relative;
@@ -1208,7 +1208,7 @@
             overflow-x: auto;
             overflow-y: hidden;
             scrollbar-width: thin;
-            scrollbar-color: #f0b90b #161b22;
+            scrollbar-color: #3b82f6 #1a1a2a;
             flex: 1;
             padding-bottom: 4px;
         }
@@ -1216,14 +1216,14 @@
             height: 4px;
         }
         .strategy-dashboard .symbol-list::-webkit-scrollbar-thumb {
-            background-color: #f0b90b;
+            background-color: #3b82f6;
             border-radius: 2px;
         }
         .strategy-dashboard .symbol-list::-webkit-scrollbar-track {
-            background: #21262d;
+            background: #1a1a2a;
         }
         .strategy-dashboard .symbol-item {
-            color: #888888;
+            color: #6a6a7a;
             font-size: 14px;
             font-weight: 600;
             letter-spacing: 0.5px;
@@ -1235,10 +1235,10 @@
             padding: 4px 0;
         }
         .strategy-dashboard .symbol-item:hover {
-            color: #cccccc;
+            color: #9ca3af;
         }
         .strategy-dashboard .symbol-item.active {
-            color: #f0b90b;
+            color: #3b82f6;
         }
         .strategy-dashboard .symbol-item.active::after {
             content: "";
@@ -1247,14 +1247,14 @@
             bottom: -2px;
             width: 100%;
             height: 2px;
-            background-color: #4a4a5a;
+            background-color: #3b82f6;
             border-radius: 2px;
         }
         .strategy-dashboard .add-pair-btn {
             width: 28px;
             height: 28px;
-            border: 1px solid #f0b90b;
-            color: #f0b90b;
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
             background: transparent;
             border-radius: 50%;
             font-size: 16px;
@@ -1268,8 +1268,8 @@
             flex-shrink: 0;
         }
         .strategy-dashboard .add-pair-btn:hover {
-            background-color: #f0b90b;
-            color: #0d1117;
+            background-color: #3b82f6;
+            color: #0a0a0f;
         }
 
         /* 顶部总收益卡片 */
@@ -1278,9 +1278,9 @@
             justify-content: space-between;
             align-items: flex-start;
             margin-bottom: 16px;
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
             padding: 14px 20px;
         }
         .strategy-dashboard .header .total-info {
@@ -1290,12 +1290,12 @@
         }
         .strategy-dashboard .header .total-info .label {
             font-size: 14px;
-            color: #8b949e;
+            color: #6a6a7a;
         }
         .strategy-dashboard .header .total-info .value {
             font-size: 26px;
             font-weight: 700;
-            color: #e6e6e6;
+            color: #e8e8f0;
         }
         .strategy-dashboard .header .total-info .change {
             font-size: 16px;
@@ -1310,7 +1310,7 @@
         .strategy-dashboard .header .price-info .price-value {
             font-size: 26px;
             font-weight: 700;
-            color: #e6e6e6;
+            color: #e8e8f0;
         }
         .strategy-dashboard .header .price-info .price-change {
             font-size: 16px;
@@ -1319,17 +1319,17 @@
 
         /* ===== 合并后的账户操作卡片 ===== */
         .strategy-dashboard .account-card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
             padding: 18px;
             margin-bottom: 20px;
         }
         .strategy-dashboard .account-card .card-title {
-            color: #f7931a;
+            color: #60a5fa;
             font-size: 16px;
             font-weight: 600;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid #1a1a2a;
             padding-bottom: 10px;
             margin-bottom: 14px;
             display: flex;
@@ -1337,8 +1337,8 @@
             align-items: center;
         }
         .strategy-dashboard .account-card .card-title .params-btn {
-            background: #30363d;
-            color: #8b949e;
+            background: #1a1a2a;
+            color: #8a8a9a;
             border: none;
             border-radius: 6px;
             padding: 4px 12px;
@@ -1347,7 +1347,7 @@
             transition: background 0.2s;
         }
         .strategy-dashboard .account-card .card-title .params-btn:hover {
-            background: #3a4046;
+            background: #2a2a3a;
         }
         .strategy-dashboard .account-card .account-row {
             display: flex;
@@ -1357,24 +1357,24 @@
         }
         .strategy-dashboard .account-card .account-row .label {
             font-size: 13px;
-            color: #8b949e;
+            color: #6a6a7a;
         }
         .strategy-dashboard .account-card .account-row .value {
             font-size: 15px;
             font-weight: 600;
-            color: #e6e6e6;
+            color: #e8e8f0;
         }
         .strategy-dashboard .account-card .account-row .value.btc {
-            color: #f7931a;
+            color: #fbbf24;
         }
         .strategy-dashboard .account-card .account-row .value.green {
-            color: #2ea043;
+            color: #10b981;
         }
         .strategy-dashboard .account-card .account-row .value.red {
-            color: #da3633;
+            color: #ef4444;
         }
         .strategy-dashboard .account-card .divider {
-            border-top: 1px solid #30363d;
+            border-top: 1px solid #1a1a2a;
             margin: 12px 0;
         }
         .strategy-dashboard .account-card .status-indicator {
@@ -1388,11 +1388,11 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #da3633;
+            background: #6a6a7a;
         }
         .strategy-dashboard .account-card .dot.active {
-            background: #2ea043;
-            box-shadow: 0 0 8px #2ea043;
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981;
         }
         .strategy-dashboard .account-card .button-group {
             display: flex;
@@ -1414,13 +1414,13 @@
             opacity: 0.85;
         }
         .strategy-dashboard .account-card .button-group .btn-buy {
-            background: #2ea043;
+            background: #10b981;
         }
         .strategy-dashboard .account-card .button-group .btn-sell {
-            background: #da3633;
+            background: #ef4444;
         }
         .strategy-dashboard .account-card .btn-strategy {
-            background: #1f6feb;
+            background: #3b82f6;
             width: 100%;
             padding: 10px 18px;
             border: none;
@@ -1438,7 +1438,7 @@
         .strategy-dashboard .account-card .current-price {
             margin-top: 10px;
             font-size: 13px;
-            color: #8b949e;
+            color: #6a6a7a;
         }
         /* 止损价格行 */
         .strategy-dashboard .account-card .stop-loss-row {
@@ -1449,27 +1449,27 @@
         }
         .strategy-dashboard .account-card .stop-loss-row .label {
             font-size: 13px;
-            color: #8b949e;
+            color: #6a6a7a;
         }
         .strategy-dashboard .account-card .stop-loss-row .value {
             font-size: 15px;
             font-weight: 600;
-            color: #f85149;
+            color: #ef4444;
         }
 
         /* 策略规则介绍卡片 */
         .strategy-dashboard .rules-card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
             padding: 18px;
             margin-bottom: 20px;
         }
         .strategy-dashboard .rules-card .rules-title {
-            color: #f7931a;
+            color: #60a5fa;
             font-size: 16px;
             font-weight: 600;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid #1a1a2a;
             padding-bottom: 10px;
             margin-bottom: 14px;
         }
@@ -1479,7 +1479,7 @@
             gap: 8px;
             margin-bottom: 10px;
             font-size: 13px;
-            color: #c8c8d8;
+            color: #9ca3af;
             line-height: 1.6;
         }
         .strategy-dashboard .rules-card .rule-item .rule-icon {
@@ -1488,14 +1488,14 @@
             text-align: center;
         }
         .strategy-dashboard .rules-card .rule-item .rule-text strong {
-            color: #e6e6e6;
+            color: #e8e8f0;
         }
 
         /* 价格走势卡片 */
         .strategy-dashboard .chart-container {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
             padding: 18px;
             margin-bottom: 20px;
             min-height: 260px;
@@ -1508,12 +1508,12 @@
             margin-bottom: 12px;
         }
         .strategy-dashboard .chart-container .chart-header .chart-title {
-            color: #f7931a;
+            color: #60a5fa;
             font-size: 16px;
             font-weight: 600;
         }
         .strategy-dashboard .chart-container .chart-header .chart-pair {
-            color: #8a8a9a;
+            color: #6a6a7a;
             font-size: 14px;
             font-weight: 500;
             background: #1a1a2a;
@@ -1547,13 +1547,13 @@
             border-color: #2a2a3a;
         }
         .chart-time-labels .time-label.active {
-            color: #f0b90b;
-            border-color: #f0b90b;
-            background: rgba(240, 185, 11, 0.08);
+            color: #3b82f6;
+            border-color: #3b82f6;
+            background: rgba(59, 130, 246, 0.08);
         }
         .strategy-dashboard .log-box {
-            background: #0d1117;
-            border: 1px solid #30363d;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
             border-radius: 8px;
             padding: 12px;
             height: 160px;
@@ -1563,6 +1563,7 @@
             line-height: 1.5;
             white-space: pre-wrap;
             word-break: break-all;
+            color: #9ca3af;
         }
         /* 移除底部交易对卡片 */
         .strategy-dashboard .bottom-symbol-bar {
@@ -1570,17 +1571,17 @@
         }
         /* 交易日志卡片样式 */
         .strategy-dashboard .log-card {
-            background: #161b22;
-            border: 1px solid #30363d;
-            border-radius: 12px;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
             padding: 18px;
             margin-bottom: 20px;
         }
         .strategy-dashboard .log-card .card-title {
-            color: #f7931a;
+            color: #60a5fa;
             font-size: 16px;
             font-weight: 600;
-            border-bottom: 1px solid #30363d;
+            border-bottom: 1px solid #1a1a2a;
             padding-bottom: 10px;
             margin-bottom: 14px;
         }
@@ -1615,8 +1616,8 @@
             display: flex;
         }
         .pair-modal {
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
             border-radius: 16px;
             padding: 20px;
             width: 90%;
@@ -1627,7 +1628,7 @@
             animation: slideUp 0.3s ease;
         }
         .pair-modal .modal-title {
-            color: #f7931a;
+            color: #60a5fa;
             font-size: 16px;
             font-weight: 600;
             text-align: center;
@@ -1635,18 +1636,18 @@
         }
         .pair-modal .search-input {
             width: 100%;
-            background: #0d1117;
-            border: 1px solid #30363d;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
             border-radius: 8px;
             padding: 10px 12px;
             font-size: 14px;
-            color: #e6e6e6;
+            color: #e8e8f0;
             outline: none;
             margin-bottom: 12px;
             transition: border-color 0.2s;
         }
         .pair-modal .search-input:focus {
-            border-color: #f7931a;
+            border-color: #3b82f6;
         }
         .pair-modal .search-input::placeholder {
             color: #5a5a6a;
@@ -1678,19 +1679,19 @@
         }
         .pair-modal .pair-option.selected {
             background: #1a2a3a;
-            border: 1px solid #f7931a;
+            border: 1px solid #3b82f6;
         }
         .pair-modal .pair-option .pair-name {
             font-size: 14px;
             font-weight: 600;
-            color: #e6e6e6;
+            color: #e8e8f0;
         }
         .pair-modal .pair-option .pair-price {
             font-size: 13px;
-            color: #8b949e;
+            color: #6a6a7a;
         }
         .pair-modal .pair-option .check-icon {
-            color: #f7931a;
+            color: #3b82f6;
             font-size: 18px;
         }
         .pair-modal .modal-buttons {
@@ -1708,15 +1709,15 @@
             transition: opacity 0.2s;
         }
         .pair-modal .modal-buttons .btn-confirm {
-            background: #f7931a;
-            color: #0d1117;
+            background: #3b82f6;
+            color: #0a0a0f;
         }
         .pair-modal .modal-buttons .btn-confirm:hover {
             opacity: 0.85;
         }
         .pair-modal .modal-buttons .btn-cancel {
-            background: #30363d;
-            color: #8b949e;
+            background: #1a1a2a;
+            color: #6a6a7a;
         }
         .pair-modal .modal-buttons .btn-cancel:hover {
             opacity: 0.85;
@@ -1743,8 +1744,8 @@
             display: flex;
         }
         .params-modal {
-            background: #161b22;
-            border: 1px solid #30363d;
+            background: #12121f;
+            border: 1px solid #1a1a2a;
             border-radius: 16px;
             padding: 20px;
             width: 90%;
@@ -1754,7 +1755,7 @@
             animation: slideUp 0.3s ease;
         }
         .params-modal .modal-title {
-            color: #f7931a;
+            color: #60a5fa;
             font-size: 16px;
             font-weight: 600;
             text-align: center;
@@ -1768,22 +1769,22 @@
         }
         .params-modal .param-row .param-label {
             font-size: 13px;
-            color: #8b949e;
+            color: #6a6a7a;
         }
         .params-modal .param-row .param-input {
             width: 120px;
-            background: #0d1117;
-            border: 1px solid #30363d;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
             border-radius: 6px;
             padding: 6px 10px;
             font-size: 13px;
-            color: #e6e6e6;
+            color: #e8e8f0;
             outline: none;
             text-align: right;
             transition: border-color 0.2s;
         }
         .params-modal .param-row .param-input:focus {
-            border-color: #f7931a;
+            border-color: #3b82f6;
         }
         .params-modal .modal-buttons {
             display: flex;
@@ -1801,15 +1802,15 @@
             transition: opacity 0.2s;
         }
         .params-modal .modal-buttons .btn-confirm {
-            background: #f7931a;
-            color: #0d1117;
+            background: #3b82f6;
+            color: #0a0a0f;
         }
         .params-modal .modal-buttons .btn-confirm:hover {
             opacity: 0.85;
         }
         .params-modal .modal-buttons .btn-cancel {
-            background: #30363d;
-            color: #8b949e;
+            background: #1a1a2a;
+            color: #6a6a7a;
         }
         .params-modal .modal-buttons .btn-cancel:hover {
             opacity: 0.85;
@@ -1893,7 +1894,7 @@
                 </div>
                 <div class="price-info">
                     <span class="price-value" id="strategyHeaderPrice">$65,432.10</span>
-                    <span class="price-change" id="strategyHeaderChange" style="color:#2ea043;">+3.21%</span>
+                    <span class="price-change" id="strategyHeaderChange" style="color:#10b981;">+3.21%</span>
                 </div>
             </div>
 
@@ -1948,7 +1949,7 @@
                 </div>
                 <div class="account-row">
                     <span class="label">总盈亏</span>
-                    <span class="value" id="strategyTotalPnl" style="color:#8b949e;">+$0.00</span>
+                    <span class="value" id="strategyTotalPnl" style="color:#10b981;">+$0.00</span>
                 </div>
 
                 <div class="divider"></div>
@@ -1972,7 +1973,13 @@
                 </div>
             </div>
 
-            <!-- 5. 策略规则介绍 -->
+            <!-- 5. 交易日志 -->
+            <div class="log-card">
+                <div class="card-title">📋 交易日志</div>
+                <div class="log-box" id="strategyLogBox">[系统] 初始化完成，等待 BTC 价格数据...</div>
+            </div>
+
+            <!-- 6. 策略规则介绍 - 移动到底部 -->
             <div class="rules-card">
                 <div class="rules-title">📋 EMA20+EMA50 趋势策略规则</div>
                 <div class="rule-item">
@@ -2007,12 +2014,6 @@
                     <span class="rule-icon">⚠️</span>
                     <span class="rule-text"><strong>风险提示：</strong>本策略为前端模拟演示，全仓买卖无仓位管理，不构成投资建议</span>
                 </div>
-            </div>
-
-            <!-- 6. 交易日志 -->
-            <div class="log-card">
-                <div class="card-title">📋 交易日志</div>
-                <div class="log-box" id="strategyLogBox">[系统] 初始化完成，等待 BTC 价格数据...</div>
             </div>
         </div>
     </div>
@@ -3421,10 +3422,10 @@ Elite版：¥299/月，1对1私人管家
         let strategyStopLoss = 62000;
         let strategyEmaShort = 20;
         let strategyEmaLong = 50;
-        let strategyPosition = 'empty'; // 'empty' | 'long'
-        let lastCross = null; // 上一次信号类型: 'golden' | 'death' | null
-        let priceHistory = []; // 价格历史数组
-        let signalCheckInterval = null; // 信号检测定时器
+        let strategyPosition = 'empty';
+        let lastCross = null;
+        let priceHistory = [];
+        let signalCheckInterval = null;
 
         // 所有可用交易对
         const allPairs = [
@@ -3486,19 +3487,6 @@ Elite版：¥299/月，1对1私人管家
             return ema;
         }
 
-        // 计算EMA序列
-        function calculateEMASeries(data, period) {
-            const k = 2 / (period + 1);
-            const emaSeries = [];
-            let ema = data[0];
-            emaSeries.push(ema);
-            for (let i = 1; i < data.length; i++) {
-                ema = data[i] * k + ema * (1 - k);
-                emaSeries.push(ema);
-            }
-            return emaSeries;
-        }
-
         function strategyAddLog(msg) {
             const time = new Date().toLocaleTimeString();
             const entry = `[${time}] ${msg}`;
@@ -3521,7 +3509,7 @@ Elite版：¥299/月，1对1私人管家
             const headerChangeEl = document.getElementById('strategyHeaderChange');
             if (headerChangeEl) {
                 headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerChangeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
+                headerChangeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
             }
 
             document.getElementById('strategyTotalBalance').textContent = '$' + total.toFixed(2);
@@ -3532,7 +3520,7 @@ Elite版：¥299/月，1对1私人管家
             const pnlEl = document.getElementById('strategyTotalPnl');
             if (pnlEl) {
                 pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
-                pnlEl.style.color = pnl >= 0 ? '#2ea043' : '#da3633';
+                pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
             }
 
             document.getElementById('strategyCurrentPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
@@ -3591,7 +3579,7 @@ Elite版：¥299/月，1对1私人管家
             const headerChangeEl = document.getElementById('strategyHeaderChange');
             if (headerChangeEl) {
                 headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerChangeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
+                headerChangeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
             }
 
             regenerateChartData(symbol, currentTimePeriod);
@@ -3605,7 +3593,6 @@ Elite版：¥299/月，1对1私人管家
             strategyBtcPrice = Math.max(10000, strategyBtcPrice + change);
             strategyBtcPrice = Math.round(strategyBtcPrice * 100) / 100;
 
-            // 添加到价格历史
             priceHistory.push(strategyBtcPrice);
             if (priceHistory.length > 200) priceHistory.shift();
 
@@ -3638,13 +3625,11 @@ Elite版：¥299/月，1对1私人管家
         function checkEMASignal() {
             if (!strategyRunning) return;
 
-            // 检查数据是否足够
             if (priceHistory.length < strategyEmaLong + 1) {
                 strategyAddLog(`⚠️ 价格数据不足(${priceHistory.length}/${strategyEmaLong + 1})，跳过信号判断`);
                 return;
             }
 
-            // 计算EMA20和EMA50
             const emaShort = calculateEMA(priceHistory, strategyEmaShort);
             const emaLong = calculateEMA(priceHistory, strategyEmaLong);
 
@@ -3664,7 +3649,6 @@ Elite版：¥299/月，1对1私人管家
                 signal = 'death';
             }
 
-            // 信号防重复
             if (signal === 'neutral') {
                 strategyAddLog(`⚪ 震荡状态: EMA${strategyEmaShort}=${emaShort.toFixed(2)}, EMA${strategyEmaLong}=${emaLong.toFixed(2)}, 差异${diffPercent.toFixed(3)}%`);
                 return;
@@ -3675,7 +3659,6 @@ Elite版：¥299/月，1对1私人管家
                 return;
             }
 
-            // 新信号
             lastCross = signal;
 
             if (signal === 'golden') {
@@ -3792,26 +3775,22 @@ Elite版：¥299/月，1对1私人管家
                 strategyAddLog('⏹️ 策略已停止');
             } else {
                 strategyRunning = true;
-                lastCross = null; // 重置信号
+                lastCross = null;
                 btn.textContent = '⏹ 停止策略';
                 dot.classList.add('active');
                 statusText.textContent = '策略运行中 (EMA趋势)';
                 strategyAddLog('▶️ 策略已启动 (EMA' + strategyEmaShort + '+EMA' + strategyEmaLong + ' 趋势策略)');
                 strategyAddLog('📊 等待收集 ' + (strategyEmaLong + 1) + ' 条价格数据...');
 
-                // 初始化价格历史
                 if (priceHistory.length < strategyEmaLong + 1) {
                     for (let i = 0; i < strategyEmaLong + 5; i++) {
                         priceHistory.push(strategyBtcPrice + (Math.random() - 0.5) * 100);
                     }
                 }
 
-                // 启动信号检测定时器(25秒)
                 signalCheckInterval = setInterval(checkEMASignal, 25000);
-                // 启动价格更新定时器(5秒模拟)
                 strategyInterval = setInterval(strategyUpdatePrice, 5000);
 
-                // 立即执行一次信号检测
                 setTimeout(checkEMASignal, 1000);
             }
         }
@@ -3842,8 +3821,8 @@ Elite版：¥299/月，1对1私人管家
                     datasets: [{
                         label: 'BTC/USDT',
                         data: strategyChartData,
-                        borderColor: '#f7931a',
-                        backgroundColor: 'rgba(247,147,26,0.1)',
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59,130,246,0.1)',
                         fill: true,
                         tension: 0.2,
                         pointRadius: 0,
@@ -3867,10 +3846,10 @@ Elite版：¥299/月，1对1私人管家
                         x: { display: false },
                         y: {
                             ticks: {
-                                color: '#8b949e',
+                                color: '#6a6a7a',
                                 callback: function(value) { return '$' + value.toFixed(0); }
                             },
-                            grid: { color: '#21262d' }
+                            grid: { color: '#1a1a2a' }
                         }
                     }
                 }
@@ -4003,7 +3982,6 @@ Elite版：¥299/月，1对1私人管家
             strategyEmaShort = emaShort;
             strategyEmaLong = emaLong;
 
-            // 如果策略正在运行，重置信号
             if (strategyRunning) {
                 lastCross = null;
                 priceHistory = [];
@@ -4024,7 +4002,6 @@ Elite版：¥299/月，1对1私人管家
             currentStrategySymbol = 'BTC/USDT';
             currentTimePeriod = '1h';
 
-            // 初始化价格历史
             priceHistory = [];
             for (let i = 0; i < 60; i++) {
                 priceHistory.push(data.price + (Math.random() - 0.5) * 100);
@@ -4035,7 +4012,7 @@ Elite版：¥299/月，1对1私人管家
             const headerChangeEl = document.getElementById('strategyHeaderChange');
             if (headerChangeEl) {
                 headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerChangeEl.style.color = data.change >= 0 ? '#2ea043' : '#da3633';
+                headerChangeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
             }
 
             document.getElementById('strategyCurrentPrice').textContent = '$' + data.price.toFixed(2);
