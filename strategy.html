@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>策略交易 - AI 金融助手</title>
+    <title>现货交易 - AI 金融助手</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
-        /* ===== 全局重置 ===== */
         * {
             margin: 0;
             padding: 0;
@@ -18,9 +17,8 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #0a0a0f;
             color: #e8e8f0;
-            height: 100vh;
+            min-height: 100vh;
             overflow-y: auto;
-            overflow-x: hidden;
             touch-action: manipulation;
         }
         ::-webkit-scrollbar {
@@ -38,17 +36,14 @@
             opacity: 0.7;
         }
 
-        /* ===== 策略面板容器 ===== */
-        #strategyPanel {
+        .spot-container {
             max-width: 900px;
             width: 100%;
             margin: 0 auto;
             padding: 20px;
             min-height: 100vh;
-            background: #0a0a0f;
         }
 
-        /* ===== 返回按钮 ===== */
         .back-btn {
             cursor: pointer;
             padding: 4px 6px;
@@ -62,7 +57,6 @@
             border: none;
             margin-bottom: 16px;
             font-size: 0;
-            gap: 0;
             text-decoration: none;
         }
         .back-btn:active {
@@ -76,8 +70,7 @@
             stroke-width: 2;
         }
 
-        /* ===== 顶部总收益卡片 ===== */
-        .header {
+        .page-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -87,32 +80,27 @@
             border-radius: 16px;
             padding: 14px 20px;
         }
-        .header .total-info {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+        .page-header .title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #60a5fa;
         }
-        .header .total-info .label {
-            font-size: 14px;
-            color: #6a6a7a;
-        }
-        .header .price-info {
+        .page-header .current-price-info {
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             gap: 4px;
         }
-        .header .price-info .price-value {
-            font-size: 26px;
+        .page-header .current-price-info .price {
+            font-size: 24px;
             font-weight: 700;
             color: #e8e8f0;
         }
-        .header .price-info .price-change {
-            font-size: 16px;
+        .page-header .current-price-info .change {
+            font-size: 14px;
             font-weight: 600;
         }
 
-        /* ===== 交易对列表 ===== */
         .symbol-bar {
             display: flex;
             align-items: center;
@@ -176,20 +164,21 @@
             align-items: center;
             justify-content: center;
             flex-shrink: 0;
+            touch-action: manipulation;
         }
         .add-pair-btn:hover {
             background-color: #3b82f6;
             color: #0a0a0f;
         }
 
-        /* ===== 价格走势卡片 ===== */
+        /* 图表容器 */
         .chart-container {
             background: #12121f;
             border: 1px solid #1a1a2a;
             border-radius: 16px;
             padding: 18px;
             margin-bottom: 20px;
-            min-height: 260px;
+            min-height: 320px;
             position: relative;
         }
         .chart-container .chart-header {
@@ -212,9 +201,35 @@
             border-radius: 12px;
             border: 1px solid #2a2a3a;
         }
-        .chart-container canvas {
+        .chart-type-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .chart-type-tab {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #1a1a2a;
+            background: #12121f;
+            color: #6a6a7a;
+            touch-action: manipulation;
+        }
+        .chart-type-tab.active {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 220px;
+        }
+        .chart-wrapper canvas {
             width: 100% !important;
-            height: 200px !important;
+            height: 220px !important;
         }
         .chart-time-labels {
             display: flex;
@@ -242,7 +257,7 @@
             background: rgba(59, 130, 246, 0.08);
         }
 
-        /* ===== 账户操作卡片 ===== */
+        /* 账户操作卡片 */
         .account-card {
             background: #12121f;
             border: 1px solid #1a1a2a;
@@ -257,22 +272,6 @@
             border-bottom: 1px solid #1a1a2a;
             padding-bottom: 10px;
             margin-bottom: 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .account-card .card-title .params-btn {
-            background: #1a1a2a;
-            color: #8a8a9a;
-            border: none;
-            border-radius: 6px;
-            padding: 4px 12px;
-            font-size: 12px;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        .account-card .card-title .params-btn:hover {
-            background: #2a2a3a;
         }
         .account-card .account-row {
             display: flex;
@@ -302,32 +301,14 @@
             border-top: 1px solid #1a1a2a;
             margin: 12px 0;
         }
-        .account-card .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            margin-bottom: 12px;
-            color: #9ca3af;
-        }
-        .account-card .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #6a6a7a;
-        }
-        .account-card .dot.active {
-            background: #10b981;
-            box-shadow: 0 0 8px #10b981;
-        }
-        .account-card .button-group {
+        .button-group {
             display: flex;
             gap: 10px;
         }
-        .account-card .button-group .btn {
+        .button-group .btn {
             flex: 1;
             text-align: center;
-            padding: 10px 18px;
+            padding: 12px 18px;
             border: none;
             border-radius: 8px;
             font-size: 15px;
@@ -335,119 +316,126 @@
             cursor: pointer;
             transition: opacity 0.2s;
             color: white;
+            touch-action: manipulation;
         }
-        .account-card .button-group .btn:hover {
+        .button-group .btn:hover {
             opacity: 0.85;
         }
-        .account-card .button-group .btn-buy {
+        .button-group .btn-buy {
             background: #10b981;
         }
-        .account-card .button-group .btn-sell {
+        .button-group .btn-sell {
             background: #ef4444;
-        }
-        .account-card .btn-strategy {
-            background: #3b82f6;
-            width: 100%;
-            padding: 10px 18px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            color: white;
-            margin-top: 10px;
-        }
-        .account-card .btn-strategy:hover {
-            opacity: 0.85;
         }
         .account-card .current-price {
             margin-top: 10px;
             font-size: 13px;
             color: #6a6a7a;
         }
-        .account-card .stop-loss-row {
+
+        /* 订单记录卡片 */
+        .orders-card {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 20px;
+        }
+        .orders-card .card-title {
+            color: #60a5fa;
+            font-size: 16px;
+            font-weight: 600;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+        }
+        .order-item {
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .order-item:last-child {
+            margin-bottom: 0;
+        }
+        .order-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
         }
-        .account-card .stop-loss-row .label {
+        .order-pair {
             font-size: 13px;
-            color: #6a6a7a;
-        }
-        .account-card .stop-loss-row .value {
-            font-size: 15px;
-            font-weight: 600;
-            color: #ef4444;
-        }
-
-        /* ===== 策略规则介绍卡片 ===== */
-        .rules-card {
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 20px;
-        }
-        .rules-card .rules-title {
-            color: #60a5fa;
-            font-size: 16px;
-            font-weight: 600;
-            border-bottom: 1px solid #1a1a2a;
-            padding-bottom: 10px;
-            margin-bottom: 14px;
-        }
-        .rules-card .rule-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 8px;
-            margin-bottom: 10px;
-            font-size: 13px;
-            color: #9ca3af;
-            line-height: 1.6;
-        }
-        .rules-card .rule-item .rule-icon {
-            flex-shrink: 0;
-            width: 20px;
-            text-align: center;
-        }
-        .rules-card .rule-item .rule-text strong {
+            font-weight: 700;
             color: #e8e8f0;
         }
-
-        /* ===== 交易日志卡片 ===== */
-        .log-card {
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 20px;
-        }
-        .log-card .card-title {
-            color: #60a5fa;
-            font-size: 16px;
-            font-weight: 600;
-            border-bottom: 1px solid #1a1a2a;
-            padding-bottom: 10px;
-            margin-bottom: 14px;
-        }
-        .log-box {
-            background: #0a0a12;
-            border: 1px solid #1a1a2a;
+        .order-type {
+            font-size: 11px;
+            padding: 2px 8px;
             border-radius: 8px;
-            padding: 12px;
-            height: 160px;
-            overflow-y: auto;
-            font-family: 'Consolas', monospace;
+            font-weight: 600;
+        }
+        .order-type.buy {
+            background: #1a3a2a;
+            color: #10b981;
+        }
+        .order-type.sell {
+            background: #3a1a1a;
+            color: #ef4444;
+        }
+        .order-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #6a6a7a;
+        }
+        .order-pnl {
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .order-pnl.profit {
+            color: #10b981;
+        }
+        .order-pnl.loss {
+            color: #ef4444;
+        }
+        .order-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .order-action-btn {
+            flex: 1;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            touch-action: manipulation;
+        }
+        .order-action-btn:active {
+            opacity: 0.7;
+        }
+        .btn-cancel-order {
+            background: #3a1a1a;
+            color: #ef4444;
+        }
+        .btn-close-order {
+            background: #1a2a3a;
+            color: #60a5fa;
+        }
+        .no-orders {
+            text-align: center;
+            padding: 20px;
+            color: #5a5a6a;
             font-size: 13px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            word-break: break-all;
-            color: #9ca3af;
         }
 
-        /* ===== 添加交易对弹窗样式 ===== */
+        /* 添加交易对弹窗 */
         .pair-modal-overlay {
             position: fixed;
             inset: 0;
@@ -456,7 +444,6 @@
             display: none;
             align-items: center;
             justify-content: center;
-            animation: fadeIn 0.2s ease;
         }
         .pair-modal-overlay.show {
             display: flex;
@@ -465,20 +452,18 @@
             background: #12121f;
             border: 1px solid #1a1a2a;
             border-radius: 16px;
-            padding: 20px;
-            width: 90%;
-            max-width: 420px;
-            max-height: 70vh;
+            padding: 16px;
+            width: 85%;
+            max-width: 350px;
             display: flex;
             flex-direction: column;
-            animation: slideUp 0.3s ease;
         }
         .pair-modal .modal-title {
             color: #60a5fa;
-            font-size: 16px;
-            font-weight: 600;
+            font-size: 14px;
+            font-weight: 700;
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
         .pair-modal .search-input {
             width: 100%;
@@ -486,41 +471,30 @@
             border: 1px solid #1a1a2a;
             border-radius: 8px;
             padding: 10px 12px;
-            font-size: 14px;
+            font-size: 13px;
             color: #e8e8f0;
             outline: none;
             margin-bottom: 12px;
-            transition: border-color 0.2s;
         }
         .pair-modal .search-input:focus {
             border-color: #3b82f6;
         }
-        .pair-modal .search-input::placeholder {
-            color: #5a5a6a;
-        }
         .pair-modal .pair-list {
-            flex: 1;
+            max-height: 200px;
             overflow-y: auto;
             margin-bottom: 12px;
         }
-        .pair-modal .pair-list::-webkit-scrollbar {
-            width: 4px;
-        }
-        .pair-modal .pair-list::-webkit-scrollbar-thumb {
-            background: #2a2a3a;
-            border-radius: 4px;
-        }
         .pair-modal .pair-option {
             display: flex;
-            align-items: center;
             justify-content: space-between;
+            align-items: center;
             padding: 10px 12px;
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s;
             margin-bottom: 4px;
+            touch-action: manipulation;
         }
-        .pair-modal .pair-option:hover {
+        .pair-modal .pair-option:active {
             background: #1a1a2a;
         }
         .pair-modal .pair-option.selected {
@@ -528,189 +502,96 @@
             border: 1px solid #3b82f6;
         }
         .pair-modal .pair-option .pair-name {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 600;
             color: #e8e8f0;
         }
         .pair-modal .pair-option .pair-price {
-            font-size: 13px;
+            font-size: 11px;
             color: #6a6a7a;
         }
         .pair-modal .pair-option .check-icon {
             color: #3b82f6;
-            font-size: 18px;
-        }
-        .pair-modal .modal-buttons {
-            display: flex;
-            gap: 10px;
-        }
-        .pair-modal .modal-buttons .btn {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 8px;
             font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .pair-modal .modal-buttons .btn-confirm {
-            background: #3b82f6;
-            color: #0a0a0f;
-        }
-        .pair-modal .modal-buttons .btn-confirm:hover {
-            opacity: 0.85;
-        }
-        .pair-modal .modal-buttons .btn-cancel {
-            background: #1a1a2a;
-            color: #6a6a7a;
-        }
-        .pair-modal .modal-buttons .btn-cancel:hover {
-            opacity: 0.85;
         }
         .pair-modal .no-results {
             text-align: center;
-            padding: 20px;
+            padding: 15px;
             color: #5a5a6a;
-            font-size: 14px;
+            font-size: 12px;
         }
-
-        /* ===== 参数设置弹窗样式 ===== */
-        .params-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.7);
-            z-index: 2000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.2s ease;
+        .add-pair-section {
+            border-top: 1px solid #1a1a2a;
+            padding-top: 12px;
         }
-        .params-modal-overlay.show {
+        .add-pair-row {
             display: flex;
+            gap: 8px;
         }
-        .params-modal {
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 20px;
-            width: 90%;
-            max-width: 380px;
-            display: flex;
-            flex-direction: column;
-            animation: slideUp 0.3s ease;
-        }
-        .params-modal .modal-title {
-            color: #60a5fa;
-            font-size: 16px;
-            font-weight: 600;
-            text-align: center;
-            margin-bottom: 16px;
-        }
-        .params-modal .param-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .params-modal .param-row .param-label {
-            font-size: 13px;
-            color: #6a6a7a;
-        }
-        .params-modal .param-row .param-input {
-            width: 120px;
+        .add-pair-row input {
+            flex: 1;
             background: #0a0a12;
             border: 1px solid #1a1a2a;
-            border-radius: 6px;
-            padding: 6px 10px;
-            font-size: 13px;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
             color: #e8e8f0;
             outline: none;
-            text-align: right;
-            transition: border-color 0.2s;
         }
-        .params-modal .param-row .param-input:focus {
+        .add-pair-row input:focus {
             border-color: #3b82f6;
         }
-        .params-modal .modal-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 8px;
-        }
-        .params-modal .modal-buttons .btn {
-            flex: 1;
-            padding: 10px;
+        .add-pair-modal-btn {
+            background: #3b82f6;
+            color: white;
             border: none;
             border-radius: 8px;
-            font-size: 14px;
+            padding: 8px 12px;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            transition: opacity 0.2s;
-        }
-        .params-modal .modal-buttons .btn-confirm {
-            background: #3b82f6;
-            color: #0a0a0f;
-        }
-        .params-modal .modal-buttons .btn-confirm:hover {
-            opacity: 0.85;
-        }
-        .params-modal .modal-buttons .btn-cancel {
-            background: #1a1a2a;
-            color: #6a6a7a;
-        }
-        .params-modal .modal-buttons .btn-cancel:hover {
-            opacity: 0.85;
+            white-space: nowrap;
+            touch-action: manipulation;
         }
 
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .spot-container {
+                padding: 12px;
             }
-            to {
-                opacity: 1;
+            .page-header .title {
+                font-size: 15px;
             }
-        }
-        @keyframes slideUp {
-            from {
-                transform: translateY(30px);
-                opacity: 0.5;
-            }
-            to {
-                transform: translateY(0);
-                opacity: 1;
+            .page-header .current-price-info .price {
+                font-size: 20px;
             }
         }
     </style>
 </head>
 <body>
-    <!-- ============================================================ -->
-    <!-- 策略交易面板 -->
-    <!-- ============================================================ -->
-    <div id="strategyPanel">
-        <!-- 返回键 -->
+    <div class="spot-container">
+        <!-- 返回按钮 -->
         <a class="back-btn" href="index.html" title="返回">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="15 18 9 12 15 6"/>
             </svg>
         </a>
 
-        <!-- 1. 顶部总收益卡片 -->
-        <div class="header">
-            <div class="total-info">
-                <span class="label">总收益</span>
-            </div>
-            <div class="price-info">
-                <span class="price-value" id="strategyHeaderPrice">$65,432.10</span>
-                <span class="price-change" id="strategyHeaderChange" style="color:#10b981;">+3.21%</span>
+        <!-- 1. 顶部价格卡片 -->
+        <div class="page-header">
+            <span class="title">💰 现货交易</span>
+            <div class="current-price-info">
+                <span class="price" id="spotCurrentPrice">$65,432.10</span>
+                <span class="change" id="spotPriceChange" style="color:#10b981;">+3.21%</span>
             </div>
         </div>
 
         <!-- 2. 交易对选择栏 -->
         <div class="symbol-bar">
-            <div class="symbol-list" id="strategySymbolList">
+            <div class="symbol-list" id="spotSymbolList">
                 <!-- 由JS渲染 -->
             </div>
-            <button class="add-pair-btn" onclick="strategyAddPair()">+</button>
+            <button class="add-pair-btn" onclick="spotAddPair()">+</button>
         </div>
 
         <!-- 3. 价格走势卡片 -->
@@ -719,800 +600,680 @@
                 <span class="chart-title">📈 价格走势</span>
                 <span class="chart-pair" id="chartPairDisplay">BTC/USDT</span>
             </div>
-            <canvas id="strategyPriceChart" height="200"></canvas>
-            <!-- 时间周期提示标记 -->
+            
+            <div class="chart-type-tabs">
+                <span class="chart-type-tab active" data-type="line" onclick="switchChartType('line', this)">📉 折线图</span>
+                <span class="chart-type-tab" data-type="candle" onclick="switchChartType('candle', this)">🕯️ K线图</span>
+                <span class="chart-type-tab" data-type="bar" onclick="switchChartType('bar', this)">📊 柱状图</span>
+            </div>
+            
+            <div class="chart-wrapper">
+                <canvas id="spotPriceChart"></canvas>
+            </div>
+            
             <div class="chart-time-labels" id="chartTimeLabels">
-                <span class="time-label active" data-period="1h" onclick="strategySetTimePeriod('1h', this)">1小时</span>
-                <span class="time-label" data-period="4h" onclick="strategySetTimePeriod('4h', this)">4小时</span>
-                <span class="time-label" data-period="1d" onclick="strategySetTimePeriod('1d', this)">日线</span>
-                <span class="time-label" data-period="1m" onclick="strategySetTimePeriod('1m', this)">月线</span>
+                <span class="time-label active" data-period="1h" onclick="spotSetTimePeriod('1h', this)">1小时</span>
+                <span class="time-label" data-period="4h" onclick="spotSetTimePeriod('4h', this)">4小时</span>
+                <span class="time-label" data-period="1d" onclick="spotSetTimePeriod('1d', this)">日线</span>
+                <span class="time-label" data-period="1m" onclick="spotSetTimePeriod('1m', this)">月线</span>
             </div>
         </div>
 
         <!-- 4. 账户操作卡片 -->
         <div class="account-card">
-            <div class="card-title">
-                <span id="strategyAccountTitle">📊 账户操作 (BTC/USDT)</span>
-                <button class="params-btn" onclick="openParamsModal()">⚙️ 参数设置</button>
-            </div>
-
-            <!-- 账户信息 -->
+            <div class="card-title">📊 账户操作</div>
+            
             <div class="account-row">
                 <span class="label">总资产</span>
-                <span class="value" id="strategyTotalBalance">$10,000.00</span>
+                <span class="value" id="spotTotalBalance">$10,000.00</span>
             </div>
             <div class="account-row">
-                <span class="label" id="strategyBaseLabel">USDT 余额</span>
-                <span class="value" id="strategyUsdtBalance">10,000.00</span>
+                <span class="label">USDT 余额</span>
+                <span class="value" id="spotUsdtBalance">10,000.00</span>
             </div>
             <div class="account-row">
-                <span class="label" id="strategyAssetLabel">BTC 持仓</span>
-                <span class="value btc" id="strategyBtcBalance">0.0000</span>
-            </div>
-            <!-- 止损价格行 -->
-            <div class="stop-loss-row">
-                <span class="label">止损 价格</span>
-                <span class="value" id="strategyStopLoss">$62,000.00</span>
+                <span class="label" id="spotAssetLabel">BTC 持仓</span>
+                <span class="value btc" id="spotBtcBalance">0.0000</span>
             </div>
             <div class="account-row">
                 <span class="label">总盈亏</span>
-                <span class="value" id="strategyTotalPnl" style="color:#10b981;">+$0.00</span>
+                <span class="value green" id="spotTotalPnl">+$0.00</span>
             </div>
-
+            
             <div class="divider"></div>
-
-            <!-- 状态指示器 -->
-            <div class="status-indicator">
-                <span class="dot active" id="strategyStatusDot"></span>
-                <span id="strategyStatusText">策略已停止</span>
-            </div>
-
-            <!-- 操作按钮 -->
+            
             <div class="button-group">
-                <button class="btn btn-buy" onclick="strategyExecuteOrder('buy')">买入</button>
-                <button class="btn btn-sell" onclick="strategyExecuteOrder('sell')">卖出</button>
+                <button class="btn btn-buy" onclick="spotBuy()">买入</button>
+                <button class="btn btn-sell" onclick="spotSell()">卖出</button>
             </div>
-            <button class="btn-strategy" onclick="strategyToggle()">
-                ▶ 启动策略
-            </button>
             <div class="current-price">
-                当前价格: <span id="strategyCurrentPrice">--</span>
+                当前价格: <span id="spotCurrentPriceDisplay">$65,432.10</span>
             </div>
         </div>
 
-        <!-- 5. 策略规则介绍 -->
-        <div class="rules-card">
-            <div class="rules-title">📋 EMA20+EMA50 趋势策略规则</div>
-            <div class="rule-item">
-                <span class="rule-icon">📈</span>
-                <span class="rule-text"><strong>金叉信号：</strong>EMA20 上穿 EMA50（EMA20 > EMA50），自动全仓买入当前币种</span>
+        <!-- 5. 订单记录卡片 -->
+        <div class="orders-card">
+            <div class="card-title">📋 订单记录</div>
+            <div id="ordersContainer">
+                <div class="no-orders">暂无订单记录</div>
             </div>
-            <div class="rule-item">
-                <span class="rule-icon">📉</span>
-                <span class="rule-text"><strong>死叉信号：</strong>EMA20 下穿 EMA50（EMA20 < EMA50），全部持仓卖出当前币种</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-icon">⚪</span>
-                <span class="rule-text"><strong>震荡状态：</strong>EMA20 ≈ EMA50，均线缠绕震荡，不执行任何交易</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-icon">🛡️</span>
-                <span class="rule-text"><strong>止损保护：</strong>当价格跌破止损价时，自动平仓控制风险</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-icon">🔄</span>
-                <span class="rule-text"><strong>信号防重复：</strong>同一信号类型（金叉/死叉）不会连续触发，只有信号切换才执行交易</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-icon">⏱️</span>
-                <span class="rule-text"><strong>检测周期：</strong>每 25 秒执行一次 EMA 交叉信号检测，数据不足 60 条时跳过</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-icon">💰</span>
-                <span class="rule-text"><strong>仓位规则：</strong>金叉全仓买入（全部 USDT 换币），死叉全部卖出（清仓换 USDT）</span>
-            </div>
-            <div class="rule-item">
-                <span class="rule-icon">⚠️</span>
-                <span class="rule-text"><strong>风险提示：</strong>本策略为前端模拟演示，全仓买卖无仓位管理，不构成投资建议</span>
-            </div>
-        </div>
-
-        <!-- 6. 交易日志 -->
-        <div class="log-card">
-            <div class="card-title">📋 交易日志</div>
-            <div class="log-box" id="strategyLogBox">[系统] 初始化完成，等待 BTC 价格数据...</div>
         </div>
     </div>
 
-    <!-- ============================================================ -->
     <!-- 添加交易对弹窗 -->
-    <!-- ============================================================ -->
-    <div class="pair-modal-overlay" id="pairModalOverlay" onclick="closePairModal(event)">
+    <div class="pair-modal-overlay" id="pairModalOverlay" onclick="spotClosePairModal(event)">
         <div class="pair-modal" onclick="event.stopPropagation()">
             <div class="modal-title">🔍 添加交易对</div>
-            <input type="text" class="search-input" id="pairSearchInput" placeholder="搜索交易对..." oninput="filterPairList()">
-            <div class="pair-list" id="pairListContainer">
-                <!-- 由JS渲染 -->
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-cancel" onclick="closePairModal()">取消</button>
-                <button class="btn btn-confirm" onclick="confirmAddPairs()">确认添加</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- 参数设置弹窗 -->
-    <!-- ============================================================ -->
-    <div class="params-modal-overlay" id="paramsModalOverlay" onclick="closeParamsModal(event)">
-        <div class="params-modal" onclick="event.stopPropagation()">
-            <div class="modal-title">⚙️ 参数设置</div>
-            <div class="param-row">
-                <span class="param-label">止损价格</span>
-                <input type="number" class="param-input" id="paramStopLoss" value="62000" step="0.01">
-            </div>
-            <div class="param-row">
-                <span class="param-label">EMA 短期周期</span>
-                <input type="number" class="param-input" id="paramEmaShort" value="20" step="1" min="5" max="50">
-            </div>
-            <div class="param-row">
-                <span class="param-label">EMA 长期周期</span>
-                <input type="number" class="param-input" id="paramEmaLong" value="50" step="1" min="20" max="200">
-            </div>
-            <div class="modal-buttons">
-                <button class="btn btn-cancel" onclick="closeParamsModal()">取消</button>
-                <button class="btn btn-confirm" onclick="saveParams()">保存</button>
+            <input type="text" class="search-input" id="pairSearchInput" placeholder="搜索交易对..." oninput="spotFilterPairList()">
+            <div class="pair-list" id="pairModalContent"></div>
+            <div class="add-pair-section">
+                <div class="add-pair-row">
+                    <input type="text" id="newPairInput" placeholder="输入新交易对 (如: ATOM/USDT)" onkeydown="spotHandleNewPairKeydown(event)">
+                    <button class="add-pair-modal-btn" onclick="spotAddNewPair()">添加</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         // ============================================================
-        //  策略交易面板逻辑 - EMA20+EMA50 趋势策略
+        //  现货交易核心逻辑
         // ============================================================
-        let strategyUsdtBalance = 10000;
-        let strategyBtcBalance = 0;
-        let strategyBtcPrice = 65000;
-        let strategyRunning = false;
-        let strategyInterval = null;
-        let strategyChartData = [];
-        let strategyChart = null;
-        let strategyLogEntries = [];
-        let currentStrategySymbol = 'BTC/USDT';
-        let currentTimePeriod = '1h';
-        let selectedPairs = new Set(['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT']);
-        let tempSelectedPairs = new Set();
-        let strategyStopLoss = 62000;
-        let strategyEmaShort = 20;
-        let strategyEmaLong = 50;
-        let strategyPosition = 'empty';
-        let lastCross = null;
-        let priceHistory = [];
-        let signalCheckInterval = null;
-
-        // 所有可用交易对
-        const allPairs = [
-            'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT',
-            'LINK/USDT', 'UNI/USDT', 'ATOM/USDT', 'LTC/USDT', 'BCH/USDT', 'FIL/USDT', 'APT/USDT', 'SUI/USDT',
-            'NEAR/USDT', 'OP/USDT', 'ARB/USDT', 'MATIC/USDT', 'DOGE/USDT', 'SHIB/USDT', 'TRX/USDT', 'ETC/USDT',
-            'AAVE/USDT', 'MKR/USDT', 'COMP/USDT', 'CRV/USDT', 'SNX/USDT', 'YFI/USDT'
-        ];
-
-        const pairData = {
-            'BTC/USDT': { price: 65432.10, change: 3.21, base: 'USDT', asset: 'BTC', label: 'BTC' },
-            'ETH/USDT': { price: 3456.78, change: -1.23, base: 'USDT', asset: 'ETH', label: 'ETH' },
-            'SOL/USDT': { price: 187.50, change: 5.67, base: 'USDT', asset: 'SOL', label: 'SOL' },
-            'BNB/USDT': { price: 598.20, change: 0.87, base: 'USDT', asset: 'BNB', label: 'BNB' },
-            'XRP/USDT': { price: 0.612, change: -0.45, base: 'USDT', asset: 'XRP', label: 'XRP' },
-            'ADA/USDT': { price: 0.456, change: 3.21, base: 'USDT', asset: 'ADA', label: 'ADA' },
-            'DOT/USDT': { price: 7.89, change: -2.10, base: 'USDT', asset: 'DOT', label: 'DOT' },
-            'AVAX/USDT': { price: 38.76, change: 4.56, base: 'USDT', asset: 'AVAX', label: 'AVAX' },
-            'LINK/USDT': { price: 16.45, change: 2.34, base: 'USDT', asset: 'LINK', label: 'LINK' },
-            'UNI/USDT': { price: 8.92, change: -0.78, base: 'USDT', asset: 'UNI', label: 'UNI' },
-            'ATOM/USDT': { price: 9.87, change: 1.45, base: 'USDT', asset: 'ATOM', label: 'ATOM' },
-            'LTC/USDT': { price: 72.34, change: 0.56, base: 'USDT', asset: 'LTC', label: 'LTC' },
-            'BCH/USDT': { price: 345.67, change: -1.89, base: 'USDT', asset: 'BCH', label: 'BCH' },
-            'FIL/USDT': { price: 5.67, change: 3.45, base: 'USDT', asset: 'FIL', label: 'FIL' },
-            'APT/USDT': { price: 12.34, change: 7.89, base: 'USDT', asset: 'APT', label: 'APT' },
-            'SUI/USDT': { price: 1.89, change: 4.56, base: 'USDT', asset: 'SUI', label: 'SUI' },
-            'NEAR/USDT': { price: 5.67, change: -2.34, base: 'USDT', asset: 'NEAR', label: 'NEAR' },
-            'OP/USDT': { price: 2.34, change: 1.23, base: 'USDT', asset: 'OP', label: 'OP' },
-            'ARB/USDT': { price: 1.56, change: -0.89, base: 'USDT', asset: 'ARB', label: 'ARB' },
-            'MATIC/USDT': { price: 0.78, change: 2.45, base: 'USDT', asset: 'MATIC', label: 'MATIC' },
-            'DOGE/USDT': { price: 0.156, change: 8.90, base: 'USDT', asset: 'DOGE', label: 'DOGE' },
-            'SHIB/USDT': { price: 0.0000234, change: 6.78, base: 'USDT', asset: 'SHIB', label: 'SHIB' },
-            'TRX/USDT': { price: 0.234, change: 1.56, base: 'USDT', asset: 'TRX', label: 'TRX' },
-            'ETC/USDT': { price: 23.45, change: -1.23, base: 'USDT', asset: 'ETC', label: 'ETC' },
-            'AAVE/USDT': { price: 156.78, change: 3.45, base: 'USDT', asset: 'AAVE', label: 'AAVE' },
-            'MKR/USDT': { price: 2345.67, change: -0.56, base: 'USDT', asset: 'MKR', label: 'MKR' },
-            'COMP/USDT': { price: 56.78, change: 1.89, base: 'USDT', asset: 'COMP', label: 'COMP' },
-            'CRV/USDT': { price: 0.567, change: -2.34, base: 'USDT', asset: 'CRV', label: 'CRV' },
-            'SNX/USDT': { price: 3.45, change: 4.56, base: 'USDT', asset: 'SNX', label: 'SNX' },
-            'YFI/USDT': { price: 6789.01, change: 0.89, base: 'USDT', asset: 'YFI', label: 'YFI' },
+        
+        // 全局状态
+        let spotUsdtBalance = 10000;
+        let spotBtcBalance = 0;
+        let spotBtcPrice = 65432.10;
+        let spotCurrentSymbol = 'BTC/USDT';
+        let spotCurrentPeriod = '1h';
+        let spotChartType = 'line';
+        let spotChart = null;
+        let spotChartData = [];
+        let spotPriceHistory = [];
+        let spotOrders = [];
+        let spotOrdersInitialized = false;
+        
+        // 交易对数据
+        let spotPairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT'];
+        
+        let spotPairData = {
+            'BTC/USDT': { price: 65432.10, change: 3.21, base: 'USDT', asset: 'BTC' },
+            'ETH/USDT': { price: 3456.78, change: -1.23, base: 'USDT', asset: 'ETH' },
+            'SOL/USDT': { price: 187.50, change: 5.67, base: 'USDT', asset: 'SOL' },
+            'BNB/USDT': { price: 598.20, change: 0.87, base: 'USDT', asset: 'BNB' },
+            'XRP/USDT': { price: 0.612, change: -0.45, base: 'USDT', asset: 'XRP' },
+            'ADA/USDT': { price: 0.456, change: 3.21, base: 'USDT', asset: 'ADA' },
+            'DOT/USDT': { price: 7.89, change: -2.10, base: 'USDT', asset: 'DOT' },
+            'AVAX/USDT': { price: 38.76, change: 4.56, base: 'USDT', asset: 'AVAX' },
         };
-
-        // 时间周期对应的数据点数
+        
+        // 时间周期数据点
         const periodDataPoints = {
             '1h': 24,
             '4h': 30,
             '1d': 30,
             '1m': 30
         };
-
-        // 计算EMA
-        function calculateEMA(data, period) {
-            if (data.length < period) return null;
-            const k = 2 / (period + 1);
-            let ema = data[0];
-            for (let i = 1; i < data.length; i++) {
-                ema = data[i] * k + ema * (1 - k);
+        
+        // 渲染交易对列表
+        function spotRenderSymbols() {
+            const container = document.getElementById('spotSymbolList');
+            if (container) {
+                let html = '';
+                spotPairs.forEach((symbol, index) => {
+                    const activeClass = index === 0 ? 'active' : '';
+                    html += `<span class="symbol-item ${activeClass}" onclick="spotSelectSymbol(this, '${symbol}')">${symbol}</span>`;
+                });
+                container.innerHTML = html;
             }
-            return ema;
         }
-
-        function strategyAddLog(msg) {
-            const time = new Date().toLocaleTimeString();
-            const entry = `[${time}] ${msg}`;
-            strategyLogEntries.push(entry);
-            if (strategyLogEntries.length > 100) strategyLogEntries.shift();
-            const box = document.getElementById('strategyLogBox');
-            if (box) box.textContent = strategyLogEntries.join('\n');
-            if (box) box.scrollTop = box.scrollHeight;
-        }
-
-        function strategyUpdateDisplay() {
-            const total = strategyUsdtBalance + strategyBtcBalance * strategyBtcPrice;
-            const initial = 10000;
-            const pnl = total - initial;
-
-            const data = pairData[currentStrategySymbol] || pairData['BTC/USDT'];
-            document.getElementById('strategyHeaderPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
-            const headerChangeEl = document.getElementById('strategyHeaderChange');
-            if (headerChangeEl) {
-                headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerChangeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
+        
+        // 选择交易对
+        function spotSelectSymbol(el, symbol) {
+            document.querySelectorAll('#spotSymbolList .symbol-item').forEach(s => s.classList.remove('active'));
+            el.classList.add('active');
+            spotCurrentSymbol = symbol;
+            
+            const data = spotPairData[symbol] || spotPairData['BTC/USDT'];
+            spotBtcPrice = data.price;
+            
+            document.getElementById('spotCurrentPrice').textContent = '$' + data.price.toFixed(2);
+            const changeEl = document.getElementById('spotPriceChange');
+            if (changeEl) {
+                changeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
+                changeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
             }
-
-            document.getElementById('strategyTotalBalance').textContent = '$' + total.toFixed(2);
-            document.getElementById('strategyUsdtBalance').textContent = strategyUsdtBalance.toFixed(2);
-            document.getElementById('strategyBtcBalance').textContent = strategyBtcBalance.toFixed(4);
-            document.getElementById('strategyStopLoss').textContent = '$' + strategyStopLoss.toFixed(2);
-
-            const pnlEl = document.getElementById('strategyTotalPnl');
-            if (pnlEl) {
-                pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
-                pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
-            }
-
-            document.getElementById('strategyCurrentPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
-            document.getElementById('chartPairDisplay').textContent = currentStrategySymbol;
+            
+            document.getElementById('chartPairDisplay').textContent = symbol;
+            document.getElementById('spotAssetLabel').textContent = data.asset + ' 持仓';
+            document.getElementById('spotCurrentPriceDisplay').textContent = '$' + data.price.toFixed(2);
+            
+            spotGenerateChartData();
+            spotUpdateDisplay();
         }
-
-        // 时间周期切换
-        function strategySetTimePeriod(period, el) {
-            currentTimePeriod = period;
+        
+        // 切换图表类型
+        function switchChartType(type, el) {
+            spotChartType = type;
+            document.querySelectorAll('.chart-type-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.type === type);
+            });
+            spotGenerateChartData();
+        }
+        
+        // 切换时间周期
+        function spotSetTimePeriod(period, el) {
+            spotCurrentPeriod = period;
             document.querySelectorAll('.chart-time-labels .time-label').forEach(label => {
                 label.classList.remove('active');
             });
             if (el) el.classList.add('active');
-
-            regenerateChartData(currentStrategySymbol, period);
-            strategyAddLog(`📊 切换至 ${currentStrategySymbol} ${period} 视图`);
+            spotGenerateChartData();
         }
-
-        // 生成当前交易对的图表数据
-        function regenerateChartData(symbol, period) {
-            const data = pairData[symbol] || pairData['BTC/USDT'];
+        
+        // 生成图表数据
+        function spotGenerateChartData() {
+            const data = spotPairData[spotCurrentSymbol] || spotPairData['BTC/USDT'];
             const basePrice = data.price;
             const volatility = basePrice * 0.025;
-            const numPoints = periodDataPoints[period] || 24;
-            const newData = [];
+            const numPoints = periodDataPoints[spotCurrentPeriod] || 24;
+            
+            spotChartData = [];
+            spotPriceHistory = [];
             let current = basePrice * 0.97;
             for (let i = 0; i < numPoints; i++) {
                 current += (Math.random() - 0.5) * volatility * 2;
                 current = Math.max(basePrice * 0.85, Math.min(basePrice * 1.15, current));
-                newData.push(Math.round(current * 100) / 100);
+                spotChartData.push(Math.round(current * 100) / 100);
+                spotPriceHistory.push(Math.round(current * 100) / 100);
             }
-            strategyChartData = newData;
-            if (strategyChart) {
-                strategyChart.data.datasets[0].data = strategyChartData;
-                strategyChart.data.datasets[0].label = symbol;
-                strategyChart.update();
-            }
+            
+            spotUpdateChart();
         }
-
-        function strategySelectSymbol(el, symbol) {
-            document.querySelectorAll('#strategySymbolList .symbol-item').forEach(s => s.classList.remove('active'));
-            el.classList.add('active');
-            currentStrategySymbol = symbol;
-
-            document.getElementById('strategyAccountTitle').textContent = '📊 账户操作 (' + symbol + ')';
-
-            const data = pairData[symbol] || pairData['BTC/USDT'];
-            document.getElementById('strategyBaseLabel').textContent = data.base + ' 余额';
-            document.getElementById('strategyAssetLabel').textContent = data.asset + ' 持仓';
-
-            strategyBtcPrice = data.price;
-            document.getElementById('strategyCurrentPrice').textContent = '$' + data.price.toFixed(2);
-            document.getElementById('chartPairDisplay').textContent = symbol;
-
-            document.getElementById('strategyHeaderPrice').textContent = '$' + data.price.toFixed(2);
-            const headerChangeEl = document.getElementById('strategyHeaderChange');
-            if (headerChangeEl) {
-                headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerChangeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
-            }
-
-            regenerateChartData(symbol, currentTimePeriod);
-            strategyUpdateDisplay();
-            strategyAddLog('📊 切换至 ' + symbol);
-        }
-
-        function strategyUpdatePrice() {
-            const volatility = 120;
-            const change = (Math.random() - 0.5) * volatility * 2;
-            strategyBtcPrice = Math.max(10000, strategyBtcPrice + change);
-            strategyBtcPrice = Math.round(strategyBtcPrice * 100) / 100;
-
-            priceHistory.push(strategyBtcPrice);
-            if (priceHistory.length > 200) priceHistory.shift();
-
-            document.getElementById('strategyCurrentPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
-            document.getElementById('strategyHeaderPrice').textContent = '$' + strategyBtcPrice.toFixed(2);
-
-            strategyChartData.push(strategyBtcPrice);
-            const maxPoints = periodDataPoints[currentTimePeriod] || 24;
-            if (strategyChartData.length > maxPoints) strategyChartData.shift();
-            if (strategyChart) {
-                strategyChart.data.datasets[0].data = strategyChartData;
-                strategyChart.update();
-            }
-
-            // 检查止损
-            if (strategyBtcPrice <= strategyStopLoss && strategyBtcBalance > 0.001) {
-                const sellQuantity = strategyBtcBalance;
-                const sellAmount = sellQuantity * strategyBtcPrice;
-                strategyBtcBalance = 0;
-                strategyUsdtBalance += sellAmount;
-                strategyPosition = 'empty';
-                strategyAddLog(`🛑 止损触发！卖出全部 ${currentStrategySymbol.split('/')[0]} @ $${strategyBtcPrice.toFixed(2)}`);
-                strategyUpdateDisplay();
-            }
-
-            strategyUpdateDisplay();
-        }
-
-        // EMA信号检测
-        function checkEMASignal() {
-            if (!strategyRunning) return;
-
-            if (priceHistory.length < strategyEmaLong + 1) {
-                strategyAddLog(`⚠️ 价格数据不足(${priceHistory.length}/${strategyEmaLong + 1})，跳过信号判断`);
-                return;
-            }
-
-            const emaShort = calculateEMA(priceHistory, strategyEmaShort);
-            const emaLong = calculateEMA(priceHistory, strategyEmaLong);
-
-            if (emaShort === null || emaLong === null) {
-                strategyAddLog('⚠️ EMA计算失败，数据不足');
-                return;
-            }
-
-            let signal = null;
-            const diffPercent = Math.abs(emaShort - emaLong) / emaLong * 100;
-
-            if (diffPercent < 0.05) {
-                signal = 'neutral';
-            } else if (emaShort > emaLong) {
-                signal = 'golden';
-            } else {
-                signal = 'death';
-            }
-
-            if (signal === 'neutral') {
-                strategyAddLog(`⚪ 震荡状态: EMA${strategyEmaShort}=${emaShort.toFixed(2)}, EMA${strategyEmaLong}=${emaLong.toFixed(2)}, 差异${diffPercent.toFixed(3)}%`);
-                return;
-            }
-
-            if (signal === lastCross) {
-                strategyAddLog(`🔁 信号重复(${signal === 'golden' ? '金叉' : '死叉'})，忽略本次信号`);
-                return;
-            }
-
-            lastCross = signal;
-
-            if (signal === 'golden') {
-                strategyAddLog(`📈 金叉信号: EMA${strategyEmaShort}(${emaShort.toFixed(2)}) 上穿 EMA${strategyEmaLong}(${emaLong.toFixed(2)})`);
-                strategyAutoBuy();
-            } else if (signal === 'death') {
-                strategyAddLog(`📉 死叉信号: EMA${strategyEmaShort}(${emaShort.toFixed(2)}) 下穿 EMA${strategyEmaLong}(${emaLong.toFixed(2)})`);
-                strategyAutoSell();
-            }
-        }
-
-        // 自动买入
-        function strategyAutoBuy() {
-            if (strategyPosition === 'long') {
-                strategyAddLog('⚠️ 已持有多头仓位，跳过买入');
-                return;
-            }
-
-            if (strategyBtcPrice <= 0) {
-                strategyAddLog('⚠️ 价格无效，跳过买入');
-                return;
-            }
-
-            if (strategyUsdtBalance <= 10) {
-                strategyAddLog('⚠️ USDT余额不足(<=10)，跳过买入');
-                return;
-            }
-
-            const quantity = strategyUsdtBalance / strategyBtcPrice;
-            if (quantity < 0.001) {
-                strategyAddLog('⚠️ 买入量太小，跳过');
-                return;
-            }
-
-            strategyBtcBalance += quantity;
-            strategyUsdtBalance = 0;
-            strategyPosition = 'long';
-            strategyAddLog(`✅ 金叉全仓买入 ${quantity.toFixed(6)} ${currentStrategySymbol.split('/')[0]} @ $${strategyBtcPrice.toFixed(2)}`);
-            strategyUpdateDisplay();
-        }
-
-        // 自动卖出
-        function strategyAutoSell() {
-            if (strategyPosition === 'empty') {
-                strategyAddLog('⚠️ 空仓状态，跳过卖出');
-                return;
-            }
-
-            if (strategyBtcBalance < 0.001) {
-                strategyAddLog('⚠️ 持仓不足，跳过卖出');
-                return;
-            }
-
-            const sellQuantity = strategyBtcBalance;
-            const sellAmount = sellQuantity * strategyBtcPrice;
-            strategyBtcBalance = 0;
-            strategyUsdtBalance += sellAmount;
-            strategyPosition = 'empty';
-            strategyAddLog(`✅ 死叉全部卖出 ${sellQuantity.toFixed(6)} ${currentStrategySymbol.split('/')[0]} @ $${strategyBtcPrice.toFixed(2)}`);
-            strategyUpdateDisplay();
-        }
-
-        function strategyExecuteOrder(type) {
-            const assetSymbol = currentStrategySymbol.split('/')[0];
-            if (type === 'buy') {
-                if (strategyPosition === 'long') {
-                    strategyAddLog('⚠️ 已持有多头仓位，跳过买入');
-                    return;
-                }
-                if (strategyUsdtBalance <= 10) {
-                    strategyAddLog('⚠️ USDT 余额不足，无法买入');
-                    return;
-                }
-                const quantity = strategyUsdtBalance / strategyBtcPrice;
-                if (quantity < 0.001) {
-                    strategyAddLog('⚠️ 买入量太小');
-                    return;
-                }
-                strategyBtcBalance += quantity;
-                strategyUsdtBalance = 0;
-                strategyPosition = 'long';
-                strategyAddLog(`✅ 买入 ${quantity.toFixed(6)} ${assetSymbol} @ $${strategyBtcPrice.toFixed(2)}`);
-            } else {
-                if (strategyPosition === 'empty') {
-                    strategyAddLog('⚠️ 空仓状态，无法卖出');
-                    return;
-                }
-                if (strategyBtcBalance < 0.001) {
-                    strategyAddLog('⚠️ ' + assetSymbol + ' 持仓不足，无法卖出');
-                    return;
-                }
-                const sellQuantity = strategyBtcBalance;
-                const sellAmount = sellQuantity * strategyBtcPrice;
-                strategyBtcBalance = 0;
-                strategyUsdtBalance += sellAmount;
-                strategyPosition = 'empty';
-                strategyAddLog(`✅ 卖出 ${sellQuantity.toFixed(6)} ${assetSymbol} @ $${strategyBtcPrice.toFixed(2)}`);
-            }
-            strategyUpdateDisplay();
-        }
-
-        function strategyToggle() {
-            const btn = document.querySelector('.btn-strategy');
-            const dot = document.getElementById('strategyStatusDot');
-            const statusText = document.getElementById('strategyStatusText');
-
-            if (strategyRunning) {
-                strategyRunning = false;
-                clearInterval(strategyInterval);
-                clearInterval(signalCheckInterval);
-                btn.textContent = '▶ 启动策略';
-                dot.classList.remove('active');
-                statusText.textContent = '策略已停止';
-                strategyAddLog('⏹️ 策略已停止');
-            } else {
-                strategyRunning = true;
-                lastCross = null;
-                btn.textContent = '⏹ 停止策略';
-                dot.classList.add('active');
-                statusText.textContent = '策略运行中 (EMA趋势)';
-                strategyAddLog('▶️ 策略已启动 (EMA' + strategyEmaShort + '+EMA' + strategyEmaLong + ' 趋势策略)');
-                strategyAddLog('📊 等待收集 ' + (strategyEmaLong + 1) + ' 条价格数据...');
-
-                if (priceHistory.length < strategyEmaLong + 1) {
-                    for (let i = 0; i < strategyEmaLong + 5; i++) {
-                        priceHistory.push(strategyBtcPrice + (Math.random() - 0.5) * 100);
-                    }
-                }
-
-                signalCheckInterval = setInterval(checkEMASignal, 25000);
-                strategyInterval = setInterval(strategyUpdatePrice, 5000);
-
-                setTimeout(checkEMASignal, 1000);
-            }
-        }
-
-        function strategyInitChart() {
-            const canvas = document.getElementById('strategyPriceChart');
+        
+        // 更新图表
+        function spotUpdateChart() {
+            const canvas = document.getElementById('spotPriceChart');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
-            canvas.style.width = '100%';
-            canvas.style.height = '200px';
-
-            const data = pairData['BTC/USDT'];
-            const basePrice = data.price;
-            const numPoints = periodDataPoints['1h'] || 24;
-            const initialData = [];
-            let current = basePrice * 0.97;
-            for (let i = 0; i < numPoints; i++) {
-                current += (Math.random() - 0.5) * basePrice * 0.025 * 2;
-                current = Math.max(basePrice * 0.85, Math.min(basePrice * 1.15, current));
-                initialData.push(Math.round(current * 100) / 100);
+            
+            if (spotChart) {
+                spotChart.destroy();
             }
-            strategyChartData = initialData;
-
-            strategyChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: Array(numPoints).fill(''),
-                    datasets: [{
-                        label: 'BTC/USDT',
-                        data: strategyChartData,
-                        borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59,130,246,0.1)',
-                        fill: true,
-                        tension: 0.2,
-                        pointRadius: 0,
-                        borderWidth: 2,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    return '$' + context.parsed.y.toFixed(2);
+            
+            if (spotChartType === 'line') {
+                spotChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: Array(spotChartData.length).fill(''),
+                        datasets: [{
+                            label: spotCurrentSymbol,
+                            data: spotChartData,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59,130,246,0.1)',
+                            fill: true,
+                            tension: 0.2,
+                            pointRadius: 0,
+                            borderWidth: 2,
+                        }]
+                    },
+                    options: getChartOptions()
+                });
+            } else if (spotChartType === 'candle') {
+                const candleData = spotChartData.map((price, index) => {
+                    const open = index > 0 ? spotChartData[index - 1] : price * 0.998;
+                    const close = price;
+                    const high = Math.max(open, close) * 1.002;
+                    const low = Math.min(open, close) * 0.998;
+                    return { open, close, high, low };
+                });
+                
+                spotChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Array(candleData.length).fill(''),
+                        datasets: [{
+                            label: spotCurrentSymbol,
+                            data: candleData.map(d => d.high - d.low),
+                            backgroundColor: candleData.map(d => d.close >= d.open ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
+                            borderColor: candleData.map(d => d.close >= d.open ? '#10b981' : '#ef4444'),
+                            borderWidth: 1,
+                        }]
+                    },
+                    options: getChartOptions()
+                });
+            } else if (spotChartType === 'bar') {
+                const barData = spotChartData.map((price, index) => {
+                    return index > 0 ? price - spotChartData[index - 1] : 0;
+                });
+                
+                spotChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: Array(barData.length).fill(''),
+                        datasets: [{
+                            label: '涨跌',
+                            data: barData,
+                            backgroundColor: barData.map(v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
+                            borderColor: barData.map(v => v >= 0 ? '#10b981' : '#ef4444'),
+                            borderWidth: 1,
+                        }]
+                    },
+                    options: getChartOptions()
+                });
+            }
+        }
+        
+        // 获取图表配置
+        function getChartOptions() {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                if (spotChartType === 'bar') {
+                                    return (context.parsed.y >= 0 ? '+' : '') + context.parsed.y.toFixed(2);
                                 }
+                                return '$' + context.parsed.y.toFixed(2);
                             }
                         }
-                    },
-                    scales: {
-                        x: { display: false },
-                        y: {
-                            ticks: {
-                                color: '#6a6a7a',
-                                callback: function(value) { return '$' + value.toFixed(0); }
-                            },
-                            grid: { color: '#1a1a2a' }
-                        }
+                    }
+                },
+                scales: {
+                    x: { display: false },
+                    y: {
+                        ticks: {
+                            color: '#6a6a7a',
+                            callback: function(value) { return '$' + value.toFixed(0); }
+                        },
+                        grid: { color: '#1a1a2a' }
                     }
                 }
-            });
+            };
         }
-
-        function strategyRenderSymbols() {
-            const topContainer = document.getElementById('strategySymbolList');
-            if (topContainer) {
-                let html = '';
-                const pairsArray = Array.from(selectedPairs);
-                pairsArray.forEach((symbol, index) => {
-                    const activeClass = index === 0 ? 'active' : '';
-                    html +=
-                        `<span class="symbol-item ${activeClass}" onclick="strategySelectSymbol(this, '${symbol}')">${symbol}</span>`;
-                });
-                topContainer.innerHTML = html;
-                if (pairsArray.length > 0) {
-                    currentStrategySymbol = pairsArray[0];
-                }
+        
+        // 更新显示
+        function spotUpdateDisplay() {
+            const total = spotUsdtBalance + spotBtcBalance * spotBtcPrice;
+            const pnl = total - 10000;
+            
+            document.getElementById('spotCurrentPrice').textContent = '$' + spotBtcPrice.toFixed(2);
+            document.getElementById('spotTotalBalance').textContent = '$' + total.toFixed(2);
+            document.getElementById('spotUsdtBalance').textContent = spotUsdtBalance.toFixed(2);
+            document.getElementById('spotBtcBalance').textContent = spotBtcBalance.toFixed(4);
+            
+            const pnlEl = document.getElementById('spotTotalPnl');
+            if (pnlEl) {
+                pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
+                pnlEl.className = 'value ' + (pnl >= 0 ? 'green' : 'red');
             }
+            
+            document.getElementById('spotCurrentPriceDisplay').textContent = '$' + spotBtcPrice.toFixed(2);
         }
-
-        // 打开添加交易对弹窗
-        function strategyAddPair() {
-            tempSelectedPairs = new Set(selectedPairs);
-            document.getElementById('pairSearchInput').value = '';
-            renderPairList('');
-            document.getElementById('pairModalOverlay').classList.add('show');
-        }
-
-        // 关闭弹窗
-        function closePairModal(e) {
-            if (e && e.target !== e.currentTarget) return;
-            document.getElementById('pairModalOverlay').classList.remove('show');
-        }
-
-        // 渲染交易对列表
-        function renderPairList(filter) {
-            const container = document.getElementById('pairListContainer');
-            const filterLower = filter.toLowerCase();
-            const filteredPairs = allPairs.filter(pair => pair.toLowerCase().includes(filterLower));
-
-            if (filteredPairs.length === 0) {
-                container.innerHTML = '<div class="no-results">未找到匹配的交易对</div>';
+        
+        // 买入
+        function spotBuy() {
+            const assetSymbol = spotCurrentSymbol.split('/')[0];
+            const maxBuy = Math.min(spotUsdtBalance, 500);
+            
+            if (maxBuy < 10) {
+                alert('USDT 余额不足，无法买入');
                 return;
             }
-
+            
+            const quantity = maxBuy / spotBtcPrice;
+            if (quantity < 0.001) {
+                alert('买入量太小');
+                return;
+            }
+            
+            const buyAmount = maxBuy;
+            spotBtcBalance += quantity;
+            spotUsdtBalance -= buyAmount;
+            spotUpdateDisplay();
+            
+            // 创建订单
+            const order = {
+                id: Date.now(),
+                pair: spotCurrentSymbol,
+                type: 'buy',
+                asset: assetSymbol,
+                quantity: quantity,
+                price: spotBtcPrice,
+                amount: buyAmount,
+                pnl: 0,
+                status: 'active',
+                time: new Date().toLocaleString()
+            };
+            spotOrders.push(order);
+            spotRenderOrders();
+        }
+        
+        // 卖出
+        function spotSell() {
+            const assetSymbol = spotCurrentSymbol.split('/')[0];
+            
+            if (spotBtcBalance < 0.001) {
+                alert(assetSymbol + ' 持仓不足，无法卖出');
+                return;
+            }
+            
+            const maxSell = Math.min(spotBtcBalance, 0.01);
+            const sellAmount = maxSell * spotBtcPrice;
+            spotBtcBalance -= maxSell;
+            spotUsdtBalance += sellAmount;
+            spotUpdateDisplay();
+            
+            // 创建订单
+            const order = {
+                id: Date.now(),
+                pair: spotCurrentSymbol,
+                type: 'sell',
+                asset: assetSymbol,
+                quantity: maxSell,
+                price: spotBtcPrice,
+                amount: sellAmount,
+                pnl: 0,
+                status: 'active',
+                time: new Date().toLocaleString()
+            };
+            spotOrders.push(order);
+            spotRenderOrders();
+        }
+        
+        // 渲染订单记录
+        function spotRenderOrders() {
+            const container = document.getElementById('ordersContainer');
+            
+            if (spotOrders.length === 0) {
+                container.innerHTML = '<div class="no-orders">暂无订单记录</div>';
+                return;
+            }
+            
             let html = '';
-            filteredPairs.forEach(pair => {
-                const isSelected = tempSelectedPairs.has(pair);
-                const data = pairData[pair] || { price: 100, change: 0 };
+            spotOrders.forEach(order => {
+                const pnlClass = order.pnl >= 0 ? 'profit' : 'loss';
+                const pnlText = (order.pnl >= 0 ? '+' : '') + '$' + order.pnl.toFixed(2);
+                const typeClass = order.type === 'buy' ? 'buy' : 'sell';
+                const typeText = order.type === 'buy' ? '买入' : '卖出';
+                
                 html += `
-                    <div class="pair-option ${isSelected ? 'selected' : ''}" onclick="togglePairSelection('${pair}')">
-                        <span class="pair-name">${pair}</span>
-                        <span class="pair-price">$${data.price.toFixed(2)}</span>
-                        <span class="check-icon">${isSelected ? '✓' : ''}</span>
+                    <div class="order-item" id="order_${order.id}">
+                        <div class="order-header">
+                            <span class="order-pair">${order.pair}</span>
+                            <span class="order-type ${typeClass}">${typeText}</span>
+                        </div>
+                        <div class="order-details">
+                            <span>数量: ${order.quantity.toFixed(6)} ${order.asset}</span>
+                            <span>价格: $${order.price.toFixed(2)}</span>
+                            <span>金额: $${order.amount.toFixed(2)}</span>
+                        </div>
+                        <div class="order-details">
+                            <span>${order.time}</span>
+                            <span class="order-pnl ${pnlClass}">盈亏: ${pnlText}</span>
+                        </div>
+                        <div class="order-actions">
+                            <button class="order-action-btn btn-cancel-order" onclick="spotCancelOrder(${order.id})">撤单</button>
+                            <button class="order-action-btn btn-close-order" onclick="spotCloseOrder(${order.id})">平仓</button>
+                        </div>
                     </div>
                 `;
             });
+            
             container.innerHTML = html;
         }
-
-        // 切换交易对选择
-        function togglePairSelection(pair) {
-            if (tempSelectedPairs.has(pair)) {
-                tempSelectedPairs.delete(pair);
+        
+        // 撤单
+        function spotCancelOrder(orderId) {
+            const order = spotOrders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            if (order.status !== 'active') {
+                alert('该订单已处理，无法撤单');
+                return;
+            }
+            
+            // 回滚交易
+            if (order.type === 'buy') {
+                spotBtcBalance -= order.quantity;
+                spotUsdtBalance += order.amount;
             } else {
-                tempSelectedPairs.add(pair);
+                spotBtcBalance += order.quantity;
+                spotUsdtBalance -= order.amount;
             }
-            renderPairList(document.getElementById('pairSearchInput').value);
+            
+            order.status = 'cancelled';
+            spotUpdateDisplay();
+            spotRenderOrders();
+            
+            alert(`✅ 订单已撤销\n${order.pair} ${order.type === 'buy' ? '买入' : '卖出'} $${order.amount.toFixed(2)}`);
         }
-
-        // 搜索过滤
-        function filterPairList() {
-            const filter = document.getElementById('pairSearchInput').value;
-            renderPairList(filter);
-        }
-
-        // 确认添加
-        function confirmAddPairs() {
-            if (tempSelectedPairs.size === 0) {
-                alert('请至少选择一个交易对');
+        
+        // 平仓
+        function spotCloseOrder(orderId) {
+            const order = spotOrders.find(o => o.id === orderId);
+            if (!order) return;
+            
+            if (order.status !== 'active') {
+                alert('该订单已处理，无法平仓');
                 return;
             }
-            selectedPairs = new Set(tempSelectedPairs);
-            strategyRenderSymbols();
-            closePairModal();
-            strategyAddLog('✅ 交易对列表已更新');
+            
+            // 计算盈亏
+            if (order.type === 'buy') {
+                const currentValue = order.quantity * spotBtcPrice;
+                const pnl = currentValue - order.amount;
+                order.pnl = pnl;
+                
+                // 卖出平仓
+                spotBtcBalance -= order.quantity;
+                spotUsdtBalance += currentValue;
+            } else {
+                const currentValue = order.quantity * spotBtcPrice;
+                const pnl = order.amount - currentValue;
+                order.pnl = pnl;
+                
+                // 买入平仓
+                spotBtcBalance += order.quantity;
+                spotUsdtBalance -= currentValue;
+            }
+            
+            order.status = 'closed';
+            spotUpdateDisplay();
+            spotRenderOrders();
+            
+            const pnlText = (order.pnl >= 0 ? '+' : '') + '$' + order.pnl.toFixed(2);
+            alert(`✅ 订单已平仓\n盈亏: ${pnlText}`);
         }
-
-        // 打开参数设置弹窗
-        function openParamsModal() {
-            document.getElementById('paramStopLoss').value = strategyStopLoss;
-            document.getElementById('paramEmaShort').value = strategyEmaShort;
-            document.getElementById('paramEmaLong').value = strategyEmaLong;
-            document.getElementById('paramsModalOverlay').classList.add('show');
+        
+        // 初始化默认订单
+        function spotInitOrders() {
+            if (spotOrdersInitialized) return;
+            spotOrdersInitialized = true;
+            
+            // 添加一笔示例订单
+            const now = new Date();
+            spotOrders.push({
+                id: Date.now() - 86400000,
+                pair: 'BTC/USDT',
+                type: 'buy',
+                asset: 'BTC',
+                quantity: 0.05,
+                price: 62000,
+                amount: 3100,
+                pnl: 171.60,
+                status: 'closed',
+                time: now.toLocaleString()
+            });
+            
+            spotOrders.push({
+                id: Date.now() - 43200000,
+                pair: 'ETH/USDT',
+                type: 'sell',
+                asset: 'ETH',
+                quantity: 2.5,
+                price: 3500,
+                amount: 8750,
+                pnl: -250.25,
+                status: 'active',
+                time: now.toLocaleString()
+            });
+            
+            spotRenderOrders();
         }
-
-        // 关闭参数设置弹窗
-        function closeParamsModal(e) {
+        
+        // 打开添加交易对弹窗
+        function spotAddPair() {
+            document.getElementById('pairSearchInput').value = '';
+            document.getElementById('newPairInput').value = '';
+            spotRenderPairList('');
+            document.getElementById('pairModalOverlay').classList.add('show');
+        }
+        
+        // 关闭添加交易对弹窗
+        function spotClosePairModal(e) {
             if (e && e.target !== e.currentTarget) return;
-            document.getElementById('paramsModalOverlay').classList.remove('show');
+            document.getElementById('pairModalOverlay').classList.remove('show');
         }
-
-        // 保存参数
-        function saveParams() {
-            const stopLoss = parseFloat(document.getElementById('paramStopLoss').value);
-            const emaShort = parseInt(document.getElementById('paramEmaShort').value);
-            const emaLong = parseInt(document.getElementById('paramEmaLong').value);
-
-            if (isNaN(stopLoss) || stopLoss <= 0) {
-                alert('请输入有效的止损价格');
+        
+        // 渲染交易对列表
+        function spotRenderPairList(filter) {
+            const container = document.getElementById('pairModalContent');
+            const filterLower = filter.toLowerCase();
+            const availablePairs = Object.keys(spotPairData);
+            const filteredPairs = availablePairs.filter(pair => pair.toLowerCase().includes(filterLower) && !spotPairs.includes(pair));
+            
+            if (filteredPairs.length === 0) {
+                container.innerHTML = '<div class="no-results">未找到可添加的交易对</div>';
                 return;
             }
-            if (isNaN(emaShort) || emaShort < 5 || emaShort > 50) {
-                alert('EMA短期周期应在 5-50 之间');
-                return;
-            }
-            if (isNaN(emaLong) || emaLong < 20 || emaLong > 200) {
-                alert('EMA长期周期应在 20-200 之间');
-                return;
-            }
-            if (emaShort >= emaLong) {
-                alert('EMA短期周期应小于长期周期');
-                return;
-            }
-
-            strategyStopLoss = stopLoss;
-            strategyEmaShort = emaShort;
-            strategyEmaLong = emaLong;
-
-            if (strategyRunning) {
-                lastCross = null;
-                priceHistory = [];
-                strategyAddLog('⚙️ 参数已更新，信号状态已重置');
-            }
-
-            strategyUpdateDisplay();
-            closeParamsModal();
-            strategyAddLog(`⚙️ 参数已更新: 止损 $${stopLoss}, EMA${emaShort}/EMA${emaLong}`);
+            
+            let html = '';
+            filteredPairs.forEach(pair => {
+                const price = spotPairData[pair]?.price || 0;
+                html += `
+                    <div class="pair-option" onclick="spotSelectNewPair('${pair}')">
+                        <span class="pair-name">${pair}</span>
+                        <span class="pair-price">$${price.toFixed(2)}</span>
+                        <span class="check-icon">+</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
         }
-
+        
+        // 搜索过滤
+        function spotFilterPairList() {
+            const filter = document.getElementById('pairSearchInput').value;
+            spotRenderPairList(filter);
+        }
+        
+        // 选择新交易对
+        function spotSelectNewPair(pair) {
+            if (!spotPairs.includes(pair)) {
+                spotPairs.push(pair);
+                spotRenderSymbols();
+                spotClosePairModal();
+                alert(`✅ 已添加交易对: ${pair}`);
+            }
+        }
+        
+        // 处理新交易对输入回车键
+        function spotHandleNewPairKeydown(event) {
+            if (event.key === 'Enter') {
+                spotAddNewPair();
+            }
+        }
+        
+        // 添加新交易对
+        function spotAddNewPair() {
+            const input = document.getElementById('newPairInput');
+            const newPair = input.value.trim().toUpperCase();
+            
+            if (!newPair) {
+                alert('请输入交易对名称');
+                return;
+            }
+            
+            if (!newPair.includes('/')) {
+                alert('请输入正确格式，如: ATOM/USDT');
+                return;
+            }
+            
+            if (spotPairs.includes(newPair)) {
+                alert('该交易对已在列表中');
+                input.value = '';
+                return;
+            }
+            
+            // 添加到列表
+            spotPairs.push(newPair);
+            
+            // 生成随机价格
+            const randomPrice = (Math.random() * 100 + 1).toFixed(2);
+            const assetName = newPair.split('/')[0];
+            spotPairData[newPair] = {
+                price: parseFloat(randomPrice),
+                change: (Math.random() * 10 - 5).toFixed(2),
+                base: 'USDT',
+                asset: assetName
+            };
+            
+            input.value = '';
+            spotRenderSymbols();
+            spotRenderPairList(document.getElementById('pairSearchInput').value);
+            
+            alert(`✅ 已添加新交易对: ${newPair}\n价格: $${randomPrice}`);
+        }
+        
         // ============================================================
         //  初始化
         // ============================================================
         document.addEventListener('DOMContentLoaded', function() {
-            strategyRenderSymbols();
-            strategyInitChart();
-
-            const data = pairData['BTC/USDT'];
-            strategyBtcPrice = data.price;
-            currentStrategySymbol = 'BTC/USDT';
-            currentTimePeriod = '1h';
-
-            priceHistory = [];
-            for (let i = 0; i < 60; i++) {
-                priceHistory.push(data.price + (Math.random() - 0.5) * 100);
-            }
-
-            document.getElementById('strategyHeaderPrice').textContent = '$' + data.price.toFixed(2);
-            const headerChangeEl = document.getElementById('strategyHeaderChange');
-            if (headerChangeEl) {
-                headerChangeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                headerChangeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
-            }
-
-            document.getElementById('strategyCurrentPrice').textContent = '$' + data.price.toFixed(2);
-            document.getElementById('strategyAccountTitle').textContent = '📊 账户操作 (BTC/USDT)';
-            document.getElementById('chartPairDisplay').textContent = 'BTC/USDT';
-
-            regenerateChartData('BTC/USDT', '1h');
-            strategyUpdateDisplay();
-            strategyAddLog('✅ 策略面板已就绪');
-            strategyAddLog(`📊 当前 BTC 价格: $${strategyBtcPrice.toFixed(2)}`);
-            strategyAddLog(`📈 EMA策略: EMA${strategyEmaShort}+EMA${strategyEmaLong} 趋势跟踪`);
-
+            spotRenderSymbols();
+            spotGenerateChartData();
+            spotUpdateDisplay();
+            spotInitOrders();
+            
             // 暴露全局函数
-            window.strategySelectSymbol = strategySelectSymbol;
-            window.strategySetTimePeriod = strategySetTimePeriod;
-            window.strategyExecuteOrder = strategyExecuteOrder;
-            window.strategyToggle = strategyToggle;
-            window.strategyAddPair = strategyAddPair;
-            window.closePairModal = closePairModal;
-            window.togglePairSelection = togglePairSelection;
-            window.filterPairList = filterPairList;
-            window.confirmAddPairs = confirmAddPairs;
-            window.openParamsModal = openParamsModal;
-            window.closeParamsModal = closeParamsModal;
-            window.saveParams = saveParams;
-
-            // 弹窗外部点击关闭
+            window.spotSelectSymbol = spotSelectSymbol;
+            window.spotSetTimePeriod = spotSetTimePeriod;
+            window.switchChartType = switchChartType;
+            window.spotBuy = spotBuy;
+            window.spotSell = spotSell;
+            window.spotAddPair = spotAddPair;
+            window.spotClosePairModal = spotClosePairModal;
+            window.spotFilterPairList = spotFilterPairList;
+            window.spotSelectNewPair = spotSelectNewPair;
+            window.spotHandleNewPairKeydown = spotHandleNewPairKeydown;
+            window.spotAddNewPair = spotAddNewPair;
+            window.spotCancelOrder = spotCancelOrder;
+            window.spotCloseOrder = spotCloseOrder;
+            
             document.getElementById('pairModalOverlay').addEventListener('click', function(e) {
                 if (e.target === this) {
-                    closePairModal();
+                    spotClosePairModal();
                 }
             });
-            document.getElementById('paramsModalOverlay').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeParamsModal();
-                }
-            });
+            
+            // 模拟价格更新
+            setInterval(() => {
+                const volatility = 100;
+                const change = (Math.random() - 0.5) * volatility * 2;
+                spotBtcPrice = Math.max(10000, spotBtcPrice + change);
+                spotBtcPrice = Math.round(spotBtcPrice * 100) / 100;
+                
+                spotChartData.push(spotBtcPrice);
+                const maxPoints = periodDataPoints[spotCurrentPeriod] || 24;
+                if (spotChartData.length > maxPoints) spotChartData.shift();
+                
+                spotUpdateChart();
+                spotUpdateDisplay();
+            }, 5000);
         });
     </script>
 </body>
