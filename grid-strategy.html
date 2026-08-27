@@ -39,7 +39,13 @@
             padding: 20px;
         }
 
-        /* 返回按钮 */
+        /* 返回按钮行 */
+        .nav-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
         .back-btn {
             display: inline-flex;
             align-items: center;
@@ -49,7 +55,6 @@
             cursor: pointer;
             padding: 4px 6px;
             border-radius: 6px;
-            margin-bottom: 16px;
             color: #8a8a9a;
             text-decoration: none;
         }
@@ -59,6 +64,23 @@
             stroke: #8a8a9a;
             fill: none;
             stroke-width: 2;
+        }
+        .know-text-btn {
+            background: transparent;
+            border: none;
+            color: #60a5fa;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 8px;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+        .know-text-btn:hover {
+            color: #93c5fd;
+        }
+        .know-text-btn:active {
+            color: #3b82f6;
         }
 
         /* 页面标题 */
@@ -120,12 +142,16 @@
             color: #60a5fa;
             font-weight: 600;
         }
-        .card-header .strategy-badge.running {
+        .card-header .strategy-badge.profit {
             background: #1a3a2a;
             color: #10b981;
         }
+        .card-header .strategy-badge.loss {
+            background: #3a1a1a;
+            color: #ef4444;
+        }
 
-        /* 交易对选择按钮 - 修复手机端触发 */
+        /* 交易对选择按钮 */
         .pair-selector-btn {
             display: flex;
             align-items: center;
@@ -208,10 +234,14 @@
             background: #10b981;
             box-shadow: 0 0 6px #10b981;
         }
+        .status-dot.loss {
+            background: #ef4444;
+            box-shadow: 0 0 6px #ef4444;
+        }
         .log-link {
             color: #60a5fa;
             cursor: pointer;
-            font-size: 10px;
+            font-size: 11px;
             text-decoration: underline;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
@@ -451,13 +481,37 @@
             border-radius: 16px;
             padding: 16px;
             width: 85%;
-            max-width: 320px;
+            max-width: 350px;
+            display: flex;
+            flex-direction: column;
         }
         .pair-modal .modal-title {
             color: #60a5fa;
             font-size: 14px;
             font-weight: 700;
             text-align: center;
+            margin-bottom: 12px;
+        }
+        .pair-modal .search-input {
+            width: 100%;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #e8e8f0;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        .pair-modal .search-input:focus {
+            border-color: #3b82f6;
+        }
+        .pair-modal .search-input::placeholder {
+            color: #5a5a6a;
+        }
+        .pair-modal .pair-list {
+            max-height: 250px;
+            overflow-y: auto;
             margin-bottom: 12px;
         }
         .pair-modal .pair-option {
@@ -492,6 +546,150 @@
             color: #3b82f6;
             font-size: 16px;
         }
+        .pair-modal .no-results {
+            text-align: center;
+            padding: 20px;
+            color: #5a5a6a;
+            font-size: 13px;
+        }
+
+        /* 添加交易对区域 */
+        .add-pair-section {
+            border-top: 1px solid #1a1a2a;
+            padding-top: 12px;
+            margin-top: 4px;
+        }
+        .add-pair-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .add-pair-row input {
+            flex: 1;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #e8e8f0;
+            outline: none;
+        }
+        .add-pair-row input:focus {
+            border-color: #3b82f6;
+        }
+        .add-pair-row input::placeholder {
+            color: #5a5a6a;
+        }
+        .add-pair-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .add-pair-btn:active {
+            background: #2563eb;
+        }
+        .pair-modal .save-btn {
+            width: 100%;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .pair-modal .save-btn:active {
+            background: #0d9668;
+        }
+
+        /* 了解策略弹窗 */
+        .strategy-knowledge-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 2300;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .strategy-knowledge-overlay.show {
+            display: flex;
+        }
+        .strategy-knowledge-panel {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 700px;
+            margin: auto;
+        }
+        .strategy-knowledge-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 12px;
+        }
+        .strategy-knowledge-panel .panel-title {
+            color: #60a5fa;
+            font-size: 16px;
+            font-weight: 700;
+        }
+        .strategy-knowledge-panel .close-btn {
+            background: #1a1a2a;
+            color: #8a8a9a;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .strategy-knowledge-panel h3 {
+            color: #e8e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 15px 0 8px 0;
+        }
+        .strategy-knowledge-panel pre {
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 11px;
+            line-height: 1.6;
+            color: #c8c8d8;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .strategy-knowledge-panel .highlight-box {
+            background: #1a2a3a;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .strategy-knowledge-panel .highlight-box strong {
+            color: #60a5fa;
+        }
 
         /* 响应式 */
         @media (max-width: 480px) {
@@ -506,12 +704,15 @@
 </head>
 <body>
     <div class="container">
-        <!-- 返回按钮 -->
-        <a class="back-btn" href="grid-strategy.html">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
-        </a>
+        <!-- 返回按钮行 -->
+        <div class="nav-row">
+            <a class="back-btn" href="grid-strategy.html">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"/>
+                </svg>
+            </a>
+            <button class="know-text-btn" onclick="openKnowledgePanel()">了解策略</button>
+        </div>
 
         <!-- 页面标题 -->
         <h1 class="page-title">📊 网格策略卡片</h1>
@@ -549,7 +750,118 @@
     <div class="pair-modal-overlay" id="pairModalOverlay" onclick="closePairModal(event)">
         <div class="pair-modal" onclick="event.stopPropagation()">
             <div class="modal-title" id="pairModalTitle">选择交易对</div>
-            <div id="pairModalContent"></div>
+            <input type="text" class="search-input" id="pairSearchInput" placeholder="搜索交易对..." oninput="filterPairList()">
+            <div class="pair-list" id="pairModalContent"></div>
+            <!-- 添加交易对区域 -->
+            <div class="add-pair-section">
+                <div class="add-pair-row">
+                    <input type="text" id="newPairInput" placeholder="输入新交易对 (如: ATOM/USDT)" onkeydown="handleNewPairKeydown(event)">
+                    <button class="add-pair-btn" onclick="addNewPair()">添加</button>
+                </div>
+                <button class="save-btn" onclick="savePairSelection()">💾 保存选择</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 了解策略弹窗 -->
+    <div class="strategy-knowledge-overlay" id="strategyKnowledgeOverlay" onclick="closeKnowledgePanel(event)">
+        <div class="strategy-knowledge-panel" onclick="event.stopPropagation()">
+            <div class="panel-header">
+                <span class="panel-title">📖 网格策略完整知识</span>
+                <button class="close-btn" onclick="closeKnowledgePanel()">✕</button>
+            </div>
+            
+            <h3>一、RSI网格策略</h3>
+            <pre>触发条件：
+- RSI < 30（超卖）→ 买入
+- RSI > 70（超买）→ 卖出
+- 30 ≤ RSI ≤ 70 → 持有不动
+
+参数设置：
+- RSI周期：14
+- 超卖阈值：30
+- 超买阈值：70
+- 网格间距：2-3%
+
+优点：过滤震荡噪音，只在极端点位操作
+缺点：可能错过趋势行情</pre>
+
+            <h3>二、布林带网格策略</h3>
+            <pre>触发条件：
+- 价格触及下轨 → 买入
+- 价格触及上轨 → 卖出
+- 价格回归中轨 → 平仓
+
+参数设置：
+- 布林带周期：20
+- 标准差倍数：2
+- 网格间距：1-2%
+
+优点：统计学基础，适合均值回归
+缺点：单边趋势中可能连续止损</pre>
+
+            <h3>三、EMA趋势网格策略</h3>
+            <pre>核心逻辑：
+- EMA20 > EMA50 → 只做多（金叉买入，回调加仓）
+- EMA20 < EMA50 → 只做空（死叉卖出，反弹减仓）
+- EMA20 ≈ EMA50 → 纯网格（高抛低吸）
+
+参数设置：
+- EMA短期：20
+- EMA长期：50
+- 网格间距：1.5-3%
+- 仓位管理：每格10-20%
+
+止损条件：
+- 价格跌破网格下限5%
+- 或趋势反转（EMA死叉）</pre>
+
+            <h3>四、KDJ网格策略</h3>
+            <pre>信号判断：
+- K线从下方穿越D线（金叉）→ 买入
+- K线从上方穿越D线（死叉）→ 卖出
+- J值 > 90 → 超买减仓
+- J值 < 10 → 超卖加仓
+
+参数设置：
+- KDJ参数：9,3,3
+- 网格间距：2%
+- 单格仓位：5-10%</pre>
+
+            <h3>五、MACD网格策略</h3>
+            <pre>信号判断：
+- MACD金叉 → 开启做多网格
+- MACD死叉 → 开启做空网格
+- MACD柱状图缩量 → 网格间距收窄
+
+参数设置：
+- MACD参数：12,26,9
+- 网格间距：动态1-3%</pre>
+
+            <h3>六、多周期网格策略</h3>
+            <pre>核心逻辑：
+- 4小时级别判断趋势方向
+- 1小时级别确定网格区间
+- 15分钟级别执行网格交易
+
+执行规则：
+- 4H趋势向上 → 只做多网格
+- 4H趋势向下 → 只做空网格
+- 4H震荡 → 双向网格</pre>
+
+            <h3>七、风控规则</h3>
+            <pre>止损规则：
+- 硬止损：单格亏损超过5%强制平仓
+- 总止损：账户回撤超过15%停止策略
+
+仓位管理：
+- 单格仓位：总资金的5-10%
+- 最大持仓：不超过总资金的60%</pre>
+
+            <div class="highlight-box">
+                <strong>最优策略推荐：</strong>EMA趋势过滤 + 动态ATR网格 + RSI辅助确认<br><br>
+                <strong>核心要素：</strong>趋势过滤、动态间距、风控止损、仓位管理、信号过滤
+            </div>
         </div>
     </div>
 
@@ -559,15 +871,38 @@
         // ============================================================
         
         // 可用交易对
-        const availablePairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT'];
+        let availablePairs = [
+            'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT',
+            'LINK/USDT', 'UNI/USDT', 'ATOM/USDT', 'LTC/USDT', 'BCH/USDT', 'FIL/USDT', 'APT/USDT', 'SUI/USDT',
+            'NEAR/USDT', 'OP/USDT', 'ARB/USDT', 'MATIC/USDT', 'DOGE/USDT', 'SHIB/USDT', 'TRX/USDT', 'ETC/USDT'
+        ];
         
         // 交易对价格
-        const pairPrices = {
+        let pairPrices = {
             'BTC/USDT': 65432.10,
             'ETH/USDT': 3456.78,
             'SOL/USDT': 187.50,
             'BNB/USDT': 598.20,
-            'XRP/USDT': 0.612
+            'XRP/USDT': 0.612,
+            'ADA/USDT': 0.456,
+            'DOT/USDT': 7.89,
+            'AVAX/USDT': 38.76,
+            'LINK/USDT': 16.45,
+            'UNI/USDT': 8.92,
+            'ATOM/USDT': 9.87,
+            'LTC/USDT': 72.34,
+            'BCH/USDT': 345.67,
+            'FIL/USDT': 5.67,
+            'APT/USDT': 12.34,
+            'SUI/USDT': 1.89,
+            'NEAR/USDT': 5.67,
+            'OP/USDT': 2.34,
+            'ARB/USDT': 1.56,
+            'MATIC/USDT': 0.78,
+            'DOGE/USDT': 0.156,
+            'SHIB/USDT': 0.0000234,
+            'TRX/USDT': 0.234,
+            'ETC/USDT': 23.45
         };
 
         const strategies = [
@@ -688,6 +1023,13 @@
             if (state.logs.length > 50) state.logs.shift();
         }
 
+        // 获取盈亏状态
+        function getPnlStatus(state) {
+            const currentPrice = pairPrices[state.currentPair] || 65432.10;
+            const totalValue = state.usdtBalance + state.assetBalance * currentPrice;
+            return totalValue - 10000;
+        }
+
         // 渲染策略卡片
         function renderStrategyCards() {
             const container = document.getElementById('strategyCardsContainer');
@@ -696,21 +1038,35 @@
             strategies.forEach(strategy => {
                 const state = strategyStates[strategy.id];
                 const currentPrice = pairPrices[state.currentPair] || 65432.10;
-                const totalValue = state.usdtBalance + state.assetBalance * currentPrice;
-                const pnl = totalValue - 10000;
+                const pnl = getPnlStatus(state);
+                const isProfit = pnl >= 0;
+                
+                let badgeText = strategy.badge;
+                let badgeClass = '';
+                let statusText = '已停止';
+                let dotClass = '';
+                let toggleText = '▶ 启动';
+                let toggleClass = '';
+                
+                if (state.running) {
+                    badgeClass = isProfit ? 'profit' : 'loss';
+                    badgeText = strategy.badge + (isProfit ? ' · 盈利中' : ' · 亏损中');
+                    statusText = isProfit ? '盈利中' : '亏损中';
+                    dotClass = isProfit ? 'active' : 'loss';
+                    toggleText = '⏸ 暂停';
+                    toggleClass = 'running';
+                }
                 
                 html += `
                     <div class="strategy-card ${state.running ? 'running' : ''}" id="card_${strategy.id}">
-                        <!-- 卡片头部 -->
                         <div class="card-header">
                             <div style="display:flex;align-items:center;gap:8px;">
                                 <span class="strategy-icon">${strategy.icon}</span>
                                 <span class="strategy-name">${strategy.name}</span>
                             </div>
-                            <span class="strategy-badge ${state.running ? 'running' : ''}">${strategy.badge}${state.running ? ' · 运行中' : ''}</span>
+                            <span class="strategy-badge ${badgeClass}">${badgeText}</span>
                         </div>
                         
-                        <!-- 交易对选择按钮 -->
                         <div class="pair-selector-btn" onclick="openPairModal('${strategy.id}')">
                             <span class="pair-label">交易对:</span>
                             <span class="pair-name">${state.currentPair}</span>
@@ -718,24 +1074,20 @@
                             <span class="dropdown-arrow">▼</span>
                         </div>
                         
-                        <!-- 策略描述 -->
                         <div class="strategy-desc">${strategy.description}</div>
                         
-                        <!-- 信号指示 -->
                         <div class="signals">
                             ${strategy.signals.map(s => `<span class="signal-tag">${s}</span>`).join('')}
                         </div>
                         
-                        <!-- 状态指示器 -->
                         <div class="status-row">
                             <div class="status-left">
-                                <span class="status-dot ${state.running ? 'active' : ''}" id="dot_${strategy.id}"></span>
-                                <span id="status_${strategy.id}">${state.running ? '运行中' : '已停止'}</span>
+                                <span class="status-dot ${dotClass}" id="dot_${strategy.id}"></span>
+                                <span id="status_${strategy.id}">${statusText}</span>
                             </div>
                             <span class="log-link" onclick="openLogModal('${strategy.id}')">📋 查看日志</span>
                         </div>
                         
-                        <!-- 账户信息 -->
                         <div class="account-info">
                             <div class="account-row">
                                 <span class="label">USDT余额</span>
@@ -747,23 +1099,21 @@
                             </div>
                             <div class="account-row">
                                 <span class="label">盈亏</span>
-                                <span class="value" id="pnl_${strategy.id}" style="color:${pnl >= 0 ? '#10b981' : '#ef4444'};">${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}</span>
+                                <span class="value" id="pnl_${strategy.id}" style="color:${isProfit ? '#10b981' : '#ef4444'};">${isProfit ? '+' : ''}$${pnl.toFixed(2)}</span>
                             </div>
                         </div>
                         
-                        <!-- 操作按钮 -->
                         <div class="card-actions">
-                            <button class="action-btn btn-toggle ${state.running ? 'running' : ''}" 
+                            <button class="action-btn btn-toggle ${toggleClass}" 
                                 id="toggleBtn_${strategy.id}" 
                                 onclick="toggleStrategy('${strategy.id}')">
-                                ${state.running ? '⏸ 暂停' : '▶ 启动'}
+                                ${toggleText}
                             </button>
                             <button class="action-btn btn-reset" onclick="resetStrategy('${strategy.id}')">
                                 🔄 撤销
                             </button>
                         </div>
                         
-                        <!-- 参数设置按钮 -->
                         <button class="btn-params" onclick="openParamsModal('${strategy.id}')">
                             ⚙️ 参数设置
                         </button>
@@ -781,9 +1131,32 @@
             const strategy = strategies.find(s => s.id === strategyId);
             
             document.getElementById('pairModalTitle').textContent = `${strategy.name} - 选择交易对`;
+            document.getElementById('pairSearchInput').value = '';
+            document.getElementById('newPairInput').value = '';
+            renderPairList('');
+            document.getElementById('pairModalOverlay').classList.add('show');
+        }
+
+        // 关闭交易对选择弹窗
+        function closePairModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('pairModalOverlay').classList.remove('show');
+        }
+
+        // 渲染交易对列表
+        function renderPairList(filter) {
+            const state = strategyStates[currentPairSelectStrategy];
+            const container = document.getElementById('pairModalContent');
+            const filterLower = filter.toLowerCase();
+            const filteredPairs = availablePairs.filter(pair => pair.toLowerCase().includes(filterLower));
+            
+            if (filteredPairs.length === 0) {
+                container.innerHTML = '<div class="no-results">未找到匹配的交易对</div>';
+                return;
+            }
             
             let html = '';
-            availablePairs.forEach(pair => {
+            filteredPairs.forEach(pair => {
                 const isSelected = state.currentPair === pair;
                 const price = pairPrices[pair] || 0;
                 html += `
@@ -795,14 +1168,13 @@
                 `;
             });
             
-            document.getElementById('pairModalContent').innerHTML = html;
-            document.getElementById('pairModalOverlay').classList.add('show');
+            container.innerHTML = html;
         }
 
-        // 关闭交易对选择弹窗
-        function closePairModal(e) {
-            if (e && e.target !== e.currentTarget) return;
-            document.getElementById('pairModalOverlay').classList.remove('show');
+        // 搜索过滤交易对
+        function filterPairList() {
+            const filter = document.getElementById('pairSearchInput').value;
+            renderPairList(filter);
         }
 
         // 选择交易对
@@ -813,6 +1185,60 @@
             addLog(currentPairSelectStrategy, `切换交易对至 ${pair}`);
             closePairModal();
             renderStrategyCards();
+        }
+
+        // 处理新交易对输入回车键
+        function handleNewPairKeydown(event) {
+            if (event.key === 'Enter') {
+                addNewPair();
+            }
+        }
+
+        // 添加新交易对
+        function addNewPair() {
+            const input = document.getElementById('newPairInput');
+            const newPair = input.value.trim().toUpperCase();
+            
+            if (!newPair) {
+                alert('请输入交易对名称');
+                return;
+            }
+            
+            if (!newPair.includes('/')) {
+                alert('请输入正确格式，如: ATOM/USDT');
+                return;
+            }
+            
+            if (availablePairs.includes(newPair)) {
+                alert('该交易对已存在');
+                input.value = '';
+                return;
+            }
+            
+            availablePairs.push(newPair);
+            const randomPrice = (Math.random() * 100 + 1).toFixed(2);
+            pairPrices[newPair] = parseFloat(randomPrice);
+            
+            input.value = '';
+            renderPairList(document.getElementById('pairSearchInput').value);
+            
+            if (currentPairSelectStrategy) {
+                addLog(currentPairSelectStrategy, `新增交易对: ${newPair}`);
+            }
+        }
+
+        // 保存交易对选择
+        function savePairSelection() {
+            if (!currentPairSelectStrategy) return;
+            
+            const state = strategyStates[currentPairSelectStrategy];
+            const selectedPair = state.currentPair;
+            
+            addLog(currentPairSelectStrategy, `💾 已保存交易对选择: ${selectedPair}`);
+            closePairModal();
+            renderStrategyCards();
+            
+            alert(`✅ 交易对 ${selectedPair} 已保存`);
         }
 
         // 切换策略运行状态
@@ -863,27 +1289,7 @@
                 }
             }
             
-            updateCardDisplay(id);
-        }
-
-        // 更新卡片显示
-        function updateCardDisplay(id) {
-            const state = strategyStates[id];
-            const currentPrice = pairPrices[state.currentPair] || 65432.10;
-            
-            const usdtEl = document.getElementById(`usdt_${id}`);
-            const assetEl = document.getElementById(`asset_${id}`);
-            const pnlEl = document.getElementById(`pnl_${id}`);
-            
-            if (usdtEl) usdtEl.textContent = state.usdtBalance.toFixed(2);
-            if (assetEl) assetEl.textContent = state.assetBalance.toFixed(4);
-            
-            if (pnlEl) {
-                const totalValue = state.usdtBalance + state.assetBalance * currentPrice;
-                const pnl = totalValue - 10000;
-                pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
-                pnlEl.style.color = pnl >= 0 ? '#10b981' : '#ef4444';
-            }
+            renderStrategyCards();
         }
 
         // 撤销策略
@@ -970,6 +1376,19 @@
             renderStrategyCards();
         }
 
+        // 打开了解策略弹窗
+        function openKnowledgePanel() {
+            document.getElementById('strategyKnowledgeOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭了解策略弹窗
+        function closeKnowledgePanel(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('strategyKnowledgeOverlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
         // ============================================================
         //  初始化
         // ============================================================
@@ -991,6 +1410,11 @@
                     closePairModal();
                 }
             });
+            document.getElementById('strategyKnowledgeOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeKnowledgePanel();
+                }
+            });
             
             // 暴露全局函数
             window.toggleStrategy = toggleStrategy;
@@ -1003,6 +1427,12 @@
             window.openPairModal = openPairModal;
             window.closePairModal = closePairModal;
             window.selectPair = selectPair;
+            window.filterPairList = filterPairList;
+            window.addNewPair = addNewPair;
+            window.handleNewPairKeydown = handleNewPairKeydown;
+            window.savePairSelection = savePairSelection;
+            window.openKnowledgePanel = openKnowledgePanel;
+            window.closeKnowledgePanel = closeKnowledgePanel;
         });
     </script>
 </body>
