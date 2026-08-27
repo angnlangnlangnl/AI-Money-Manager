@@ -2530,13 +2530,13 @@ Elite版：¥299/月，1对1私人管家
         function renderQuickActions() {
             const container = document.getElementById('quickActions');
             const actions = [
-                { label: '策略交易', prompt: 'strategy' },
-                { label: '量化交易', prompt: '帮我分析量化交易机会' },
+                { label: '策略交易', prompt: 'strategy', url: 'strategy.html' },
+                { label: '量化交易', prompt: 'grid', url: 'grid-strategy.html' },
                 { label: '收益排行', prompt: '查看收益排行榜' },
             ];
             container.innerHTML = actions.map((a) => {
-                if (a.label === '策略交易') {
-                    return `<button onclick="window.location.href='strategy.html'" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
+                if (a.url) {
+                    return `<button onclick="window.location.href='${a.url}'" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
                 }
                 return `<button onclick="sendMessage('${a.prompt}')" class="flex items-center gap-1 text-xs px-3 py-1.5 rounded-full border border-[#1a1a2a] text-[#8a8a9a] active:bg-[#1a1a2a] active:text-[#e8e8f0] transition-all whitespace-nowrap tap-active bg-[#12121f]">${a.label}</button>`;
             }).join('');
