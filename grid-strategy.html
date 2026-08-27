@@ -45,7 +45,13 @@
             min-height: 100vh;
         }
 
-        /* 返回按钮 */
+        /* 返回按钮行 */
+        .nav-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
         .back-btn {
             cursor: pointer;
             padding: 4px 6px;
@@ -57,7 +63,6 @@
             justify-content: center;
             background: transparent;
             border: none;
-            margin-bottom: 16px;
             font-size: 0;
             text-decoration: none;
         }
@@ -70,6 +75,23 @@
             stroke: #8a8a9a;
             fill: none;
             stroke-width: 2;
+        }
+        .know-text-btn {
+            background: transparent;
+            border: none;
+            color: #60a5fa;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 4px 8px;
+            transition: color 0.2s;
+            text-decoration: none;
+        }
+        .know-text-btn:hover {
+            color: #93c5fd;
+        }
+        .know-text-btn:active {
+            color: #3b82f6;
         }
 
         /* 顶部标题 */
@@ -102,6 +124,117 @@
         .page-header .current-price-info .change {
             font-size: 14px;
             font-weight: 600;
+        }
+
+        /* 量化了解弹窗 */
+        .knowledge-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 3000;
+            display: none;
+            align-items: flex-start;
+            justify-content: center;
+            overflow-y: auto;
+            padding: 20px;
+            animation: fadeIn 0.2s ease;
+        }
+        .knowledge-overlay.show {
+            display: flex;
+        }
+        .knowledge-panel {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 800px;
+            margin: auto;
+            animation: slideUp 0.3s ease;
+        }
+        .knowledge-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 12px;
+        }
+        .knowledge-panel .panel-title {
+            color: #60a5fa;
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .knowledge-panel .close-btn {
+            background: #1a1a2a;
+            color: #8a8a9a;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+        .knowledge-panel .close-btn:hover {
+            background: #2a2a3a;
+        }
+        .knowledge-panel h2 {
+            color: #60a5fa;
+            font-size: 16px;
+            font-weight: 700;
+            margin: 20px 0 10px 0;
+        }
+        .knowledge-panel h3 {
+            color: #e8e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            margin: 15px 0 8px 0;
+        }
+        .knowledge-panel pre {
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #c8c8d8;
+            overflow-x: auto;
+            margin-bottom: 10px;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        .knowledge-panel table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .knowledge-panel table th {
+            background: #1a1a2a;
+            color: #60a5fa;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #2a2a3a;
+        }
+        .knowledge-panel table td {
+            padding: 8px 12px;
+            color: #c8c8d8;
+            border: 1px solid #2a2a3a;
+        }
+        .knowledge-panel .highlight-box {
+            background: #1a2a3a;
+            border: 1px solid #2a3a4a;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 10px 0;
+        }
+        .knowledge-panel .highlight-box strong {
+            color: #60a5fa;
         }
 
         /* 策略选择标签 */
@@ -161,12 +294,18 @@
             justify-content: space-between;
             align-items: center;
         }
-        .card .card-title .badge {
-            font-size: 11px;
-            padding: 2px 10px;
-            border-radius: 12px;
-            background: #1a2a3a;
-            color: #60a5fa;
+        .card .card-title .params-btn {
+            background: #1a1a2a;
+            color: #8a8a9a;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 12px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .card .card-title .params-btn:hover {
+            background: #2a2a3a;
         }
 
         /* 网格可视化 */
@@ -273,33 +412,6 @@
             color: #8a8a9a;
         }
 
-        /* 参数设置 */
-        .param-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-            font-size: 13px;
-        }
-        .param-row .param-label {
-            color: #6a6a7a;
-        }
-        .param-row .param-input {
-            width: 100px;
-            background: #0a0a12;
-            border: 1px solid #1a1a2a;
-            border-radius: 6px;
-            padding: 6px 10px;
-            font-size: 13px;
-            color: #e8e8f0;
-            outline: none;
-            text-align: right;
-            transition: border-color 0.2s;
-        }
-        .param-row .param-input:focus {
-            border-color: #3b82f6;
-        }
-
         /* 状态指示器 */
         .status-indicator {
             display: flex;
@@ -365,13 +477,95 @@
             background: #1a3a2a;
             color: #10b981;
         }
-        .signal-badge.warning {
-            background: #3a2a1a;
-            color: #f59e0b;
+
+        /* 参数设置弹窗样式 */
+        .params-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
         }
-        .signal-badge.danger {
-            background: #3a1a1a;
-            color: #ef4444;
+        .params-modal-overlay.show {
+            display: flex;
+        }
+        .params-modal {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 20px;
+            width: 90%;
+            max-width: 380px;
+            display: flex;
+            flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+        .params-modal .modal-title {
+            color: #60a5fa;
+            font-size: 16px;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .params-modal .param-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .params-modal .param-row .param-label {
+            font-size: 13px;
+            color: #6a6a7a;
+        }
+        .params-modal .param-row .param-input {
+            width: 120px;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 6px;
+            padding: 6px 10px;
+            font-size: 13px;
+            color: #e8e8f0;
+            outline: none;
+            text-align: right;
+            transition: border-color 0.2s;
+        }
+        .params-modal .param-row .param-input:focus {
+            border-color: #3b82f6;
+        }
+        .params-modal .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+        }
+        .params-modal .modal-buttons .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .params-modal .modal-buttons .btn-confirm {
+            background: #3b82f6;
+            color: #0a0a0f;
+        }
+        .params-modal .modal-buttons .btn-cancel {
+            background: #1a1a2a;
+            color: #6a6a7a;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(30px); opacity: 0.5; }
+            to { transform: translateY(0); opacity: 1; }
         }
 
         /* 响应式 */
@@ -385,19 +579,25 @@
             .page-header .current-price-info .price {
                 font-size: 20px;
             }
+            .knowledge-panel {
+                padding: 16px;
+            }
         }
     </style>
 </head>
 <body>
     <div class="grid-container">
-        <!-- 返回按钮 -->
-        <a class="back-btn" href="index.html" title="返回">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
-        </a>
+        <!-- 返回按钮行 -->
+        <div class="nav-row">
+            <a class="back-btn" href="index.html" title="返回">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"/>
+                </svg>
+            </a>
+            <button class="know-text-btn" onclick="openKnowledgePanel()">量化了解</button>
+        </div>
 
-        <!-- 顶部标题 -->
+        <!-- 1. 顶部总收益卡片 -->
         <div class="page-header">
             <span class="title">📊 网格量化交易策略</span>
             <div class="current-price-info">
@@ -406,25 +606,311 @@
             </div>
         </div>
 
-        <!-- 策略选择标签 -->
-        <div class="strategy-tabs" id="strategyTabs">
-            <span class="strategy-tab active" data-strategy="rsi" onclick="switchStrategy('rsi')">RSI网格</span>
-            <span class="strategy-tab" data-strategy="bollinger" onclick="switchStrategy('bollinger')">布林带网格</span>
-            <span class="strategy-tab" data-strategy="ema" onclick="switchStrategy('ema')">EMA趋势网格</span>
-            <span class="strategy-tab" data-strategy="kdj" onclick="switchStrategy('kdj')">KDJ网格</span>
-            <span class="strategy-tab" data-strategy="macd" onclick="switchStrategy('macd')">MACD网格</span>
-            <span class="strategy-tab" data-strategy="multi" onclick="switchStrategy('multi')">多周期网格</span>
+        <!-- 2. 账户信息卡片 -->
+        <div class="card" id="accountCard">
+            <div class="card-title">💰 账户信息</div>
+            <div class="account-row">
+                <span class="label">总资产</span>
+                <span class="value" id="gridTotalBalance">$10,000.00</span>
+            </div>
+            <div class="account-row">
+                <span class="label">USDT 余额</span>
+                <span class="value" id="gridUsdtBalance">10,000.00</span>
+            </div>
+            <div class="account-row">
+                <span class="label">BTC 持仓</span>
+                <span class="value" id="gridBtcBalance">0.0000</span>
+            </div>
+            <div class="account-row">
+                <span class="label">总盈亏</span>
+                <span class="value green" id="gridTotalPnl">+$0.00</span>
+            </div>
+            <div class="status-indicator" style="margin-top:12px;">
+                <span class="status-dot" id="gridStatusDot"></span>
+                <span id="gridStatusText">策略已停止</span>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" onclick="startGridStrategy()">▶ 启动策略</button>
+                <button class="btn btn-secondary" onclick="stopGridStrategy()">⏹ 停止</button>
+            </div>
         </div>
 
-        <!-- 策略内容区域 -->
-        <div id="strategyContent">
-            <!-- 由JS动态渲染 -->
+        <!-- 3. RSI网格策略卡片 -->
+        <div class="card" id="strategyCard">
+            <div class="card-title">
+                <span id="strategyCardTitle">RSI网格策略</span>
+                <button class="params-btn" onclick="openParamsModal()">⚙️ 参数设置</button>
+            </div>
+            <p style="font-size:13px;color:#9ca3af;margin-bottom:12px;" id="strategyCardDesc">基于RSI超买超卖信号的网格交易</p>
+            <div class="signal-indicator" id="strategyCardSignals">
+                <span class="signal-badge">超卖买入</span>
+                <span class="signal-badge">超买卖出</span>
+                <span class="signal-badge">中性持有</span>
+            </div>
+            <!-- 策略选择标签 -->
+            <div class="strategy-tabs" id="strategyTabs" style="margin-bottom:0;">
+                <span class="strategy-tab active" data-strategy="rsi" onclick="switchStrategy('rsi')">RSI网格</span>
+                <span class="strategy-tab" data-strategy="bollinger" onclick="switchStrategy('bollinger')">布林带网格</span>
+                <span class="strategy-tab" data-strategy="ema" onclick="switchStrategy('ema')">EMA趋势网格</span>
+                <span class="strategy-tab" data-strategy="kdj" onclick="switchStrategy('kdj')">KDJ网格</span>
+                <span class="strategy-tab" data-strategy="macd" onclick="switchStrategy('macd')">MACD网格</span>
+                <span class="strategy-tab" data-strategy="multi" onclick="switchStrategy('multi')">多周期网格</span>
+            </div>
         </div>
 
-        <!-- 交易日志 -->
+        <!-- 4. 网格布局卡片 -->
+        <div class="card">
+            <div class="card-title">📐 网格布局</div>
+            <div class="grid-visual" id="gridVisualContainer">
+                <!-- 由JS渲染 -->
+            </div>
+        </div>
+
+        <!-- 5. 价格走势卡片 -->
+        <div class="card">
+            <div class="card-title">📈 价格走势</div>
+            <div class="chart-wrapper">
+                <canvas id="gridPriceChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 6. 交易日志卡片 -->
         <div class="card">
             <div class="card-title">📋 交易日志</div>
             <div class="log-box" id="gridLogBox">[系统] 网格策略已初始化，等待价格数据...</div>
+        </div>
+    </div>
+
+    <!-- 量化了解弹窗 -->
+    <div class="knowledge-overlay" id="knowledgeOverlay" onclick="closeKnowledgePanel(event)">
+        <div class="knowledge-panel" onclick="event.stopPropagation()">
+            <div class="panel-header">
+                <span class="panel-title">市场最优网格量化交易规则分析</span>
+                <button class="close-btn" onclick="closeKnowledgePanel()">✕</button>
+            </div>
+            
+            <h2>一、经典网格策略</h2>
+            
+            <h3>1. 等差网格（Equal Spacing Grid）</h3>
+            <pre>规则：固定价格间距，每个格子买卖数量相同
+适用：震荡市
+特点：简单、稳定，但资金利用率较低</pre>
+
+            <h3>2. 等比网格（Geometric Grid）</h3>
+            <pre>规则：固定百分比间距，价格越高格子越宽
+适用：波动较大的市场
+特点：适应价格波动，但需要更多资金</pre>
+
+            <h3>3. 动态网格（Adaptive Grid）</h3>
+            <pre>规则：根据ATR/波动率动态调整网格间距
+适用：波动率变化的市场
+特点：自适应，但实现复杂</pre>
+
+            <h2>二、主流网格策略</h2>
+
+            <h3>策略1：RSI趋势网格</h3>
+            <pre>触发条件：
+- RSI < 30（超卖）→ 买入
+- RSI > 70（超买）→ 卖出
+- 30 ≤ RSI ≤ 70 → 持有不动
+
+参数设置：
+- RSI周期：14
+- 超卖阈值：30
+- 超买阈值：70
+- 网格间距：2-3%
+
+优点：过滤震荡噪音，只在极端点位操作
+缺点：可能错过趋势行情</pre>
+
+            <h3>策略2：布林带网格</h3>
+            <pre>触发条件：
+- 价格触及下轨 → 买入
+- 价格触及上轨 → 卖出
+- 价格回归中轨 → 平仓
+
+参数设置：
+- 布林带周期：20
+- 标准差倍数：2
+- 网格间距：1-2%
+
+优点：统计学基础，适合均值回归
+缺点：单边趋势中可能连续止损</pre>
+
+            <h3>策略3：EMA趋势+网格混合</h3>
+            <pre>核心逻辑：
+- EMA20 > EMA50 → 只做多（金叉买入，回调加仓）
+- EMA20 < EMA50 → 只做空（死叉卖出，反弹减仓）
+- EMA20 ≈ EMA50 → 纯网格（高抛低吸）
+
+参数设置：
+- EMA短期：20
+- EMA长期：50
+- 网格间距：1.5-3%
+- 仓位管理：每格10-20%</pre>
+
+            <h2>三、专业量化网格策略</h2>
+
+            <h3>策略1：KDJ+网格</h3>
+            <pre>信号判断：
+- K线从下方穿越D线（金叉）→ 买入
+- K线从上方穿越D线（死叉）→ 卖出
+- J值 > 90 → 超买减仓
+- J值 < 10 → 超卖加仓
+
+参数设置：
+- KDJ参数：9,3,3
+- 网格间距：2%
+- 单格仓位：5-10%</pre>
+
+            <h3>策略2：MACD+网格</h3>
+            <pre>信号判断：
+- MACD金叉 → 开启做多网格
+- MACD死叉 → 开启做空网格
+- MACD柱状图缩量 → 网格间距收窄
+
+参数设置：
+- MACD参数：12,26,9
+- 网格间距：动态1-3%</pre>
+
+            <h3>策略3：多重时间框架网格</h3>
+            <pre>核心逻辑：
+- 4小时级别判断趋势方向
+- 1小时级别确定网格区间
+- 15分钟级别执行网格交易
+
+执行规则：
+- 4H趋势向上 → 只做多网格
+- 4H趋势向下 → 只做空网格
+- 4H震荡 → 双向网格</pre>
+
+            <h2>四、风控规则（必须包含）</h2>
+
+            <h3>1. 止损规则</h3>
+            <pre>硬止损：单格亏损超过5%强制平仓
+总止损：账户回撤超过15%停止策略
+移动止损：盈利超过10%后，回撤50%止盈</pre>
+
+            <h3>2. 仓位管理</h3>
+            <pre>单格仓位：总资金的5-10%
+最大持仓：不超过总资金的60%
+加仓规则：价格每下跌一格加仓一次
+减仓规则：价格每上涨一格减仓一次</pre>
+
+            <h3>3. 资金分配</h3>
+            <pre>网格区间资金：60%
+趋势跟踪资金：20%
+备用资金：20%</pre>
+
+            <h2>五、最优网格策略推荐</h2>
+
+            <h3>推荐策略：EMA趋势过滤+动态网格</h3>
+            <pre>完整规则：
+
+1. 趋势判断（4小时级别）
+   - EMA20 > EMA50 → 上升趋势，只做多网格
+   - EMA20 < EMA50 → 下降趋势，只做空网格
+   - |EMA20-EMA50| < 0.5% → 震荡，双向网格
+
+2. 网格设置
+   - 网格间距：ATR(14) × 0.5
+   - 网格数量：20-30格
+   - 单格仓位：总资金5%
+
+3. 买入条件（做多网格）
+   - 趋势向上
+   - 价格触及网格下沿
+   - RSI < 60（避免追高）
+
+4. 卖出条件（做多网格）
+   - 价格触及网格上沿
+   - 或RSI > 70超买
+
+5. 止损条件
+   - 价格跌破网格下限5%
+   - 或趋势反转（EMA死叉）
+
+6. 止盈条件
+   - 网格全部成交后
+   - 或收益率达到20%</pre>
+
+            <h2>六、实战参数参考</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>参数</th>
+                        <th>保守</th>
+                        <th>均衡</th>
+                        <th>激进</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>网格间距</td>
+                        <td>3%</td>
+                        <td>2%</td>
+                        <td>1%</td>
+                    </tr>
+                    <tr>
+                        <td>单格仓位</td>
+                        <td>3%</td>
+                        <td>5%</td>
+                        <td>10%</td>
+                    </tr>
+                    <tr>
+                        <td>网格数量</td>
+                        <td>30</td>
+                        <td>20</td>
+                        <td>15</td>
+                    </tr>
+                    <tr>
+                        <td>止损比例</td>
+                        <td>3%</td>
+                        <td>5%</td>
+                        <td>8%</td>
+                    </tr>
+                    <tr>
+                        <td>止盈比例</td>
+                        <td>10%</td>
+                        <td>15%</td>
+                        <td>25%</td>
+                    </tr>
+                    <tr>
+                        <td>最大回撤</td>
+                        <td>10%</td>
+                        <td>15%</td>
+                        <td>20%</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="highlight-box">
+                <strong>最优网格策略核心要素：</strong><br>
+                1. <strong>趋势过滤</strong> - 用EMA判断方向，避免逆势操作<br>
+                2. <strong>动态间距</strong> - 根据ATR调整网格间距<br>
+                3. <strong>风控止损</strong> - 必须有硬止损和总回撤控制<br>
+                4. <strong>仓位管理</strong> - 单格仓位控制在5-10%<br>
+                5. <strong>信号过滤</strong> - RSI/KDJ辅助判断买卖点
+            </div>
+            
+            <div class="highlight-box">
+                <strong>最适合当前市场的策略：</strong><br>
+                EMA趋势过滤 + 动态ATR网格 + RSI辅助确认
+            </div>
+        </div>
+    </div>
+
+    <!-- 参数设置弹窗 -->
+    <div class="params-modal-overlay" id="paramsModalOverlay" onclick="closeParamsModal(event)">
+        <div class="params-modal" onclick="event.stopPropagation()">
+            <div class="modal-title">⚙️ 参数设置</div>
+            <div id="paramsModalContent">
+                <!-- 由JS动态渲染 -->
+            </div>
+            <div class="modal-buttons">
+                <button class="btn btn-cancel" onclick="closeParamsModal()">取消</button>
+                <button class="btn btn-confirm" onclick="saveParams()">保存</button>
+            </div>
         </div>
     </div>
 
@@ -443,7 +929,6 @@
         let gridLogEntries = [];
         let priceHistory = [];
         let gridOrders = [];
-        let strategyParams = {};
 
         // 策略参数配置
         const strategyConfigs = {
@@ -590,28 +1075,6 @@
             };
         }
 
-        // 生成网格订单
-        function generateGridOrders(spacing, count, currentPrice) {
-            const orders = [];
-            for (let i = 0; i < count; i++) {
-                const buyPrice = currentPrice * (1 - (i + 1) * spacing / 100);
-                const sellPrice = currentPrice * (1 + (i + 1) * spacing / 100);
-                orders.push({
-                    type: 'buy',
-                    price: buyPrice,
-                    status: 'pending',
-                    amount: 0
-                });
-                orders.push({
-                    type: 'sell',
-                    price: sellPrice,
-                    status: 'pending',
-                    amount: 0
-                });
-            }
-            return orders;
-        }
-
         // 添加日志
         function gridAddLog(msg) {
             const time = new Date().toLocaleTimeString();
@@ -626,105 +1089,30 @@
         // 切换策略
         function switchStrategy(strategy) {
             currentStrategy = strategy;
+            const config = strategyConfigs[strategy];
+            
+            document.getElementById('strategyCardTitle').textContent = config.name;
+            document.getElementById('strategyCardDesc').textContent = config.description;
+            
+            const signalsContainer = document.getElementById('strategyCardSignals');
+            signalsContainer.innerHTML = config.signals.map(s => `<span class="signal-badge">${s}</span>`).join('');
+            
             document.querySelectorAll('.strategy-tab').forEach(tab => {
                 tab.classList.toggle('active', tab.dataset.strategy === strategy);
             });
-            renderStrategyContent();
-            gridAddLog(`📊 切换至${strategyConfigs[strategy].name}`);
+            
+            updateGridVisual();
+            
+            gridAddLog(`📊 切换至${config.name}`);
         }
 
-        // 渲染策略内容
-        function renderStrategyContent() {
-            const config = strategyConfigs[currentStrategy];
-            const container = document.getElementById('strategyContent');
-            
-            let html = `
-                <!-- 策略说明 -->
-                <div class="card">
-                    <div class="card-title">
-                        <span>${config.name}</span>
-                        <span class="badge">${currentStrategy.toUpperCase()}</span>
-                    </div>
-                    <p style="font-size:13px;color:#9ca3af;margin-bottom:12px;">${config.description}</p>
-                    <div class="signal-indicator">
-                        ${config.signals.map(s => `<span class="signal-badge">${s}</span>`).join('')}
-                    </div>
-                </div>
-
-                <!-- 参数设置 -->
-                <div class="card">
-                    <div class="card-title">⚙️ 参数设置</div>
-                    ${Object.entries(config.params).map(([key, param]) => `
-                        <div class="param-row">
-                            <span class="param-label">${param.label}</span>
-                            <input type="number" class="param-input" 
-                                id="param_${key}" 
-                                value="${param.value}" 
-                                min="${param.min}" 
-                                max="${param.max}" 
-                                step="0.1">
-                        </div>
-                    `).join('')}
-                    <div class="btn-group">
-                        <button class="btn btn-primary" onclick="startGridStrategy()">▶ 启动策略</button>
-                        <button class="btn btn-secondary" onclick="stopGridStrategy()">⏹ 停止</button>
-                    </div>
-                </div>
-
-                <!-- 账户信息 -->
-                <div class="card">
-                    <div class="card-title">💰 账户信息</div>
-                    <div class="account-row">
-                        <span class="label">总资产</span>
-                        <span class="value" id="gridTotalBalance">$10,000.00</span>
-                    </div>
-                    <div class="account-row">
-                        <span class="label">USDT 余额</span>
-                        <span class="value" id="gridUsdtBalance">10,000.00</span>
-                    </div>
-                    <div class="account-row">
-                        <span class="label">BTC 持仓</span>
-                        <span class="value" id="gridBtcBalance">0.0000</span>
-                    </div>
-                    <div class="account-row">
-                        <span class="label">总盈亏</span>
-                        <span class="value green" id="gridTotalPnl">+$0.00</span>
-                    </div>
-                    <div class="status-indicator" style="margin-top:12px;">
-                        <span class="status-dot" id="gridStatusDot"></span>
-                        <span id="gridStatusText">策略已停止</span>
-                    </div>
-                </div>
-
-                <!-- 网格可视化 -->
-                <div class="card">
-                    <div class="card-title">📐 网格布局</div>
-                    <div class="grid-visual" id="gridVisualContainer">
-                        ${generateGridVisual()}
-                    </div>
-                </div>
-
-                <!-- 价格图表 -->
-                <div class="card">
-                    <div class="card-title">📈 价格走势</div>
-                    <div class="chart-wrapper">
-                        <canvas id="gridPriceChart"></canvas>
-                    </div>
-                </div>
-            `;
-
-            container.innerHTML = html;
-            
-            // 初始化图表
-            initGridChart();
-            updateGridDisplay();
-        }
-
-        // 生成网格可视化
-        function generateGridVisual() {
+        // 更新网格可视化
+        function updateGridVisual() {
             const config = strategyConfigs[currentStrategy];
             const spacing = config.params.gridSpacing ? config.params.gridSpacing.value : 2;
             const currentPrice = gridBtcPrice;
+            const container = document.getElementById('gridVisualContainer');
+            
             let html = '';
             
             for (let i = 4; i >= 1; i--) {
@@ -757,7 +1145,7 @@
                 `;
             }
             
-            return html;
+            container.innerHTML = html;
         }
 
         // 初始化图表
@@ -848,7 +1236,6 @@
             
             gridAddLog(`▶️ ${strategyConfigs[currentStrategy].name}已启动`);
             
-            // 模拟价格更新
             gridInterval = setInterval(() => {
                 const volatility = 100;
                 const change = (Math.random() - 0.5) * volatility * 2;
@@ -860,8 +1247,8 @@
                 
                 updateGridDisplay();
                 executeGridLogic();
+                updateGridVisual();
                 
-                // 更新图表
                 if (window.gridChart) {
                     window.gridChart.data.datasets[0].data.push(gridBtcPrice);
                     window.gridChart.data.datasets[0].data.shift();
@@ -916,11 +1303,10 @@
 
         // RSI网格执行
         function executeRSIGrid(params) {
-            const rsiPeriod = parseInt(document.getElementById('param_rsiPeriod')?.value || params.rsiPeriod.value);
-            const oversold = parseFloat(document.getElementById('param_oversold')?.value || params.oversold.value);
-            const overbought = parseFloat(document.getElementById('param_overbought')?.value || params.overbought.value);
-            const spacing = parseFloat(document.getElementById('param_gridSpacing')?.value || params.gridSpacing.value);
-            const positionSize = parseFloat(document.getElementById('param_positionSize')?.value || params.positionSize.value);
+            const rsiPeriod = parseInt(params.rsiPeriod.value);
+            const oversold = parseFloat(params.oversold.value);
+            const overbought = parseFloat(params.overbought.value);
+            const positionSize = parseFloat(params.positionSize.value);
             
             const rsi = calculateRSI(priceHistory, rsiPeriod);
             if (rsi === null) return;
@@ -946,10 +1332,9 @@
 
         // 布林带网格执行
         function executeBollingerGrid(params) {
-            const bbPeriod = parseInt(document.getElementById('param_bbPeriod')?.value || params.bbPeriod.value);
-            const stdDev = parseFloat(document.getElementById('param_stdDev')?.value || params.stdDev.value);
-            const spacing = parseFloat(document.getElementById('param_gridSpacing')?.value || params.gridSpacing.value);
-            const positionSize = parseFloat(document.getElementById('param_positionSize')?.value || params.positionSize.value);
+            const bbPeriod = parseInt(params.bbPeriod.value);
+            const stdDev = parseFloat(params.stdDev.value);
+            const positionSize = parseFloat(params.positionSize.value);
             
             const bb = calculateBollinger(priceHistory, bbPeriod, stdDev);
             if (bb === null) return;
@@ -975,11 +1360,9 @@
 
         // EMA趋势网格执行
         function executeEMAGrid(params) {
-            const emaShort = parseInt(document.getElementById('param_emaShort')?.value || params.emaShort.value);
-            const emaLong = parseInt(document.getElementById('param_emaLong')?.value || params.emaLong.value);
-            const spacing = parseFloat(document.getElementById('param_gridSpacing')?.value || params.gridSpacing.value);
-            const positionSize = parseFloat(document.getElementById('param_positionSize')?.value || params.positionSize.value);
-            const stopLoss = parseFloat(document.getElementById('param_stopLoss')?.value || params.stopLoss.value);
+            const emaShort = parseInt(params.emaShort.value);
+            const emaLong = parseInt(params.emaLong.value);
+            const positionSize = parseFloat(params.positionSize.value);
             
             const shortEMA = calculateEMA(priceHistory, emaShort);
             const longEMA = calculateEMA(priceHistory, emaLong);
@@ -988,7 +1371,6 @@
             const diffPercent = Math.abs(shortEMA - longEMA) / longEMA * 100;
             
             if (diffPercent < 0.5) {
-                // 震荡市，双向网格
                 if (gridUsdtBalance > 100 && gridBtcBalance < 0.1) {
                     const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
                     const quantity = buyAmount / gridBtcPrice;
@@ -1007,7 +1389,6 @@
                     }
                 }
             } else if (shortEMA > longEMA) {
-                // 上升趋势，只做多
                 if (gridBtcPrice <= shortEMA * 1.01 && gridUsdtBalance > 100) {
                     const buyAmount = Math.min(gridUsdtBalance * positionSize / 100, 500);
                     const quantity = buyAmount / gridBtcPrice;
@@ -1018,7 +1399,6 @@
                     }
                 }
             } else {
-                // 下降趋势，只做空（清仓）
                 if (gridBtcBalance > 0.001) {
                     const sellQuantity = gridBtcBalance;
                     const sellAmount = sellQuantity * gridBtcPrice;
@@ -1031,9 +1411,8 @@
 
         // KDJ网格执行
         function executeKDJGrid(params) {
-            const kdjPeriod = parseInt(document.getElementById('param_kdjPeriod')?.value || params.kdjPeriod.value);
-            const spacing = parseFloat(document.getElementById('param_gridSpacing')?.value || params.gridSpacing.value);
-            const positionSize = parseFloat(document.getElementById('param_positionSize')?.value || params.positionSize.value);
+            const kdjPeriod = parseInt(params.kdjPeriod.value);
+            const positionSize = parseFloat(params.positionSize.value);
             
             const kdj = calculateKDJ(priceHistory, kdjPeriod);
             if (kdj === null) return;
@@ -1059,11 +1438,10 @@
 
         // MACD网格执行
         function executeMACDGrid(params) {
-            const fastPeriod = parseInt(document.getElementById('param_fastPeriod')?.value || params.fastPeriod.value);
-            const slowPeriod = parseInt(document.getElementById('param_slowPeriod')?.value || params.slowPeriod.value);
-            const signalPeriod = parseInt(document.getElementById('param_signalPeriod')?.value || params.signalPeriod.value);
-            const spacing = parseFloat(document.getElementById('param_gridSpacing')?.value || params.gridSpacing.value);
-            const positionSize = parseFloat(document.getElementById('param_positionSize')?.value || params.positionSize.value);
+            const fastPeriod = parseInt(params.fastPeriod.value);
+            const slowPeriod = parseInt(params.slowPeriod.value);
+            const signalPeriod = parseInt(params.signalPeriod.value);
+            const positionSize = parseFloat(params.positionSize.value);
             
             const macd = calculateMACD(priceHistory, fastPeriod, slowPeriod, signalPeriod);
             if (macd === null) return;
@@ -1089,9 +1467,8 @@
 
         // 多周期网格执行
         function executeMultiGrid(params) {
-            const spacing = parseFloat(document.getElementById('param_gridSpacing')?.value || params.gridSpacing.value);
-            const positionSize = parseFloat(document.getElementById('param_positionSize')?.value || params.positionSize.value);
-            const maxPositions = parseFloat(document.getElementById('param_maxPositions')?.value || params.maxPositions.value);
+            const positionSize = parseFloat(params.positionSize.value);
+            const maxPositions = parseFloat(params.maxPositions.value);
             
             const totalValue = gridUsdtBalance + gridBtcBalance * gridBtcPrice;
             const currentPositionPercent = (gridBtcBalance * gridBtcPrice / totalValue) * 100;
@@ -1115,6 +1492,68 @@
             }
         }
 
+        // 打开量化了解弹窗
+        function openKnowledgePanel() {
+            document.getElementById('knowledgeOverlay').classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // 关闭量化了解弹窗
+        function closeKnowledgePanel(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('knowledgeOverlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        // 打开参数设置弹窗
+        function openParamsModal() {
+            const config = strategyConfigs[currentStrategy];
+            const container = document.getElementById('paramsModalContent');
+            
+            let html = '';
+            Object.entries(config.params).forEach(([key, param]) => {
+                html += `
+                    <div class="param-row">
+                        <span class="param-label">${param.label}</span>
+                        <input type="number" class="param-input" 
+                            id="modalParam_${key}" 
+                            value="${param.value}" 
+                            min="${param.min}" 
+                            max="${param.max}" 
+                            step="0.1">
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            document.getElementById('paramsModalOverlay').classList.add('show');
+        }
+
+        // 关闭参数设置弹窗
+        function closeParamsModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('paramsModalOverlay').classList.remove('show');
+        }
+
+        // 保存参数
+        function saveParams() {
+            const config = strategyConfigs[currentStrategy];
+            
+            Object.keys(config.params).forEach(key => {
+                const input = document.getElementById('modalParam_' + key);
+                if (input) {
+                    const value = parseFloat(input.value);
+                    if (!isNaN(value)) {
+                        config.params[key].value = value;
+                    }
+                }
+            });
+            
+            closeParamsModal();
+            updateGridVisual();
+            gridAddLog(`⚙️ ${config.name}参数已更新`);
+        }
+
         // ============================================================
         //  初始化
         // ============================================================
@@ -1124,8 +1563,13 @@
                 priceHistory.push(gridBtcPrice + (Math.random() - 0.5) * 200);
             }
             
-            // 渲染默认策略
-            renderStrategyContent();
+            // 初始化网格布局
+            updateGridVisual();
+            
+            // 初始化图表
+            initGridChart();
+            
+            // 更新显示
             updateGridDisplay();
             
             gridAddLog('✅ 网格策略面板已就绪');
@@ -1135,6 +1579,23 @@
             window.switchStrategy = switchStrategy;
             window.startGridStrategy = startGridStrategy;
             window.stopGridStrategy = stopGridStrategy;
+            window.openParamsModal = openParamsModal;
+            window.closeParamsModal = closeParamsModal;
+            window.saveParams = saveParams;
+            window.openKnowledgePanel = openKnowledgePanel;
+            window.closeKnowledgePanel = closeKnowledgePanel;
+            
+            // 弹窗外部点击关闭
+            document.getElementById('paramsModalOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeParamsModal();
+                }
+            });
+            document.getElementById('knowledgeOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeKnowledgePanel();
+                }
+            });
         });
     </script>
 </body>
