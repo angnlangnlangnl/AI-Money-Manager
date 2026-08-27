@@ -512,7 +512,7 @@
             color: #10b981;
         }
 
-        /* 订单记录卡片 - 纵排样式 */
+        /* 订单记录卡片 */
         .orders-card {
             background: transparent;
             border: none;
@@ -615,7 +615,7 @@
             color: #ef4444;
         }
         
-        /* 纵排样式：上面名称，下面数值 */
+        /* 桌面端：两列布局 */
         .order-card-body {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -862,9 +862,13 @@
             .page-header .current-price-info .price {
                 font-size: 20px;
             }
+            /* 手机端：单列布局 */
             .order-card-body {
-                grid-template-columns: 1fr 1fr;
+                grid-template-columns: 1fr;
                 gap: 6px;
+            }
+            .order-info-item.full-width {
+                grid-column: 1;
             }
             .order-card-header .order-pair {
                 font-size: 12px;
@@ -882,9 +886,6 @@
         }
 
         @media (max-width: 360px) {
-            .order-card-body {
-                grid-template-columns: 1fr;
-            }
             .order-card-header .order-pair {
                 max-width: 70px;
                 font-size: 11px;
@@ -1636,7 +1637,7 @@
         }
         
         // ============================================================
-        //  订单记录 - 纵排样式（上面名称，下面数值）
+        //  订单记录
         // ============================================================
         function spotRenderOrders() {
             const container = document.getElementById('ordersContainer');
