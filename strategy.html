@@ -292,6 +292,7 @@
             align-items: center;
             margin-bottom: 8px;
             min-height: 24px;
+            gap: 12px;
         }
         .account-card .account-row .label {
             font-size: 13px;
@@ -476,6 +477,12 @@
         .tp-sl-input:focus {
             border-color: #3b82f6;
         }
+        .tp-sl-btn-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: nowrap;
+        }
         .tp-sl-btn {
             background: #3b82f6;
             color: white;
@@ -494,8 +501,14 @@
         }
         .tp-sl-status {
             font-size: 10px;
-            margin-top: 6px;
             color: #6a6a7a;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+        .tp-sl-status.active {
+            color: #10b981;
         }
 
         /* 订单记录卡片 - 手机兼容 */
@@ -609,15 +622,19 @@
         }
         .order-info-item {
             display: flex;
-            flex-direction: column;
-            gap: 2px;
+            flex-direction: row;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
             min-width: 0;
             overflow: hidden;
+            padding: 4px 0;
         }
         .order-info-item .info-label {
             font-size: 10px;
             color: #6a6a7a;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .order-info-item .info-value {
             font-size: 12px;
@@ -626,6 +643,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            text-align: right;
         }
         .order-info-item .info-value.profit {
             color: #10b981;
@@ -812,29 +830,15 @@
                 font-size: 20px;
             }
             .order-card-body {
-                grid-template-columns: 1fr 1fr;
-                gap: 6px;
+                grid-template-columns: 1fr;
+                gap: 4px;
             }
-            .order-card-header {
-                flex-wrap: nowrap;
+            .order-info-item {
+                padding: 2px 0;
             }
             .order-card-header .order-pair {
                 font-size: 12px;
                 max-width: 90px;
-            }
-            .order-card-header .order-type-badge {
-                font-size: 8px;
-                padding: 2px 6px;
-            }
-            .order-card-header .order-status-badge {
-                font-size: 8px;
-                padding: 2px 6px;
-            }
-            .order-info-item .info-value {
-                font-size: 11px;
-            }
-            .account-card .account-row {
-                min-height: 22px;
             }
             .account-card .account-row .label {
                 font-size: 12px;
@@ -842,12 +846,15 @@
             .account-card .account-row .value {
                 font-size: 13px;
             }
+            .tp-sl-btn-row {
+                flex-wrap: nowrap;
+            }
+            .tp-sl-status {
+                font-size: 9px;
+            }
         }
 
         @media (max-width: 360px) {
-            .order-card-body {
-                grid-template-columns: 1fr;
-            }
             .order-card-header .order-pair {
                 max-width: 70px;
                 font-size: 11px;
@@ -865,6 +872,9 @@
                 padding: 5px 10px;
                 font-size: 10px;
                 min-width: 40px;
+            }
+            .tp-sl-status {
+                font-size: 8px;
             }
         }
     </style>
@@ -978,10 +988,10 @@
                     <span class="tp-sl-label">止损价</span>
                     <input type="number" class="tp-sl-input" id="stopLossInput" placeholder="如: 60000">
                 </div>
-                <div class="tp-sl-row">
+                <div class="tp-sl-btn-row">
+                    <span class="tp-sl-status" id="tpSlStatus">未设置止盈止损</span>
                     <button class="tp-sl-btn" onclick="setTpSl()">设置</button>
                 </div>
-                <div class="tp-sl-status" id="tpSlStatus">未设置止盈止损</div>
             </div>
         </div>
 
@@ -1098,10 +1108,10 @@
             
             const statusEl = document.getElementById('tpSlStatus');
             if (statusEl) {
-                let statusText = '✅ 已设置: ';
+                let statusText = '✅ ';
                 const parts = [];
-                if (takeProfitPrice) parts.push(`止盈 $${takeProfitPrice.toFixed(2)}`);
-                if (stopLossPrice) parts.push(`止损 $${stopLossPrice.toFixed(2)}`);
+                if (takeProfitPrice) parts.push(`止盈$${takeProfitPrice.toFixed(2)}`);
+                if (stopLossPrice) parts.push(`止损$${stopLossPrice.toFixed(2)}`);
                 statusText += parts.join(' | ');
                 statusEl.textContent = statusText;
                 statusEl.style.color = '#10b981';
