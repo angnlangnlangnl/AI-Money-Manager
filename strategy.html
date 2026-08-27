@@ -512,7 +512,7 @@
             color: #10b981;
         }
 
-        /* 订单记录卡片 */
+        /* 订单记录卡片 - 纵排样式 */
         .orders-card {
             background: transparent;
             border: none;
@@ -615,6 +615,7 @@
             color: #ef4444;
         }
         
+        /* 纵排样式：上面名称，下面数值 */
         .order-card-body {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -623,10 +624,9 @@
         }
         .order-info-item {
             display: flex;
-            flex-direction: row;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 2px;
             min-width: 0;
             overflow: hidden;
             padding: 4px 0;
@@ -635,7 +635,6 @@
             font-size: 10px;
             color: #6a6a7a;
             white-space: nowrap;
-            flex-shrink: 0;
         }
         .order-info-item .info-value {
             font-size: 12px;
@@ -644,7 +643,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-align: right;
+            text-align: left;
         }
         .order-info-item .info-value.profit {
             color: #10b981;
@@ -864,11 +863,8 @@
                 font-size: 20px;
             }
             .order-card-body {
-                grid-template-columns: 1fr;
-                gap: 4px;
-            }
-            .order-info-item {
-                padding: 2px 0;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
             }
             .order-card-header .order-pair {
                 font-size: 12px;
@@ -886,6 +882,9 @@
         }
 
         @media (max-width: 360px) {
+            .order-card-body {
+                grid-template-columns: 1fr;
+            }
             .order-card-header .order-pair {
                 max-width: 70px;
                 font-size: 11px;
@@ -1071,10 +1070,8 @@
         let tpSlActive = false;
         let tpSlCheckInterval = null;
         
-        // 已选中的交易对列表
         let spotPairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT'];
         
-        // 所有可用交易对（包含价格数据）
         let spotPairData = {
             'BTC/USDT': { price: 65432.10, change: 3.21, base: 'USDT', asset: 'BTC' },
             'ETH/USDT': { price: 3456.78, change: -1.23, base: 'USDT', asset: 'ETH' },
@@ -1118,8 +1115,6 @@
         // ============================================================
         //  统一交易对选择功能
         // ============================================================
-        
-        // 打开统一交易对选择弹窗
         function openUnifiedPairModal() {
             document.getElementById('pairSearchInput').value = '';
             document.getElementById('newPairInput').value = '';
@@ -1127,13 +1122,11 @@
             document.getElementById('pairModalOverlay').classList.add('show');
         }
         
-        // 关闭统一交易对选择弹窗
         function closeUnifiedPairModal(e) {
             if (e && e.target !== e.currentTarget) return;
             document.getElementById('pairModalOverlay').classList.remove('show');
         }
         
-        // 渲染统一交易对列表（显示所有交易对，已添加的标记选中状态）
         function renderUnifiedPairList(filter) {
             const container = document.getElementById('pairModalContent');
             const filterLower = filter.toLowerCase();
@@ -1161,36 +1154,30 @@
             container.innerHTML = html;
         }
         
-        // 搜索过滤
         function filterUnifiedPairList() {
             const filter = document.getElementById('pairSearchInput').value;
             renderUnifiedPairList(filter);
         }
         
-        // 切换交易对选择状态
         function togglePairSelection(pair) {
             if (spotPairs.includes(pair)) {
-                // 取消选择（但不允许取消最后一个）
                 if (spotPairs.length <= 1) {
                     alert('至少保留一个交易对');
                     return;
                 }
                 spotPairs = spotPairs.filter(p => p !== pair);
             } else {
-                // 添加选择
                 spotPairs.push(pair);
             }
             renderUnifiedPairList(document.getElementById('pairSearchInput').value);
         }
         
-        // 处理新交易对输入回车键
         function handleNewPairKeydown(event) {
             if (event.key === 'Enter') {
                 addNewPairFromModal();
             }
         }
         
-        // 从弹窗添加新交易对
         function addNewPairFromModal() {
             const input = document.getElementById('newPairInput');
             const newPair = input.value.trim().toUpperCase();
@@ -1206,7 +1193,6 @@
             }
             
             if (spotPairData[newPair]) {
-                // 已存在数据，只需添加到选中列表
                 if (!spotPairs.includes(newPair)) {
                     spotPairs.push(newPair);
                     input.value = '';
@@ -1219,7 +1205,6 @@
                 return;
             }
             
-            // 新交易对，生成随机价格
             const randomPrice = (Math.random() * 100 + 1).toFixed(2);
             const assetName = newPair.split('/')[0];
             spotPairData[newPair] = {
@@ -1236,7 +1221,6 @@
             alert(`✅ 已添加新交易对: ${newPair}\n价格: $${randomPrice}`);
         }
         
-        // 保存交易对选择
         function savePairSelection() {
             spotRenderSymbols();
             closeUnifiedPairModal();
@@ -1652,7 +1636,7 @@
         }
         
         // ============================================================
-        //  订单记录
+        //  订单记录 - 纵排样式（上面名称，下面数值）
         // ============================================================
         function spotRenderOrders() {
             const container = document.getElementById('ordersContainer');
