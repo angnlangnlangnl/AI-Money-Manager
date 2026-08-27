@@ -20,6 +20,7 @@
             min-height: 100vh;
             overflow-y: auto;
             touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
         }
         ::-webkit-scrollbar {
             width: 3px;
@@ -119,6 +120,7 @@
             scrollbar-color: #3b82f6 #1a1a2a;
             flex: 1;
             padding-bottom: 4px;
+            -webkit-overflow-scrolling: touch;
         }
         .symbol-list::-webkit-scrollbar {
             height: 4px;
@@ -205,6 +207,7 @@
             display: flex;
             gap: 6px;
             margin-bottom: 12px;
+            flex-wrap: wrap;
         }
         .chart-type-tab {
             padding: 4px 12px;
@@ -237,6 +240,7 @@
             gap: 6px;
             margin-top: 8px;
             padding-right: 4px;
+            flex-wrap: wrap;
         }
         .chart-time-labels .time-label {
             font-size: 11px;
@@ -301,6 +305,72 @@
             border-top: 1px solid #1a1a2a;
             margin: 12px 0;
         }
+
+        /* 资金输入框 */
+        .amount-input-section {
+            margin-bottom: 12px;
+        }
+        .amount-input-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 10px;
+            padding: 10px 12px;
+        }
+        .amount-input-row:focus-within {
+            border-color: #3b82f6;
+        }
+        .amount-input-row .amount-label {
+            font-size: 12px;
+            color: #6a6a7a;
+            white-space: nowrap;
+        }
+        .amount-input-row input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #e8e8f0;
+            font-size: 14px;
+            font-weight: 600;
+            outline: none;
+            text-align: right;
+            min-width: 0;
+        }
+        .amount-input-row input::placeholder {
+            color: #5a5a6a;
+            font-weight: 400;
+        }
+        .amount-input-row .amount-usdt {
+            font-size: 12px;
+            color: #6a6a7a;
+            white-space: nowrap;
+        }
+        .amount-quick-btns {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .amount-quick-btn {
+            flex: 1;
+            padding: 4px 8px;
+            border: 1px solid #1a1a2a;
+            border-radius: 6px;
+            background: #12121f;
+            color: #8a8a9a;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .amount-quick-btn:active {
+            background: #1a1a2a;
+            color: #e8e8f0;
+        }
+
         .button-group {
             display: flex;
             gap: 10px;
@@ -317,6 +387,7 @@
             transition: opacity 0.2s;
             color: white;
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
         }
         .button-group .btn:hover {
             opacity: 0.85;
@@ -333,7 +404,69 @@
             color: #6a6a7a;
         }
 
-        /* 订单记录卡片 - 每个记录独立卡片 */
+        /* 止盈止损设置 */
+        .tp-sl-section {
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        .tp-sl-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: #60a5fa;
+            margin-bottom: 10px;
+        }
+        .tp-sl-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .tp-sl-row:last-child {
+            margin-bottom: 0;
+        }
+        .tp-sl-label {
+            font-size: 11px;
+            color: #6a6a7a;
+            min-width: 50px;
+        }
+        .tp-sl-input {
+            flex: 1;
+            background: #1a1a2a;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 8px 10px;
+            font-size: 12px;
+            color: #e8e8f0;
+            outline: none;
+            min-width: 0;
+        }
+        .tp-sl-input:focus {
+            border-color: #3b82f6;
+        }
+        .tp-sl-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+        .tp-sl-btn:active {
+            background: #2563eb;
+        }
+        .tp-sl-status {
+            font-size: 10px;
+            margin-top: 6px;
+            color: #6a6a7a;
+        }
+
+        /* 订单记录卡片 - 手机兼容 */
         .orders-card {
             background: transparent;
             border: none;
@@ -358,6 +491,8 @@
             border-radius: 16px;
             padding: 16px;
             transition: all 0.3s ease;
+            width: 100%;
+            overflow: hidden;
         }
         .order-card.active {
             border-color: #3b82f6;
@@ -375,6 +510,8 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
             border-bottom: 1px solid #1a1a2a;
             padding-bottom: 10px;
             margin-bottom: 10px;
@@ -383,12 +520,20 @@
             font-size: 14px;
             font-weight: 700;
             color: #e8e8f0;
+            word-break: break-all;
+        }
+        .order-card-header .order-badges {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
         }
         .order-card-header .order-type-badge {
             font-size: 10px;
             padding: 3px 10px;
             border-radius: 10px;
             font-weight: 600;
+            white-space: nowrap;
         }
         .order-card-header .order-type-badge.buy {
             background: #1a3a2a;
@@ -403,6 +548,7 @@
             padding: 3px 10px;
             border-radius: 10px;
             font-weight: 600;
+            white-space: nowrap;
         }
         .order-card-header .order-status-badge.active {
             background: #1a2a3a;
@@ -427,6 +573,7 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+            min-width: 0;
         }
         .order-info-item .info-label {
             font-size: 10px;
@@ -436,6 +583,7 @@
             font-size: 13px;
             font-weight: 600;
             color: #e8e8f0;
+            word-break: break-all;
         }
         .order-info-item .info-value.profit {
             color: #10b981;
@@ -459,6 +607,7 @@
             transition: opacity 0.2s;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .order-action-btn:active {
             opacity: 0.7;
@@ -585,6 +734,7 @@
             font-size: 12px;
             color: #e8e8f0;
             outline: none;
+            min-width: 0;
         }
         .add-pair-row input:focus {
             border-color: #3b82f6;
@@ -615,6 +765,47 @@
             }
             .order-card-body {
                 grid-template-columns: 1fr;
+            }
+            .order-card-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .order-card-footer {
+                flex-direction: row;
+            }
+            .chart-type-tabs {
+                flex-wrap: wrap;
+            }
+            .amount-quick-btns {
+                flex-wrap: wrap;
+            }
+            .amount-quick-btn {
+                flex: 1 1 30%;
+                min-width: 60px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .account-card .account-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 4px;
+            }
+            .account-card .account-row .label {
+                font-size: 11px;
+            }
+            .account-card .account-row .value {
+                font-size: 14px;
+            }
+            .order-card-body {
+                gap: 6px;
+            }
+            .order-info-item .info-value {
+                font-size: 12px;
+            }
+            .button-group .btn {
+                padding: 10px 14px;
+                font-size: 13px;
             }
         }
     </style>
@@ -692,6 +883,22 @@
             </div>
             
             <div class="divider"></div>
+
+            <!-- 资金输入框 -->
+            <div class="amount-input-section">
+                <div class="amount-input-row">
+                    <span class="amount-label">金额</span>
+                    <input type="number" id="tradeAmountInput" placeholder="输入交易金额" step="0.01" min="0">
+                    <span class="amount-usdt">USDT</span>
+                </div>
+                <div class="amount-quick-btns">
+                    <button class="amount-quick-btn" onclick="setQuickAmount(100)">$100</button>
+                    <button class="amount-quick-btn" onclick="setQuickAmount(500)">$500</button>
+                    <button class="amount-quick-btn" onclick="setQuickAmount(1000)">$1,000</button>
+                    <button class="amount-quick-btn" onclick="setQuickAmount(5000)">$5,000</button>
+                    <button class="amount-quick-btn" onclick="setQuickAmount('max')">最大</button>
+                </div>
+            </div>
             
             <div class="button-group">
                 <button class="btn btn-buy" onclick="spotBuy()">买入</button>
@@ -700,9 +907,26 @@
             <div class="current-price">
                 当前价格: <span id="spotCurrentPriceDisplay">$65,432.10</span>
             </div>
+
+            <!-- 止盈止损设置 -->
+            <div class="tp-sl-section">
+                <div class="tp-sl-title">🎯 止盈/止损设置</div>
+                <div class="tp-sl-row">
+                    <span class="tp-sl-label">止盈价</span>
+                    <input type="number" class="tp-sl-input" id="takeProfitInput" placeholder="如: 70000">
+                </div>
+                <div class="tp-sl-row">
+                    <span class="tp-sl-label">止损价</span>
+                    <input type="number" class="tp-sl-input" id="stopLossInput" placeholder="如: 60000">
+                </div>
+                <div class="tp-sl-row">
+                    <button class="tp-sl-btn" onclick="setTpSl()">设置</button>
+                </div>
+                <div class="tp-sl-status" id="tpSlStatus">未设置止盈止损</div>
+            </div>
         </div>
 
-        <!-- 5. 订单记录 - 每个记录独立卡片 -->
+        <!-- 5. 订单记录 -->
         <div class="orders-card">
             <div class="section-title">📋 订单记录</div>
             <div class="orders-list" id="ordersContainer">
@@ -743,6 +967,12 @@
         let spotOrders = [];
         let spotOrdersInitialized = false;
         
+        // 止盈止损
+        let takeProfitPrice = null;
+        let stopLossPrice = null;
+        let tpSlActive = false;
+        let tpSlCheckInterval = null;
+        
         let spotPairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT'];
         
         let spotPairData = {
@@ -762,6 +992,132 @@
             '1d': 30,
             '1m': 30
         };
+        
+        // 快捷设置金额
+        function setQuickAmount(value) {
+            const input = document.getElementById('tradeAmountInput');
+            if (value === 'max') {
+                input.value = spotUsdtBalance.toFixed(2);
+            } else {
+                input.value = value;
+            }
+        }
+        
+        // 获取输入金额
+        function getTradeAmount() {
+            const input = document.getElementById('tradeAmountInput');
+            const value = parseFloat(input.value);
+            if (isNaN(value) || value <= 0) {
+                alert('请输入有效的交易金额');
+                return null;
+            }
+            return value;
+        }
+        
+        // 设置止盈止损
+        function setTpSl() {
+            const tpInput = document.getElementById('takeProfitInput');
+            const slInput = document.getElementById('stopLossInput');
+            
+            const tpValue = parseFloat(tpInput.value);
+            const slValue = parseFloat(slInput.value);
+            
+            if (isNaN(tpValue) && isNaN(slValue)) {
+                alert('请至少输入止盈价或止损价');
+                return;
+            }
+            
+            if (!isNaN(tpValue) && tpValue <= spotBtcPrice) {
+                alert('止盈价应高于当前价格');
+                return;
+            }
+            
+            if (!isNaN(slValue) && slValue >= spotBtcPrice) {
+                alert('止损价应低于当前价格');
+                return;
+            }
+            
+            takeProfitPrice = !isNaN(tpValue) ? tpValue : null;
+            stopLossPrice = !isNaN(slValue) ? slValue : null;
+            tpSlActive = true;
+            
+            const statusEl = document.getElementById('tpSlStatus');
+            if (statusEl) {
+                let statusText = '✅ 已设置: ';
+                const parts = [];
+                if (takeProfitPrice) parts.push(`止盈 $${takeProfitPrice.toFixed(2)}`);
+                if (stopLossPrice) parts.push(`止损 $${stopLossPrice.toFixed(2)}`);
+                statusText += parts.join(' | ');
+                statusEl.textContent = statusText;
+                statusEl.style.color = '#10b981';
+            }
+            
+            if (tpSlCheckInterval) {
+                clearInterval(tpSlCheckInterval);
+            }
+            
+            tpSlCheckInterval = setInterval(checkTpSl, 2000);
+            
+            alert(`✅ 止盈止损已设置\n${takeProfitPrice ? '止盈: $' + takeProfitPrice.toFixed(2) : ''}\n${stopLossPrice ? '止损: $' + stopLossPrice.toFixed(2) : ''}`);
+        }
+        
+        // 检查止盈止损
+        function checkTpSl() {
+            if (!tpSlActive) return;
+            
+            if (takeProfitPrice && spotBtcPrice >= takeProfitPrice && spotBtcBalance > 0.001) {
+                executeTpSl('take_profit');
+            }
+            
+            if (stopLossPrice && spotBtcPrice <= stopLossPrice && spotBtcBalance > 0.001) {
+                executeTpSl('stop_loss');
+            }
+        }
+        
+        // 执行止盈止损
+        function executeTpSl(type) {
+            const assetSymbol = spotCurrentSymbol.split('/')[0];
+            const sellQuantity = spotBtcBalance;
+            const sellAmount = sellQuantity * spotBtcPrice;
+            
+            spotBtcBalance = 0;
+            spotUsdtBalance += sellAmount;
+            spotUpdateDisplay();
+            
+            takeProfitPrice = null;
+            stopLossPrice = null;
+            tpSlActive = false;
+            
+            if (tpSlCheckInterval) {
+                clearInterval(tpSlCheckInterval);
+                tpSlCheckInterval = null;
+            }
+            
+            const statusEl = document.getElementById('tpSlStatus');
+            if (statusEl) {
+                statusEl.textContent = '已触发，止盈止损已清除';
+                statusEl.style.color = '#6a6a7a';
+            }
+            
+            const typeText = type === 'take_profit' ? '止盈' : '止损';
+            alert(`🎯 ${typeText}触发！\n已卖出全部 ${sellQuantity.toFixed(6)} ${assetSymbol}\n价格: $${spotBtcPrice.toFixed(2)}\n金额: $${sellAmount.toFixed(2)}`);
+            
+            const order = {
+                id: Date.now(),
+                pair: spotCurrentSymbol,
+                type: 'sell',
+                asset: assetSymbol,
+                quantity: sellQuantity,
+                price: spotBtcPrice,
+                amount: sellAmount,
+                pnl: 0,
+                status: 'closed',
+                time: new Date().toLocaleString(),
+                trigger: typeText
+            };
+            spotOrders.push(order);
+            spotRenderOrders();
+        }
         
         function spotRenderSymbols() {
             const container = document.getElementById('spotSymbolList');
@@ -956,22 +1312,22 @@
         
         function spotBuy() {
             const assetSymbol = spotCurrentSymbol.split('/')[0];
-            const maxBuy = Math.min(spotUsdtBalance, 500);
+            const tradeAmount = getTradeAmount();
+            if (tradeAmount === null) return;
             
-            if (maxBuy < 10) {
-                alert('USDT 余额不足，无法买入');
+            if (tradeAmount > spotUsdtBalance) {
+                alert('USDT 余额不足');
                 return;
             }
             
-            const quantity = maxBuy / spotBtcPrice;
+            const quantity = tradeAmount / spotBtcPrice;
             if (quantity < 0.001) {
                 alert('买入量太小');
                 return;
             }
             
-            const buyAmount = maxBuy;
             spotBtcBalance += quantity;
-            spotUsdtBalance -= buyAmount;
+            spotUsdtBalance -= tradeAmount;
             spotUpdateDisplay();
             
             const order = {
@@ -981,27 +1337,31 @@
                 asset: assetSymbol,
                 quantity: quantity,
                 price: spotBtcPrice,
-                amount: buyAmount,
+                amount: tradeAmount,
                 pnl: 0,
                 status: 'active',
                 time: new Date().toLocaleString()
             };
             spotOrders.push(order);
             spotRenderOrders();
+            
+            document.getElementById('tradeAmountInput').value = '';
         }
         
         function spotSell() {
             const assetSymbol = spotCurrentSymbol.split('/')[0];
+            const tradeAmount = getTradeAmount();
+            if (tradeAmount === null) return;
             
-            if (spotBtcBalance < 0.001) {
-                alert(assetSymbol + ' 持仓不足，无法卖出');
+            const sellQuantity = tradeAmount / spotBtcPrice;
+            
+            if (sellQuantity > spotBtcBalance) {
+                alert(assetSymbol + ' 持仓不足');
                 return;
             }
             
-            const maxSell = Math.min(spotBtcBalance, 0.01);
-            const sellAmount = maxSell * spotBtcPrice;
-            spotBtcBalance -= maxSell;
-            spotUsdtBalance += sellAmount;
+            spotBtcBalance -= sellQuantity;
+            spotUsdtBalance += tradeAmount;
             spotUpdateDisplay();
             
             const order = {
@@ -1009,18 +1369,19 @@
                 pair: spotCurrentSymbol,
                 type: 'sell',
                 asset: assetSymbol,
-                quantity: maxSell,
+                quantity: sellQuantity,
                 price: spotBtcPrice,
-                amount: sellAmount,
+                amount: tradeAmount,
                 pnl: 0,
                 status: 'active',
                 time: new Date().toLocaleString()
             };
             spotOrders.push(order);
             spotRenderOrders();
+            
+            document.getElementById('tradeAmountInput').value = '';
         }
         
-        // 渲染订单记录 - 每个记录独立卡片
         function spotRenderOrders() {
             const container = document.getElementById('ordersContainer');
             
@@ -1043,8 +1404,8 @@
                 html += `
                     <div class="order-card ${statusClass}" id="order_${order.id}">
                         <div class="order-card-header">
-                            <span class="order-pair">${order.pair}</span>
-                            <div style="display:flex;gap:6px;align-items:center;">
+                            <span class="order-pair">${order.pair}${order.trigger ? ' (' + order.trigger + ')' : ''}</span>
+                            <div class="order-badges">
                                 <span class="order-type-badge ${typeClass}">${typeText}</span>
                                 <span class="order-status-badge ${statusClass}">${statusText}</span>
                             </div>
@@ -1291,6 +1652,8 @@
             window.spotAddNewPair = spotAddNewPair;
             window.spotCancelOrder = spotCancelOrder;
             window.spotCloseOrder = spotCloseOrder;
+            window.setTpSl = setTpSl;
+            window.setQuickAmount = setQuickAmount;
             
             document.getElementById('pairModalOverlay').addEventListener('click', function(e) {
                 if (e.target === this) {
@@ -1310,6 +1673,8 @@
                 
                 spotUpdateChart();
                 spotUpdateDisplay();
+                
+                checkTpSl();
             }, 5000);
         });
     </script>
