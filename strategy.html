@@ -207,7 +207,13 @@
             display: flex;
             gap: 6px;
             margin-bottom: 12px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+        .chart-type-tabs::-webkit-scrollbar {
+            display: none;
         }
         .chart-type-tab {
             padding: 4px 12px;
@@ -220,6 +226,8 @@
             background: #12121f;
             color: #6a6a7a;
             touch-action: manipulation;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .chart-type-tab.active {
             background: #3b82f6;
@@ -240,7 +248,7 @@
             gap: 6px;
             margin-top: 8px;
             padding-right: 4px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
         }
         .chart-time-labels .time-label {
             font-size: 11px;
@@ -250,6 +258,7 @@
             border-radius: 12px;
             transition: all 0.2s;
             border: 1px solid transparent;
+            white-space: nowrap;
         }
         .chart-time-labels .time-label:hover {
             color: #8a8a9a;
@@ -282,15 +291,21 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 8px;
+            min-height: 24px;
         }
         .account-card .account-row .label {
             font-size: 13px;
             color: #6a6a7a;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .account-card .account-row .value {
             font-size: 15px;
             font-weight: 600;
             color: #e8e8f0;
+            white-space: nowrap;
+            flex-shrink: 0;
+            text-align: right;
         }
         .account-card .account-row .value.btc {
             color: #fbbf24;
@@ -326,6 +341,7 @@
             font-size: 12px;
             color: #6a6a7a;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .amount-input-row input {
             flex: 1;
@@ -346,15 +362,24 @@
             font-size: 12px;
             color: #6a6a7a;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .amount-quick-btns {
             display: flex;
             gap: 6px;
             margin-top: 8px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .amount-quick-btns::-webkit-scrollbar {
+            display: none;
         }
         .amount-quick-btn {
-            flex: 1;
-            padding: 4px 8px;
+            flex: 0 0 auto;
+            padding: 6px 12px;
             border: 1px solid #1a1a2a;
             border-radius: 6px;
             background: #12121f;
@@ -365,6 +390,8 @@
             text-align: center;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
+            min-width: 50px;
         }
         .amount-quick-btn:active {
             background: #1a1a2a;
@@ -388,6 +415,7 @@
             color: white;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
+            white-space: nowrap;
         }
         .button-group .btn:hover {
             opacity: 0.85;
@@ -431,6 +459,8 @@
             font-size: 11px;
             color: #6a6a7a;
             min-width: 50px;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .tp-sl-input {
             flex: 1;
@@ -456,6 +486,8 @@
             font-weight: 600;
             cursor: pointer;
             touch-action: manipulation;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .tp-sl-btn:active {
             background: #2563eb;
@@ -510,30 +542,35 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 8px;
             border-bottom: 1px solid #1a1a2a;
             padding-bottom: 10px;
             margin-bottom: 10px;
         }
         .order-card-header .order-pair {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 700;
             color: #e8e8f0;
-            word-break: break-all;
+            white-space: nowrap;
+            flex-shrink: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 120px;
         }
         .order-card-header .order-badges {
             display: flex;
             gap: 6px;
             align-items: center;
-            flex-wrap: wrap;
+            flex-shrink: 0;
         }
         .order-card-header .order-type-badge {
-            font-size: 10px;
-            padding: 3px 10px;
-            border-radius: 10px;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 8px;
             font-weight: 600;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .order-card-header .order-type-badge.buy {
             background: #1a3a2a;
@@ -544,11 +581,12 @@
             color: #ef4444;
         }
         .order-card-header .order-status-badge {
-            font-size: 10px;
-            padding: 3px 10px;
-            border-radius: 10px;
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 8px;
             font-weight: 600;
             white-space: nowrap;
+            flex-shrink: 0;
         }
         .order-card-header .order-status-badge.active {
             background: #1a2a3a;
@@ -574,22 +612,29 @@
             flex-direction: column;
             gap: 2px;
             min-width: 0;
+            overflow: hidden;
         }
         .order-info-item .info-label {
             font-size: 10px;
             color: #6a6a7a;
+            white-space: nowrap;
         }
         .order-info-item .info-value {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 600;
             color: #e8e8f0;
-            word-break: break-all;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .order-info-item .info-value.profit {
             color: #10b981;
         }
         .order-info-item .info-value.loss {
             color: #ef4444;
+        }
+        .order-info-item.full-width {
+            grid-column: 1 / -1;
         }
         
         .order-card-footer {
@@ -702,10 +747,12 @@
             font-size: 13px;
             font-weight: 600;
             color: #e8e8f0;
+            white-space: nowrap;
         }
         .pair-modal .pair-option .pair-price {
             font-size: 11px;
             color: #6a6a7a;
+            white-space: nowrap;
         }
         .pair-modal .pair-option .check-icon {
             color: #3b82f6;
@@ -750,9 +797,10 @@
             cursor: pointer;
             white-space: nowrap;
             touch-action: manipulation;
+            flex-shrink: 0;
         }
 
-        /* 响应式 */
+        /* 响应式 - 手机兼容 */
         @media (max-width: 480px) {
             .spot-container {
                 padding: 12px;
@@ -764,48 +812,59 @@
                 font-size: 20px;
             }
             .order-card-body {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
             }
             .order-card-header {
-                flex-direction: column;
-                align-items: flex-start;
+                flex-wrap: nowrap;
             }
-            .order-card-footer {
-                flex-direction: row;
+            .order-card-header .order-pair {
+                font-size: 12px;
+                max-width: 90px;
             }
-            .chart-type-tabs {
-                flex-wrap: wrap;
+            .order-card-header .order-type-badge {
+                font-size: 8px;
+                padding: 2px 6px;
             }
-            .amount-quick-btns {
-                flex-wrap: wrap;
+            .order-card-header .order-status-badge {
+                font-size: 8px;
+                padding: 2px 6px;
             }
-            .amount-quick-btn {
-                flex: 1 1 30%;
-                min-width: 60px;
+            .order-info-item .info-value {
+                font-size: 11px;
+            }
+            .account-card .account-row {
+                min-height: 22px;
+            }
+            .account-card .account-row .label {
+                font-size: 12px;
+            }
+            .account-card .account-row .value {
+                font-size: 13px;
             }
         }
 
         @media (max-width: 360px) {
-            .account-card .account-row {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 4px;
+            .order-card-body {
+                grid-template-columns: 1fr;
+            }
+            .order-card-header .order-pair {
+                max-width: 70px;
+                font-size: 11px;
+            }
+            .order-info-item .info-value {
+                font-size: 11px;
             }
             .account-card .account-row .label {
                 font-size: 11px;
             }
             .account-card .account-row .value {
-                font-size: 14px;
-            }
-            .order-card-body {
-                gap: 6px;
-            }
-            .order-info-item .info-value {
                 font-size: 12px;
             }
-            .button-group .btn {
-                padding: 10px 14px;
-                font-size: 13px;
+            .amount-quick-btn {
+                padding: 5px 10px;
+                font-size: 10px;
+                min-width: 40px;
             }
         }
     </style>
@@ -967,7 +1026,6 @@
         let spotOrders = [];
         let spotOrdersInitialized = false;
         
-        // 止盈止损
         let takeProfitPrice = null;
         let stopLossPrice = null;
         let tpSlActive = false;
@@ -993,7 +1051,6 @@
             '1m': 30
         };
         
-        // 快捷设置金额
         function setQuickAmount(value) {
             const input = document.getElementById('tradeAmountInput');
             if (value === 'max') {
@@ -1003,7 +1060,6 @@
             }
         }
         
-        // 获取输入金额
         function getTradeAmount() {
             const input = document.getElementById('tradeAmountInput');
             const value = parseFloat(input.value);
@@ -1014,7 +1070,6 @@
             return value;
         }
         
-        // 设置止盈止损
         function setTpSl() {
             const tpInput = document.getElementById('takeProfitInput');
             const slInput = document.getElementById('stopLossInput');
@@ -1061,7 +1116,6 @@
             alert(`✅ 止盈止损已设置\n${takeProfitPrice ? '止盈: $' + takeProfitPrice.toFixed(2) : ''}\n${stopLossPrice ? '止损: $' + stopLossPrice.toFixed(2) : ''}`);
         }
         
-        // 检查止盈止损
         function checkTpSl() {
             if (!tpSlActive) return;
             
@@ -1074,7 +1128,6 @@
             }
         }
         
-        // 执行止盈止损
         function executeTpSl(type) {
             const assetSymbol = spotCurrentSymbol.split('/')[0];
             const sellQuantity = spotBtcBalance;
@@ -1427,7 +1480,7 @@
                                 <span class="info-label">盈亏</span>
                                 <span class="info-value ${pnlClass}">${pnlText}</span>
                             </div>
-                            <div class="order-info-item" style="grid-column:1/-1;">
+                            <div class="order-info-item full-width">
                                 <span class="info-label">时间</span>
                                 <span class="info-value">${order.time}</span>
                             </div>
