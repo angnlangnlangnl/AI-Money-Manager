@@ -1378,10 +1378,10 @@
             <div class="token-list" id="tokenModalContent"></div>
             <!-- 合约输入区 - 修复显示错误 -->
             <div class="contract-input-section">
-                <span class="contract-input-label">📋 通过合约地址添加自定义代币</span>
+                <span class="contract-input-label">📋 通过合约地址添加自定义代币（自动获取链上数据）</span>
                 <div class="contract-input-row">
                     <input type="text" id="contractInput" placeholder="输入合约地址，如 0x..." onkeydown="handleContractKeydown(event)" autocomplete="off">
-                    <button class="contract-add-btn" onclick="addTokenFromContract()">添加</button>
+                    <button class="contract-add-btn" id="contractAddBtn" onclick="addTokenFromContract()">添加</button>
                 </div>
             </div>
             <button class="save-btn" onclick="saveTokenSelection()">💾 保存选择</button>
@@ -1756,44 +1756,343 @@
             }
         }
 
-        // 从合约地址添加代币
-        function addTokenFromContract() {
+        // ============================================================
+        //  从合约地址获取链上真实数据
+        // ============================================================
+        
+        // 判断合约地址属于哪条链
+        function detectChainFromAddress(address) {
+            const addr = address.toLowerCase().trim();
+            
+            // Ethereum 合约地址：0x开头，42个字符
+            if (addr.startsWith('0x') && addr.length === 42) {
+                return 'ethereum';
+            }
+            
+            // Solana 合约地址：base58编码，通常32-44个字符，不含0x
+            if (!addr.startsWith('0x') && addr.length >= 32 && addr.length <= 44) {
+                return 'solana';
+            }
+            
+            // BNB Chain 合约地址：0x开头，42个字符（与以太坊相同格式）
+            if (addr.startsWith('0x') && addr.length === 42) {
+                return 'bsc';
+            }
+            
+            return 'unknown';
+        }
+
+        // 从 Ethereum/BSC 获取代币信息
+        async function fetchEthereumTokenData(contractAddress) {
+            try {
+                // 使用 CoinGecko API 按合约地址搜索代币
+                const response = await fetch(
+                    `https://api.coingecko.com/api/v3/search?query=${contractAddress}`
+                );
+                
+                if (!response.ok) {
+                    throw new Error('API请求失败');
+                }
+                
+                const data = await response.json();
+                
+                // 在搜索结果中查找匹配的代币
+                let matchedToken = null;
+                if (data.coins && data.coins.length > 0) {
+                    // 尝试通过合约地址匹配
+                    for (const coin of data.coins) {
+                        // 获取代币详情以匹配合约地址
+                        try {
+                            const detailResponse = await fetch(
+                                `https://api.coingecko.com/api/v3/coins/${coin.id}?localization=false&tickers=false&market_data=true&community_data=false&developer_data=false`
+                            );
+                            if (detailResponse.ok) {
+                                const detail = await detailResponse.json();
+                                const platforms = detail.platforms || {};
+                                // 检查以太坊合约地址
+                                if (platforms.ethereum && platforms.ethereum.toLowerCase() === contractAddress.toLowerCase()) {
+                                    matchedToken = {
+                                        symbol: detail.symbol ? detail.symbol.toUpperCase() : coin.symbol.toUpperCase(),
+                                        name: detail.name || coin.name,
+                                        price: detail.market_data?.current_price?.usd || null,
+                                        chain: 'Ethereum',
+                                        contractAddress: contractAddress
+                                    };
+                                    break;
+                                }
+                                // 检查BSC合约地址
+                                if (platforms['binance-smart-chain'] && platforms['binance-smart-chain'].toLowerCase() === contractAddress.toLowerCase()) {
+                                    matchedToken = {
+                                        symbol: detail.symbol ? detail.symbol.toUpperCase() : coin.symbol.toUpperCase(),
+                                        name: detail.name || coin.name,
+                                        price: detail.market_data?.current_price?.usd || null,
+                                        chain: 'BNB Chain',
+                                        contractAddress: contractAddress
+                                    };
+                                    break;
+                                }
+                            }
+                        } catch (innerErr) {
+                            continue;
+                        }
+                    }
+                }
+                
+                // 如果没有找到匹配，尝试使用 Etherscan API（需要免费API key）
+                if (!matchedToken) {
+                    // 尝试直接获取代币基本信息
+                    // 使用公共RPC调用获取代币名称和符号
+                    matchedToken = await fetchTokenFromRPC(contractAddress, 'ethereum');
+                }
+                
+                return matchedToken;
+            } catch (error) {
+                console.error('获取以太坊代币数据失败:', error);
+                // 降级到RPC方法
+                return await fetchTokenFromRPC(contractAddress, 'ethereum');
+            }
+        }
+
+        // 从 Solana 获取代币信息
+        async function fetchSolanaTokenData(contractAddress) {
+            try {
+                // 使用 Jupiter API 获取Solana代币信息
+                const response = await fetch(
+                    `https://token.jup.ag/all`
+                );
+                
+                if (!response.ok) {
+                    throw new Error('API请求失败');
+                }
+                
+                const tokens = await response.json();
+                
+                // 查找匹配的代币
+                const matchedToken = tokens.find(token => 
+                    token.address && token.address.toLowerCase() === contractAddress.toLowerCase()
+                );
+                
+                if (matchedToken) {
+                    // 获取价格
+                    let price = null;
+                    try {
+                        const priceResponse = await fetch(
+                            `https://api.jup.ag/price/v2?ids=${matchedToken.address}`
+                        );
+                        if (priceResponse.ok) {
+                            const priceData = await priceResponse.json();
+                            if (priceData.data && priceData.data[matchedToken.address]) {
+                                price = parseFloat(priceData.data[matchedToken.address].price);
+                            }
+                        }
+                    } catch (priceErr) {
+                        console.error('获取价格失败:', priceErr);
+                    }
+                    
+                    return {
+                        symbol: matchedToken.symbol || 'UNKNOWN',
+                        name: matchedToken.name || matchedToken.symbol,
+                        price: price,
+                        chain: 'Solana',
+                        contractAddress: contractAddress
+                    };
+                }
+                
+                return null;
+            } catch (error) {
+                console.error('获取Solana代币数据失败:', error);
+                return null;
+            }
+        }
+
+        // 使用RPC获取ERC20代币信息（备用方案）
+        async function fetchTokenFromRPC(contractAddress, chain) {
+            const rpcUrls = {
+                'ethereum': 'https://eth.llamarpc.com',
+                'bsc': 'https://bsc-dataseed.binance.org'
+            };
+            
+            const rpcUrl = rpcUrls[chain] || rpcUrls['ethereum'];
+            
+            try {
+                // 获取代币名称
+                const nameResponse = await fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_call',
+                        params: [{
+                            to: contractAddress,
+                            data: '0x06fdde03' // name()
+                        }, 'latest'],
+                        id: 1
+                    })
+                });
+                
+                // 获取代币符号
+                const symbolResponse = await fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_call',
+                        params: [{
+                            to: contractAddress,
+                            data: '0x95d89b41' // symbol()
+                        }, 'latest'],
+                        id: 2
+                    })
+                });
+                
+                // 获取代币精度
+                const decimalsResponse = await fetch(rpcUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        jsonrpc: '2.0',
+                        method: 'eth_call',
+                        params: [{
+                            to: contractAddress,
+                            data: '0x313ce567' // decimals()
+                        }, 'latest'],
+                        id: 3
+                    })
+                });
+                
+                let symbol = 'UNKNOWN';
+                let name = 'Unknown Token';
+                let decimals = 18;
+                
+                if (symbolResponse.ok) {
+                    const symbolData = await symbolResponse.json();
+                    if (symbolData.result && symbolData.result !== '0x') {
+                        // 解析symbol
+                        const hexSymbol = symbolData.result.slice(2);
+                        let symbolStr = '';
+                        for (let i = 0; i < hexSymbol.length; i += 2) {
+                            const charCode = parseInt(hexSymbol.substr(i, 2), 16);
+                            if (charCode > 0) {
+                                symbolStr += String.fromCharCode(charCode);
+                            }
+                        }
+                        if (symbolStr) symbol = symbolStr;
+                    }
+                }
+                
+                if (nameResponse.ok) {
+                    const nameData = await nameResponse.json();
+                    if (nameData.result && nameData.result !== '0x') {
+                        const hexName = nameData.result.slice(2);
+                        let nameStr = '';
+                        for (let i = 0; i < hexName.length; i += 2) {
+                            const charCode = parseInt(hexName.substr(i, 2), 16);
+                            if (charCode > 0) {
+                                nameStr += String.fromCharCode(charCode);
+                            }
+                        }
+                        if (nameStr) name = nameStr;
+                    }
+                }
+                
+                return {
+                    symbol: symbol,
+                    name: name,
+                    price: null,
+                    chain: chain === 'ethereum' ? 'Ethereum' : 'BNB Chain',
+                    contractAddress: contractAddress,
+                    decimals: decimals
+                };
+            } catch (error) {
+                console.error('RPC获取代币信息失败:', error);
+                return null;
+            }
+        }
+
+        // 从合约地址添加代币（获取链上真实数据）
+        async function addTokenFromContract() {
             const input = document.getElementById('contractInput');
             const contractAddress = input.value.trim();
+            const addBtn = document.getElementById('contractAddBtn');
             
             if (!contractAddress) {
                 alert('请输入合约地址');
                 return;
             }
             
-            // 验证合约地址格式（简单验证）
+            // 验证合约地址格式
             if (contractAddress.length < 10) {
                 alert('请输入有效的合约地址');
                 return;
             }
             
-            // 生成代币符号（从合约地址派生）
-            const symbol = 'CUSTOM' + contractAddress.slice(0, 4).toUpperCase();
+            // 禁用按钮，显示加载状态
+            addBtn.disabled = true;
+            addBtn.textContent = '获取中...';
             
-            if (userTokens.includes(symbol)) {
-                alert('该代币已在列表中');
+            try {
+                // 检测链类型
+                const chain = detectChainFromAddress(contractAddress);
+                
+                let tokenData = null;
+                
+                if (chain === 'ethereum' || chain === 'bsc') {
+                    tokenData = await fetchEthereumTokenData(contractAddress);
+                    if (!tokenData) {
+                        tokenData = await fetchTokenFromRPC(contractAddress, chain);
+                    }
+                } else if (chain === 'solana') {
+                    tokenData = await fetchSolanaTokenData(contractAddress);
+                } else {
+                    // 未知链，使用RPC尝试
+                    tokenData = await fetchTokenFromRPC(contractAddress, 'ethereum');
+                }
+                
+                if (!tokenData) {
+                    alert('无法获取该合约地址的代币信息，请确认地址是否正确');
+                    return;
+                }
+                
+                const symbol = tokenData.symbol || 'CUSTOM' + contractAddress.slice(0, 4).toUpperCase();
+                
+                if (userTokens.includes(symbol)) {
+                    alert(`代币 ${symbol} 已在列表中`);
+                    input.value = '';
+                    return;
+                }
+                
+                // 添加到代币列表
+                allAvailableTokens.push(symbol);
+                
+                // 如果有真实价格则使用，否则生成模拟价格
+                const price = tokenData.price || parseFloat((Math.random() * 10 + 0.01).toFixed(4));
+                tokenPrices[symbol] = price;
+                
+                const chainName = tokenData.chain || 'Custom Contract';
+                tokenChains[symbol] = chainName;
+                
+                userTokens.push(symbol);
+                
                 input.value = '';
-                return;
+                renderTokenList(document.getElementById('tokenSearchInput').value);
+                
+                let alertMsg = `✅ 已从合约获取代币信息\n`;
+                alertMsg += `符号: ${symbol}\n`;
+                alertMsg += `名称: ${tokenData.name || 'Unknown'}\n`;
+                alertMsg += `链: ${chainName}\n`;
+                alertMsg += `合约: ${contractAddress.slice(0, 10)}...\n`;
+                alertMsg += `价格: ${tokenData.price ? '$' + price.toFixed(4) : '暂无价格数据'}`;
+                
+                alert(alertMsg);
+                
+            } catch (error) {
+                console.error('添加代币失败:', error);
+                alert('获取代币信息失败，请检查网络连接或合约地址');
+            } finally {
+                // 恢复按钮状态
+                addBtn.disabled = false;
+                addBtn.textContent = '添加';
             }
-            
-            // 生成随机价格
-            const randomPrice = (Math.random() * 10 + 0.01).toFixed(4);
-            
-            // 添加到代币列表
-            allAvailableTokens.push(symbol);
-            tokenPrices[symbol] = parseFloat(randomPrice);
-            tokenChains[symbol] = 'Custom Contract';
-            userTokens.push(symbol);
-            
-            input.value = '';
-            renderTokenList(document.getElementById('tokenSearchInput').value);
-            
-            alert(`✅ 已从合约添加代币\n符号: ${symbol}\n合约: ${contractAddress.slice(0, 10)}...\n价格: $${randomPrice}`);
         }
 
         function saveTokenSelection() {
