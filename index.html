@@ -967,16 +967,10 @@
             align-items: center;
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
+            font-size: 18px;
         }
         .drawer-settings-btn:active {
             background: #1a1a2a;
-        }
-        .drawer-settings-btn svg {
-            width: 22px;
-            height: 22px;
-            stroke: #6a6a7a;
-            fill: none;
-            stroke-width: 2;
         }
 
         .system-message {
@@ -987,8 +981,41 @@
             border: none !important;
         }
 
-        /* 侧边栏底部+按钮 */
+        /* 侧边栏布局修复 */
+        .drawer-content-wrapper {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+            overflow: hidden;
+        }
+        .drawer-asset-scroll {
+            flex: 1;
+            overflow-y: auto;
+            min-height: 0;
+            -webkit-overflow-scrolling: touch;
+        }
+        .drawer-asset-scroll::-webkit-scrollbar {
+            width: 2px;
+        }
+        .drawer-asset-scroll::-webkit-scrollbar-thumb {
+            background: #2a2a3a;
+            border-radius: 4px;
+        }
+
+        /* 底部区域 */
+        .drawer-bottom-section {
+            position: relative;
+            padding-top: 12px;
+            border-top: 1px solid #1a1a2a;
+            flex-shrink: 0;
+        }
+        /* +按钮靠右上下居中 */
         .drawer-add-btn {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
             width: 24px;
             height: 24px;
             border: 1px solid #3b82f6;
@@ -1064,6 +1091,13 @@
             overflow-y: auto;
             margin-bottom: 12px;
             flex: 1;
+        }
+        .token-modal .token-list::-webkit-scrollbar {
+            width: 2px;
+        }
+        .token-modal .token-list::-webkit-scrollbar-thumb {
+            background: #2a2a3a;
+            border-radius: 4px;
         }
         .token-modal .token-option {
             display: flex;
@@ -1297,8 +1331,8 @@
     <div id="app" style="display:flex;flex-direction:column;height:100vh;background:#0a0a0f;">
         <div id="overlay" class="overlay closed fixed inset-0 bg-black/60 z-40" onclick="closeDrawer()"></div>
 
-        <div id="drawer" class="drawer closed fixed top-0 left-0 h-full w-[280px] bg-[#0f0f1a] border-r border-[#1a1a2a] z-50 p-5 flex flex-col overflow-y-auto">
-            <div class="flex items-center justify-between mb-6">
+        <div id="drawer" class="drawer closed fixed top-0 left-0 h-full w-[280px] bg-[#0f0f1a] border-r border-[#1a1a2a] z-50 p-5 flex flex-col overflow-hidden">
+            <div class="flex items-center justify-between mb-6 flex-shrink-0">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">AI</div>
                     <div>
@@ -1306,21 +1340,20 @@
                         <p class="text-xs text-[#6a6a7a]">在线 · 4 条链</p>
                     </div>
                 </div>
-                <div class="drawer-settings-btn" onclick="openSettings()" title="设置">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="12" cy="12" r="3"/>
-                        <path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
-                    </svg>
-                </div>
+                <div class="drawer-settings-btn" onclick="openSettings()" title="设置">⚙️</div>
             </div>
-            <div id="assetOverview" class="space-y-4 flex-1"></div>
-            <div class="pt-4 border-t border-[#1a1a2a] mt-auto">
-                <div class="flex items-center gap-2 text-xs text-[#5a5a6a]">
+            <!-- 资产列表可滚动区域 -->
+            <div class="drawer-asset-scroll flex-1 min-h-0" id="assetOverview">
+                <!-- 由JS渲染，可上下拖动 -->
+            </div>
+            <!-- 底部固定区域 -->
+            <div class="drawer-bottom-section">
+                <div class="flex items-center gap-2 text-xs text-[#5a5a6a] pr-8">
                     <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                     <span>安全模式 · 非托管</span>
-                    <button class="drawer-add-btn" onclick="openTokenModal()" title="管理代币">+</button>
                 </div>
                 <p class="text-[10px] text-[#3a3a4a] mt-1">AI 可准备交易，执行需确认</p>
+                <button class="drawer-add-btn" onclick="openTokenModal()" title="管理代币">+</button>
             </div>
         </div>
 
@@ -1564,6 +1597,39 @@
             'COMP': 56.78,
             'CRV': 0.567
         };
+        
+        const tokenChains = {
+            'BTC': 'Bitcoin',
+            'ETH': 'Ethereum',
+            'USDT': 'Ethereum',
+            'USDC': 'Ethereum',
+            'BNB': 'BNB Chain',
+            'SOL': 'Solana',
+            'XRP': 'Ripple',
+            'ADA': 'Cardano',
+            'DOT': 'Polkadot',
+            'AVAX': 'Avalanche',
+            'LINK': 'Ethereum',
+            'UNI': 'Ethereum',
+            'ATOM': 'Cosmos',
+            'LTC': 'Litecoin',
+            'BCH': 'Bitcoin Cash',
+            'FIL': 'Filecoin',
+            'APT': 'Aptos',
+            'SUI': 'Sui',
+            'NEAR': 'NEAR Protocol',
+            'OP': 'Optimism',
+            'ARB': 'Arbitrum',
+            'MATIC': 'Polygon',
+            'DOGE': 'Dogecoin',
+            'SHIB': 'Ethereum',
+            'TRX': 'Tron',
+            'ETC': 'Ethereum Classic',
+            'AAVE': 'Ethereum',
+            'MKR': 'Ethereum',
+            'COMP': 'Ethereum',
+            'CRV': 'Ethereum'
+        };
 
         function openTokenModal() {
             document.getElementById('tokenSearchInput').value = '';
@@ -1621,6 +1687,31 @@
         }
 
         function saveTokenSelection() {
+            mockAssets = userTokens.map(token => {
+                const price = tokenPrices[token] || 100;
+                const chain = tokenChains[token] || 'Ethereum';
+                let balance;
+                if (token === 'BTC') balance = 0.15;
+                else if (token === 'ETH') balance = 3.42;
+                else if (token === 'USDC' || token === 'USDT') balance = 12500.00;
+                else if (token === 'SOL') balance = 120.5;
+                else if (token === 'ARB') balance = 8500;
+                else if (price < 1) balance = 10000;
+                else if (price < 10) balance = 500;
+                else if (price < 100) balance = 50;
+                else if (price < 1000) balance = 5;
+                else balance = 1;
+                
+                const usdValue = balance * price;
+                return {
+                    symbol: token,
+                    name: chain,
+                    balance: balance,
+                    usdValue: Math.round(usdValue * 100) / 100,
+                    chain: chain
+                };
+            });
+            
             renderAssetOverview();
             closeTokenModal();
             alert(`✅ 代币列表已保存\n当前共 ${userTokens.length} 个代币`);
@@ -2415,7 +2506,7 @@ Elite版：¥299/月，1对1私人管家
             const changeColor = change >= 0 ? 'text-emerald-400' : 'text-red-400';
             const totalValue = mockAssets.reduce((sum, a) => sum + a.usdValue, 0);
             let html = `
-                <div class="bg-[#12121f] rounded-2xl p-4 border border-[#1a1a2a]">
+                <div class="bg-[#12121f] rounded-2xl p-4 border border-[#1a1a2a] flex-shrink-0">
                     <div class="flex items-center justify-between">
                         <span class="text-sm text-[#6a6a7a]">总资产</span>
                         <span class="text-sm ${changeColor}">${change >= 0 ? '+' : ''}${change}%</span>
