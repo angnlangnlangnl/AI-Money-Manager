@@ -986,13 +986,146 @@
             background: transparent !important;
             border: none !important;
         }
+
+        /* 侧边栏底部+按钮 */
+        .drawer-add-btn {
+            width: 24px;
+            height: 24px;
+            border: 1px solid #3b82f6;
+            color: #3b82f6;
+            background: transparent;
+            border-radius: 50%;
+            font-size: 14px;
+            font-weight: 400;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+        }
+        .drawer-add-btn:active {
+            background-color: #3b82f6;
+            color: #0a0a0f;
+        }
+
+        /* 代币选择弹窗 */
+        .token-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 2500;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .token-modal-overlay.show {
+            display: flex;
+        }
+        .token-modal {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 16px;
+            width: 85%;
+            max-width: 350px;
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+        }
+        .token-modal .modal-title {
+            color: #60a5fa;
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .token-modal .search-input {
+            width: 100%;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #e8e8f0;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        .token-modal .search-input:focus {
+            border-color: #3b82f6;
+        }
+        .token-modal .search-input::placeholder {
+            color: #5a5a6a;
+        }
+        .token-modal .token-list {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            flex: 1;
+        }
+        .token-modal .token-option {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .token-modal .token-option:active {
+            background: #1a1a2a;
+        }
+        .token-modal .token-option.selected {
+            background: #1a2a3a;
+            border: 1px solid #3b82f6;
+        }
+        .token-modal .token-option .token-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #e8e8f0;
+            white-space: nowrap;
+        }
+        .token-modal .token-option .token-price {
+            font-size: 11px;
+            color: #6a6a7a;
+            white-space: nowrap;
+        }
+        .token-modal .token-option .check-icon {
+            color: #3b82f6;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .token-modal .no-results {
+            text-align: center;
+            padding: 15px;
+            color: #5a5a6a;
+            font-size: 12px;
+        }
+        .token-modal .save-btn {
+            width: 100%;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .token-modal .save-btn:active {
+            background: #0d9668;
+        }
     </style>
 </head>
 <body>
 
-    <!-- ============================================================ -->
     <!-- 分享面板 -->
-    <!-- ============================================================ -->
     <div class="share-overlay" id="shareOverlay" onclick="closeShare(event)">
         <div class="share-panel" onclick="event.stopPropagation()">
             <div class="handle"></div>
@@ -1049,9 +1182,7 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
     <!-- 设置面板 -->
-    <!-- ============================================================ -->
     <div class="settings-overlay" id="settingsOverlay">
         <div class="settings-header">
             <div class="back-btn" onclick="closeSettings()" title="返回">
@@ -1152,9 +1283,17 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
+    <!-- 代币选择弹窗 -->
+    <div class="token-modal-overlay" id="tokenModalOverlay" onclick="closeTokenModal(event)">
+        <div class="token-modal" onclick="event.stopPropagation()">
+            <div class="modal-title">🔍 管理代币</div>
+            <input type="text" class="search-input" id="tokenSearchInput" placeholder="搜索代币..." oninput="filterTokenList()">
+            <div class="token-list" id="tokenModalContent"></div>
+            <button class="save-btn" onclick="saveTokenSelection()">💾 保存选择</button>
+        </div>
+    </div>
+
     <!-- 主应用 -->
-    <!-- ============================================================ -->
     <div id="app" style="display:flex;flex-direction:column;height:100vh;background:#0a0a0f;">
         <div id="overlay" class="overlay closed fixed inset-0 bg-black/60 z-40" onclick="closeDrawer()"></div>
 
@@ -1178,7 +1317,8 @@
             <div class="pt-4 border-t border-[#1a1a2a] mt-auto">
                 <div class="flex items-center gap-2 text-xs text-[#5a5a6a]">
                     <div class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    安全模式 · 非托管
+                    <span>安全模式 · 非托管</span>
+                    <button class="drawer-add-btn" onclick="openTokenModal()" title="管理代币">+</button>
                 </div>
                 <p class="text-[10px] text-[#3a3a4a] mt-1">AI 可准备交易，执行需确认</p>
             </div>
@@ -1287,7 +1427,7 @@
         }
 
         // ============================================================
-        //  语音转文字（Web Speech API）
+        //  语音转文字
         // ============================================================
         let recognition = null;
         let isListening = false;
@@ -1379,6 +1519,111 @@
                 } catch (e) {}
             }
             isListening = false;
+        }
+
+        // ============================================================
+        //  代币管理功能
+        // ============================================================
+        let userTokens = ['ETH', 'BTC', 'USDC', 'SOL', 'ARB'];
+        
+        const allAvailableTokens = [
+            'BTC', 'ETH', 'USDT', 'USDC', 'BNB', 'SOL', 'XRP', 'ADA', 'DOT', 'AVAX',
+            'LINK', 'UNI', 'ATOM', 'LTC', 'BCH', 'FIL', 'APT', 'SUI', 'NEAR', 'OP',
+            'ARB', 'MATIC', 'DOGE', 'SHIB', 'TRX', 'ETC', 'AAVE', 'MKR', 'COMP', 'CRV'
+        ];
+        
+        const tokenPrices = {
+            'BTC': 65432.10,
+            'ETH': 3456.78,
+            'USDT': 1.00,
+            'USDC': 1.00,
+            'BNB': 598.20,
+            'SOL': 187.50,
+            'XRP': 0.612,
+            'ADA': 0.456,
+            'DOT': 7.89,
+            'AVAX': 38.76,
+            'LINK': 16.45,
+            'UNI': 8.92,
+            'ATOM': 9.87,
+            'LTC': 72.34,
+            'BCH': 345.67,
+            'FIL': 5.67,
+            'APT': 12.34,
+            'SUI': 1.89,
+            'NEAR': 5.67,
+            'OP': 2.34,
+            'ARB': 1.56,
+            'MATIC': 0.78,
+            'DOGE': 0.156,
+            'SHIB': 0.0000234,
+            'TRX': 0.234,
+            'ETC': 23.45,
+            'AAVE': 156.78,
+            'MKR': 2345.67,
+            'COMP': 56.78,
+            'CRV': 0.567
+        };
+
+        function openTokenModal() {
+            document.getElementById('tokenSearchInput').value = '';
+            renderTokenList('');
+            document.getElementById('tokenModalOverlay').classList.add('show');
+        }
+
+        function closeTokenModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('tokenModalOverlay').classList.remove('show');
+        }
+
+        function renderTokenList(filter) {
+            const container = document.getElementById('tokenModalContent');
+            const filterLower = filter.toLowerCase();
+            const filteredTokens = allAvailableTokens.filter(token => token.toLowerCase().includes(filterLower));
+            
+            if (filteredTokens.length === 0) {
+                container.innerHTML = '<div class="no-results">未找到匹配的代币</div>';
+                return;
+            }
+            
+            let html = '';
+            filteredTokens.forEach(token => {
+                const isSelected = userTokens.includes(token);
+                const price = tokenPrices[token] || 0;
+                html += `
+                    <div class="token-option ${isSelected ? 'selected' : ''}" onclick="toggleTokenSelection('${token}')">
+                        <span class="token-name">${token}</span>
+                        <span class="token-price">$${price.toFixed(2)}</span>
+                        <span class="check-icon">${isSelected ? '✓' : '+'}</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        function filterTokenList() {
+            const filter = document.getElementById('tokenSearchInput').value;
+            renderTokenList(filter);
+        }
+
+        function toggleTokenSelection(token) {
+            if (userTokens.includes(token)) {
+                if (userTokens.length <= 1) {
+                    alert('至少保留一个代币');
+                    return;
+                }
+                userTokens = userTokens.filter(t => t !== token);
+            } else {
+                userTokens.push(token);
+            }
+            renderTokenList(document.getElementById('tokenSearchInput').value);
+        }
+
+        function saveTokenSelection() {
+            renderAssetOverview();
+            closeTokenModal();
+            alert(`✅ 代币列表已保存\n当前共 ${userTokens.length} 个代币`);
         }
 
         // ============================================================
@@ -1578,14 +1823,13 @@
         // ============================================================
         //  主应用数据
         // ============================================================
-        const mockAssets = [
+        let mockAssets = [
             { symbol: 'ETH', name: 'Ethereum', balance: 3.42, usdValue: 8243.22, chain: 'Ethereum' },
             { symbol: 'BTC', name: 'Bitcoin', balance: 0.15, usdValue: 8475.00, chain: 'Bitcoin' },
             { symbol: 'USDC', name: 'USD Coin', balance: 12500.00, usdValue: 12500.00, chain: 'Ethereum' },
             { symbol: 'SOL', name: 'Solana', balance: 120.5, usdValue: 3856.00, chain: 'Solana' },
             { symbol: 'ARB', name: 'Arbitrum', balance: 8500, usdValue: 5100.00, chain: 'Arbitrum' },
         ];
-        const totalValue = mockAssets.reduce((sum, a) => sum + a.usdValue, 0);
 
         let messages = [{
             id: 'welcome',
@@ -2169,6 +2413,7 @@ Elite版：¥299/月，1对1私人管家
             const container = document.getElementById('assetOverview');
             const change = 2.3;
             const changeColor = change >= 0 ? 'text-emerald-400' : 'text-red-400';
+            const totalValue = mockAssets.reduce((sum, a) => sum + a.usdValue, 0);
             let html = `
                 <div class="bg-[#12121f] rounded-2xl p-4 border border-[#1a1a2a]">
                     <div class="flex items-center justify-between">
@@ -2508,8 +2753,18 @@ Elite版：¥299/月，1对1私人管家
             window.addRebate = addRebate;
             window.settleRebate = settleRebate;
             window.resetRebate = resetRebate;
+            window.openTokenModal = openTokenModal;
+            window.closeTokenModal = closeTokenModal;
+            window.filterTokenList = filterTokenList;
+            window.toggleTokenSelection = toggleTokenSelection;
+            window.saveTokenSelection = saveTokenSelection;
 
             document.getElementById('overlay').addEventListener('click', closeDrawer);
+            document.getElementById('tokenModalOverlay').addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeTokenModal();
+                }
+            });
         });
     </script>
 
