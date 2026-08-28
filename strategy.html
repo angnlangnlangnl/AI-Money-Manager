@@ -499,15 +499,17 @@
             background: #2563eb;
         }
         .tp-sl-status {
-            font-size: 10px;
-            color: #6a6a7a;
+            font-size: 13px;
+            color: #9ca3af;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             flex: 1;
+            font-weight: 500;
         }
         .tp-sl-status.active {
             color: #10b981;
+            font-weight: 600;
         }
 
         /* 订单记录卡片 */
@@ -613,7 +615,6 @@
             color: #ef4444;
         }
         
-        /* 两列布局 - 所有屏幕尺寸 */
         .order-card-body {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -860,7 +861,6 @@
             .page-header .current-price-info .price {
                 font-size: 20px;
             }
-            /* 手机端保持两列布局 */
             .order-card-body {
                 grid-template-columns: 1fr 1fr;
                 gap: 6px;
@@ -879,7 +879,7 @@
                 font-size: 13px;
             }
             .tp-sl-status {
-                font-size: 9px;
+                font-size: 12px;
             }
         }
 
@@ -906,7 +906,7 @@
                 min-width: 40px;
             }
             .tp-sl-status {
-                font-size: 8px;
+                font-size: 11px;
             }
         }
     </style>
@@ -1114,9 +1114,6 @@
             '1m': 30
         };
         
-        // ============================================================
-        //  统一交易对选择功能
-        // ============================================================
         function openUnifiedPairModal() {
             document.getElementById('pairSearchInput').value = '';
             document.getElementById('newPairInput').value = '';
@@ -1229,9 +1226,6 @@
             alert(`✅ 交易对列表已保存\n当前共 ${spotPairs.length} 个交易对`);
         }
         
-        // ============================================================
-        //  快捷金额
-        // ============================================================
         function setQuickAmount(value) {
             const input = document.getElementById('tradeAmountInput');
             if (value === 'max') {
@@ -1251,9 +1245,6 @@
             return value;
         }
         
-        // ============================================================
-        //  止盈止损
-        // ============================================================
         function setTpSl() {
             const tpInput = document.getElementById('takeProfitInput');
             const slInput = document.getElementById('stopLossInput');
@@ -1356,9 +1347,6 @@
             spotRenderOrders();
         }
         
-        // ============================================================
-        //  渲染交易对列表
-        // ============================================================
         function spotRenderSymbols() {
             const container = document.getElementById('spotSymbolList');
             if (container) {
@@ -1374,9 +1362,6 @@
             }
         }
         
-        // ============================================================
-        //  选择交易对
-        // ============================================================
         function spotSelectSymbol(el, symbol) {
             document.querySelectorAll('#spotSymbolList .symbol-item').forEach(s => s.classList.remove('active'));
             el.classList.add('active');
@@ -1400,9 +1385,6 @@
             spotUpdateDisplay();
         }
         
-        // ============================================================
-        //  图表功能
-        // ============================================================
         function switchChartType(type, el) {
             spotChartType = type;
             document.querySelectorAll('.chart-type-tab').forEach(tab => {
@@ -1541,9 +1523,6 @@
             };
         }
         
-        // ============================================================
-        //  账户显示
-        // ============================================================
         function spotUpdateDisplay() {
             const total = spotUsdtBalance + spotBtcBalance * spotBtcPrice;
             const pnl = total - 10000;
@@ -1562,9 +1541,6 @@
             document.getElementById('spotCurrentPriceDisplay').textContent = '$' + spotBtcPrice.toFixed(2);
         }
         
-        // ============================================================
-        //  买入/卖出
-        // ============================================================
         function spotBuy() {
             const assetSymbol = spotCurrentSymbol.split('/')[0];
             const tradeAmount = getTradeAmount();
@@ -1637,9 +1613,6 @@
             document.getElementById('tradeAmountInput').value = '';
         }
         
-        // ============================================================
-        //  订单记录
-        // ============================================================
         function spotRenderOrders() {
             const container = document.getElementById('ordersContainer');
             
