@@ -176,7 +176,6 @@
             color: #0a0a0f;
         }
 
-        /* 图表容器 */
         .chart-container {
             background: #12121f;
             border: 1px solid #1a1a2a;
@@ -273,7 +272,6 @@
             background: rgba(59, 130, 246, 0.08);
         }
 
-        /* 账户操作卡片 */
         .account-card {
             background: #12121f;
             border: 1px solid #1a1a2a;
@@ -512,7 +510,7 @@
             color: #10b981;
         }
 
-        /* 交易持仓卡片 */
+        /* 订单记录卡片 */
         .orders-card {
             background: transparent;
             border: none;
@@ -529,163 +527,165 @@
         .orders-list {
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 12px;
         }
-
-        /* 新交易持仓卡片样式 */
-        .trade-card {
-            background-color: #131722;
-            border: 1px solid #1e2c3a;
-            border-radius: 12px;
-            padding: 20px;
-            width: 100%;
-            box-shadow: 0 0 15px rgba(0, 123, 255, 0.15), inset 0 0 0 1px rgba(0, 123, 255, 0.1);
-            color: #d1d4dc;
+        .order-card {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 16px;
             transition: all 0.3s ease;
+            width: 100%;
+            overflow: hidden;
         }
-        .trade-card.active {
-            border-color: #4a9eff;
-            box-shadow: 0 0 20px rgba(74, 158, 255, 0.25), inset 0 0 0 1px rgba(74, 158, 255, 0.2);
+        .order-card.active {
+            border-color: #3b82f6;
         }
-        .trade-card.closed {
-            opacity: 0.7;
-            box-shadow: none;
+        .order-card.closed {
+            border-color: #2a2a3a;
+            opacity: 0.8;
         }
-        .trade-card.cancelled {
-            opacity: 0.5;
+        .order-card.cancelled {
             border-color: #3a1a1a;
-            box-shadow: none;
+            opacity: 0.6;
         }
-
-        .trade-card .card-header {
+        
+        .order-card-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid #2a2e39;
             flex-wrap: nowrap;
             gap: 8px;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }
-        .trade-card .symbol {
-            font-size: 1rem;
+        .order-card-header .order-pair {
+            font-size: 13px;
             font-weight: 700;
-            color: #ffffff;
-            letter-spacing: 0.5px;
+            color: #e8e8f0;
             white-space: nowrap;
+            flex-shrink: 0;
             overflow: hidden;
             text-overflow: ellipsis;
             max-width: 120px;
-            flex-shrink: 0;
         }
-        .trade-card .header-tags {
+        .order-card-header .order-badges {
             display: flex;
             gap: 6px;
+            align-items: center;
             flex-shrink: 0;
         }
-        .trade-card .tag {
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 20px;
+        .order-card-header .order-type-badge {
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 8px;
             font-weight: 600;
             white-space: nowrap;
+            flex-shrink: 0;
         }
-        .trade-card .tag-buy {
-            background-color: rgba(16, 185, 129, 0.15);
+        .order-card-header .order-type-badge.buy {
+            background: #1a3a2a;
             color: #10b981;
         }
-        .trade-card .tag-sell {
-            background-color: rgba(255, 80, 80, 0.15);
-            color: #ff5c5c;
+        .order-card-header .order-type-badge.sell {
+            background: #3a1a1a;
+            color: #ef4444;
         }
-        .trade-card .tag-holding {
-            background-color: rgba(80, 150, 255, 0.15);
-            color: #4a9eff;
+        .order-card-header .order-status-badge {
+            font-size: 9px;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
-        .trade-card .tag-closed {
-            background-color: rgba(120, 123, 134, 0.15);
-            color: #787b86;
+        .order-card-header .order-status-badge.active {
+            background: #1a2a3a;
+            color: #60a5fa;
         }
-        .trade-card .tag-cancelled {
-            background-color: rgba(255, 80, 80, 0.1);
-            color: #ff5c5c;
+        .order-card-header .order-status-badge.closed {
+            background: #1a1a2a;
+            color: #8a8a9a;
         }
-
-        .trade-card .info-grid {
+        .order-card-header .order-status-badge.cancelled {
+            background: #3a1a1a;
+            color: #ef4444;
+        }
+        
+        /* 两列布局 - 所有屏幕尺寸 */
+        .order-card-body {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 16px 12px;
-            margin-bottom: 20px;
+            gap: 8px;
+            margin-bottom: 10px;
         }
-        .trade-card .info-item {
+        .order-info-item {
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            align-items: flex-start;
+            gap: 2px;
             min-width: 0;
             overflow: hidden;
+            padding: 4px 0;
         }
-        .trade-card .info-item.full-width {
-            grid-column: 1 / -1;
-        }
-        .trade-card .label {
-            font-size: 0.7rem;
-            color: #787b86;
+        .order-info-item .info-label {
+            font-size: 10px;
+            color: #6a6a7a;
             white-space: nowrap;
         }
-        .trade-card .value {
-            font-size: 0.9rem;
+        .order-info-item .info-value {
+            font-size: 12px;
             font-weight: 600;
-            color: #e3e5e8;
-            word-break: break-all;
+            color: #e8e8f0;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            text-align: left;
         }
-        .trade-card .value.profit {
+        .order-info-item .info-value.profit {
             color: #10b981;
         }
-        .trade-card .value.loss {
-            color: #ff5c5c;
-            text-shadow: 0 0 8px rgba(255, 92, 92, 0.3);
+        .order-info-item .info-value.loss {
+            color: #ef4444;
         }
-
-        .trade-card .btn-group {
+        .order-info-item.full-width {
+            grid-column: 1 / -1;
+        }
+        
+        .order-card-footer {
             display: flex;
-            gap: 12px;
+            gap: 8px;
         }
-        .trade-card .btn {
+        .order-action-btn {
             flex: 1;
-            padding: 12px 0;
+            padding: 8px 12px;
             border: none;
             border-radius: 8px;
-            font-size: 0.9rem;
+            font-size: 12px;
             font-weight: 600;
             cursor: pointer;
-            color: white;
-            transition: all 0.2s ease;
+            transition: opacity 0.2s;
             touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
             white-space: nowrap;
         }
-        .trade-card .btn:active {
-            transform: scale(0.97);
-            opacity: 0.8;
+        .order-action-btn:active {
+            opacity: 0.7;
         }
-        .trade-card .btn:disabled {
+        .btn-cancel-order {
+            background: #3a1a1a;
+            color: #ef4444;
+        }
+        .btn-close-order {
+            background: #1a2a3a;
+            color: #60a5fa;
+        }
+        .btn-cancel-order:disabled,
+        .btn-close-order:disabled {
             opacity: 0.4;
             cursor: not-allowed;
         }
-        .trade-card .btn-cancel {
-            background: linear-gradient(180deg, #4a1e1e, #331515);
-            border: 1px solid rgba(255, 92, 92, 0.2);
-            color: #ff6666;
-        }
-        .trade-card .btn-close {
-            background: linear-gradient(180deg, #1e3a4a, #152a36);
-            border: 1px solid rgba(74, 158, 255, 0.2);
-            color: #66b3ff;
-        }
-
         .no-orders {
             text-align: center;
             padding: 30px;
@@ -860,19 +860,17 @@
             .page-header .current-price-info .price {
                 font-size: 20px;
             }
-            .trade-card {
-                padding: 15px;
+            /* 手机端保持两列布局 */
+            .order-card-body {
+                grid-template-columns: 1fr 1fr;
+                gap: 6px;
             }
-            .trade-card .btn {
-                padding: 12px 0;
-                font-size: 0.85rem;
+            .order-info-item.full-width {
+                grid-column: 1 / -1;
             }
-            .trade-card .info-grid {
-                gap: 14px 10px;
-            }
-            .trade-card .symbol {
-                font-size: 0.9rem;
-                max-width: 80px;
+            .order-card-header .order-pair {
+                font-size: 12px;
+                max-width: 90px;
             }
             .account-card .account-row .label {
                 font-size: 12px;
@@ -886,23 +884,21 @@
         }
 
         @media (max-width: 360px) {
-            .trade-card {
-                padding: 12px;
+            .order-card-header .order-pair {
+                max-width: 70px;
+                font-size: 11px;
             }
-            .trade-card .info-grid {
-                grid-template-columns: 1fr;
-                gap: 10px;
+            .order-info-item .info-value {
+                font-size: 11px;
             }
-            .trade-card .info-item.full-width {
-                grid-column: 1;
+            .order-info-item .info-label {
+                font-size: 9px;
             }
-            .trade-card .symbol {
-                max-width: 60px;
-                font-size: 0.8rem;
+            .account-card .account-row .label {
+                font-size: 11px;
             }
-            .trade-card .tag {
-                font-size: 0.6rem;
-                padding: 2px 6px;
+            .account-card .account-row .value {
+                font-size: 12px;
             }
             .amount-quick-btn {
                 padding: 5px 10px;
@@ -1029,11 +1025,11 @@
             </div>
         </div>
 
-        <!-- 5. 交易持仓卡片 -->
+        <!-- 5. 订单记录 -->
         <div class="orders-card">
-            <div class="section-title">📋 交易持仓</div>
+            <div class="section-title">📋 订单记录</div>
             <div class="orders-list" id="ordersContainer">
-                <div class="no-orders">暂无持仓记录</div>
+                <div class="no-orders">暂无订单记录</div>
             </div>
         </div>
     </div>
@@ -1642,13 +1638,13 @@
         }
         
         // ============================================================
-        //  交易持仓卡片渲染
+        //  订单记录
         // ============================================================
         function spotRenderOrders() {
             const container = document.getElementById('ordersContainer');
             
             if (spotOrders.length === 0) {
-                container.innerHTML = '<div class="no-orders">暂无持仓记录</div>';
+                container.innerHTML = '<div class="no-orders">暂无订单记录</div>';
                 return;
             }
             
@@ -1660,44 +1656,43 @@
                 const typeText = order.type === 'buy' ? '买入' : '卖出';
                 const statusClass = order.status;
                 const statusText = order.status === 'active' ? '持仓中' : (order.status === 'closed' ? '已平仓' : '已撤销');
-                const statusTagClass = order.status === 'active' ? 'tag-holding' : (order.status === 'closed' ? 'tag-closed' : 'tag-cancelled');
                 
                 const isActionable = order.status === 'active';
                 
                 html += `
-                    <div class="trade-card ${statusClass}" id="order_${order.id}">
-                        <div class="card-header">
-                            <div class="symbol">${order.pair}${order.trigger ? ' (' + order.trigger + ')' : ''}</div>
-                            <div class="header-tags">
-                                <span class="tag ${order.type === 'buy' ? 'tag-buy' : 'tag-sell'}">${typeText}</span>
-                                <span class="tag ${statusTagClass}">${statusText}</span>
+                    <div class="order-card ${statusClass}" id="order_${order.id}">
+                        <div class="order-card-header">
+                            <span class="order-pair">${order.pair}${order.trigger ? ' (' + order.trigger + ')' : ''}</span>
+                            <div class="order-badges">
+                                <span class="order-type-badge ${typeClass}">${typeText}</span>
+                                <span class="order-status-badge ${statusClass}">${statusText}</span>
                             </div>
                         </div>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="label">数量</span>
-                                <span class="value">${order.quantity.toFixed(6)} ${order.asset}</span>
+                        <div class="order-card-body">
+                            <div class="order-info-item">
+                                <span class="info-label">数量</span>
+                                <span class="info-value">${order.quantity.toFixed(6)} ${order.asset}</span>
                             </div>
-                            <div class="info-item">
-                                <span class="label">价格</span>
-                                <span class="value">$${order.price.toFixed(2)}</span>
+                            <div class="order-info-item">
+                                <span class="info-label">价格</span>
+                                <span class="info-value">$${order.price.toFixed(2)}</span>
                             </div>
-                            <div class="info-item">
-                                <span class="label">金额</span>
-                                <span class="value">$${order.amount.toFixed(2)}</span>
+                            <div class="order-info-item">
+                                <span class="info-label">金额</span>
+                                <span class="info-value">$${order.amount.toFixed(2)}</span>
                             </div>
-                            <div class="info-item">
-                                <span class="label">盈亏</span>
-                                <span class="value ${pnlClass}">${pnlText}</span>
+                            <div class="order-info-item">
+                                <span class="info-label">盈亏</span>
+                                <span class="info-value ${pnlClass}">${pnlText}</span>
                             </div>
-                            <div class="info-item full-width">
-                                <span class="label">时间</span>
-                                <span class="value">${order.time}</span>
+                            <div class="order-info-item full-width">
+                                <span class="info-label">时间</span>
+                                <span class="info-value">${order.time}</span>
                             </div>
                         </div>
-                        <div class="btn-group">
-                            <button class="btn btn-cancel" onclick="spotCancelOrder(${order.id})" ${isActionable ? '' : 'disabled'}>撤单</button>
-                            <button class="btn btn-close" onclick="spotCloseOrder(${order.id})" ${isActionable ? '' : 'disabled'}>平仓</button>
+                        <div class="order-card-footer">
+                            <button class="order-action-btn btn-cancel-order" onclick="spotCancelOrder(${order.id})" ${isActionable ? '' : 'disabled'}>撤单</button>
+                            <button class="order-action-btn btn-close-order" onclick="spotCloseOrder(${order.id})" ${isActionable ? '' : 'disabled'}>平仓</button>
                         </div>
                     </div>
                 `;
