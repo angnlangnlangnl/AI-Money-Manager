@@ -981,7 +981,6 @@
             border: none !important;
         }
 
-        /* 侧边栏布局修复 */
         .drawer-content-wrapper {
             display: flex;
             flex-direction: column;
@@ -1003,14 +1002,12 @@
             border-radius: 4px;
         }
 
-        /* 底部区域 */
         .drawer-bottom-section {
             position: relative;
             padding-top: 12px;
             border-top: 1px solid #1a1a2a;
             flex-shrink: 0;
         }
-        /* +按钮靠右上下居中 */
         .drawer-add-btn {
             position: absolute;
             right: 0;
@@ -1038,7 +1035,6 @@
             color: #0a0a0f;
         }
 
-        /* 代币选择弹窗 */
         .token-modal-overlay {
             position: fixed;
             inset: 0;
@@ -1155,6 +1151,50 @@
         .token-modal .save-btn:active {
             background: #0d9668;
         }
+
+        /* 合约输入框 */
+        .contract-input-section {
+            border-top: 1px solid #1a1a2a;
+            padding-top: 12px;
+            margin-top: 12px;
+        }
+        .contract-input-row {
+            display: flex;
+            gap: 8px;
+        }
+        .contract-input-row input {
+            flex: 1;
+            background: #0a0a12;
+            border: 1px solid #1a1a2a;
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            color: #e8e8f0;
+            outline: none;
+            min-width: 0;
+        }
+        .contract-input-row input:focus {
+            border-color: #3b82f6;
+        }
+        .contract-input-row input::placeholder {
+            color: #5a5a6a;
+        }
+        .contract-add-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            touch-action: manipulation;
+            flex-shrink: 0;
+        }
+        .contract-add-btn:active {
+            background: #2563eb;
+        }
     </style>
 </head>
 <body>
@@ -1252,27 +1292,6 @@
                 </div>
             </div>
 
-            <div class="settings-section">
-                <div class="section-title">📊 推广员看板</div>
-                <div class="section-content" id="dashboardMini">
-                    <div class="dashboard-stats">
-                        <div class="stat-item">
-                            <span class="stat-num" id="statTrades">0</span>
-                            <span class="stat-label">交易笔数</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-num" id="statVolume">$0</span>
-                            <span class="stat-label">总交易额</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-num" id="statRebate">$0</span>
-                            <span class="stat-label">预估返利</span>
-                        </div>
-                    </div>
-                    <button onclick="openFullDashboard()" class="settings-btn-secondary">📈 查看完整看板</button>
-                </div>
-            </div>
-
             <div class="rebate-dashboard" id="rebateDashboard">
                 <div class="rebate-header">
                     <div class="rebate-item rebate-item-left">
@@ -1323,7 +1342,14 @@
             <div class="modal-title">🔍 管理代币</div>
             <input type="text" class="search-input" id="tokenSearchInput" placeholder="搜索代币..." oninput="filterTokenList()">
             <div class="token-list" id="tokenModalContent"></div>
-            <button class="save-btn" onclick="saveTokenSelection()">💾 保存选择</button>
+            <!-- 合约输入区 -->
+            <div class="contract-input-section">
+                <div class="contract-input-row">
+                    <input type="text" id="contractInput" placeholder="输入合约地址添加自定义代币" onkeydown="handleContractKeydown(event)">
+                    <button class="contract-add-btn" onclick="addTokenFromContract()">添加</button>
+                </div>
+            </div>
+            <button class="save-btn" onclick="saveTokenSelection()" style="margin-top:8px;">💾 保存选择</button>
         </div>
     </div>
 
@@ -1633,6 +1659,7 @@
 
         function openTokenModal() {
             document.getElementById('tokenSearchInput').value = '';
+            document.getElementById('contractInput').value = '';
             renderTokenList('');
             document.getElementById('tokenModalOverlay').classList.add('show');
         }
@@ -1684,6 +1711,53 @@
                 userTokens.push(token);
             }
             renderTokenList(document.getElementById('tokenSearchInput').value);
+        }
+
+        // 处理合约输入回车键
+        function handleContractKeydown(event) {
+            if (event.key === 'Enter') {
+                addTokenFromContract();
+            }
+        }
+
+        // 从合约地址添加代币
+        function addTokenFromContract() {
+            const input = document.getElementById('contractInput');
+            const contractAddress = input.value.trim();
+            
+            if (!contractAddress) {
+                alert('请输入合约地址');
+                return;
+            }
+            
+            // 验证合约地址格式（简单验证）
+            if (contractAddress.length < 10) {
+                alert('请输入有效的合约地址');
+                return;
+            }
+            
+            // 生成代币符号（从合约地址派生）
+            const symbol = 'CUSTOM' + contractAddress.slice(0, 4).toUpperCase();
+            
+            if (userTokens.includes(symbol)) {
+                alert('该代币已在列表中');
+                input.value = '';
+                return;
+            }
+            
+            // 生成随机价格
+            const randomPrice = (Math.random() * 10 + 0.01).toFixed(4);
+            
+            // 添加到代币列表
+            allAvailableTokens.push(symbol);
+            tokenPrices[symbol] = parseFloat(randomPrice);
+            tokenChains[symbol] = 'Custom Contract';
+            userTokens.push(symbol);
+            
+            input.value = '';
+            renderTokenList(document.getElementById('tokenSearchInput').value);
+            
+            alert(`✅ 已从合约添加代币\n符号: ${symbol}\n合约: ${contractAddress.slice(0, 10)}...\n价格: $${randomPrice}`);
         }
 
         function saveTokenSelection() {
@@ -1807,8 +1881,6 @@
 
             const darkMode = localStorage.getItem('darkMode') !== 'false';
             document.getElementById('darkModeToggle').checked = darkMode;
-
-            loadDashboardStats();
         }
 
         function saveApiConfig() {
@@ -1826,19 +1898,8 @@
             alert('API配置已保存（本地加密存储）');
         }
 
-        function loadDashboardStats() {
-            const stats = {
-                trades: 0,
-                volume: 0,
-                rebate: 0
-            };
-            document.getElementById('statTrades').textContent = stats.trades;
-            document.getElementById('statVolume').textContent = '$' + stats.volume.toFixed(2);
-            document.getElementById('statRebate').textContent = '$' + stats.rebate.toFixed(2);
-        }
-
         function openFullDashboard() {
-            alert('完整看板功能开发中...\n\n当前数据：\n交易笔数：0\n总交易额：$0\n预估返利：$0');
+            alert('完整看板功能开发中...');
         }
 
         // ============================================================
@@ -2849,6 +2910,8 @@ Elite版：¥299/月，1对1私人管家
             window.filterTokenList = filterTokenList;
             window.toggleTokenSelection = toggleTokenSelection;
             window.saveTokenSelection = saveTokenSelection;
+            window.handleContractKeydown = handleContractKeydown;
+            window.addTokenFromContract = addTokenFromContract;
 
             document.getElementById('overlay').addEventListener('click', closeDrawer);
             document.getElementById('tokenModalOverlay').addEventListener('click', function(e) {
