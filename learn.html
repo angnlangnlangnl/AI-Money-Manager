@@ -1,0 +1,760 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>学习专区 - AI 金融助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0a0a0f;
+            color: #e8e8f0;
+            min-height: 100vh;
+            overflow-y: auto;
+            touch-action: manipulation;
+            -webkit-text-size-adjust: 100%;
+        }
+        ::-webkit-scrollbar {
+            width: 3px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2a2a3a;
+            border-radius: 4px;
+        }
+
+        .learn-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            padding: 4px 6px;
+            border-radius: 6px;
+            margin-bottom: 16px;
+            color: #8a8a9a;
+            text-decoration: none;
+        }
+        .back-btn:active {
+            background: #1a1a2a;
+        }
+        .back-btn svg {
+            width: 24px;
+            height: 24px;
+            stroke: #8a8a9a;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: #60a5fa;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        /* 分类标签 */
+        .category-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 4px 0;
+            margin-bottom: 20px;
+            scrollbar-width: none;
+            -webkit-overflow-scrolling: touch;
+        }
+        .category-tabs::-webkit-scrollbar {
+            display: none;
+        }
+        .category-tab {
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            border: 1px solid #1a1a2a;
+            background: #12121f;
+            color: #6a6a7a;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .category-tab.active {
+            background: #3b82f6;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+        .category-tab:hover {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+        .category-tab.active:hover {
+            color: #fff;
+        }
+
+        /* 学习卡片 */
+        .learn-card {
+            background: #12121f;
+            border: 1px solid #1a1a2a;
+            border-radius: 16px;
+            padding: 18px;
+            margin-bottom: 14px;
+        }
+        .learn-card .card-title {
+            color: #60a5fa;
+            font-size: 16px;
+            font-weight: 700;
+            border-bottom: 1px solid #1a1a2a;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .learn-card .card-content {
+            font-size: 13px;
+            color: #c8c8d8;
+            line-height: 1.8;
+        }
+        .learn-card .card-content strong {
+            color: #e8e8f0;
+        }
+        .learn-card .card-content .highlight {
+            color: #fbbf24;
+            font-weight: 600;
+        }
+        .learn-card .card-content .danger {
+            color: #ef4444;
+            font-weight: 600;
+        }
+        .learn-card .card-content .success {
+            color: #10b981;
+            font-weight: 600;
+        }
+        .learn-card ul {
+            list-style: none;
+            padding: 0;
+            margin: 8px 0;
+        }
+        .learn-card li {
+            padding: 4px 0;
+            padding-left: 16px;
+            position: relative;
+        }
+        .learn-card li::before {
+            content: '•';
+            position: absolute;
+            left: 0;
+            color: #3b82f6;
+            font-weight: 700;
+        }
+        .learn-card table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .learn-card table th {
+            background: #1a1a2a;
+            color: #60a5fa;
+            padding: 8px 12px;
+            text-align: left;
+            font-weight: 600;
+            border: 1px solid #2a2a3a;
+            white-space: nowrap;
+        }
+        .learn-card table td {
+            padding: 8px 12px;
+            color: #c8c8d8;
+            border: 1px solid #2a2a3a;
+        }
+
+        /* 响应式 */
+        @media (max-width: 480px) {
+            .learn-container {
+                padding: 12px;
+            }
+            .page-title {
+                font-size: 18px;
+            }
+            .learn-card {
+                padding: 14px;
+            }
+            .learn-card .card-content {
+                font-size: 12px;
+            }
+            .learn-card table {
+                font-size: 11px;
+            }
+            .learn-card table th,
+            .learn-card table td {
+                padding: 6px 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="learn-container">
+        <!-- 返回按钮 -->
+        <a class="back-btn" href="index.html" title="返回">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="15 18 9 12 15 6"/>
+            </svg>
+        </a>
+
+        <!-- 页面标题 -->
+        <h1 class="page-title">📚 加密货币交易学习专区</h1>
+
+        <!-- 分类标签 -->
+        <div class="category-tabs" id="categoryTabs">
+            <span class="category-tab active" data-category="basics" onclick="switchCategory('basics')">📖 基础知识</span>
+            <span class="category-tab" data-category="technical" onclick="switchCategory('technical')">📈 技术分析</span>
+            <span class="category-tab" data-category="risk" onclick="switchCategory('risk')">🛡️ 风险管理</span>
+            <span class="category-tab" data-category="strategy" onclick="switchCategory('strategy')">📊 交易策略</span>
+            <span class="category-tab" data-category="advanced" onclick="switchCategory('advanced')">🚀 进阶知识</span>
+        </div>
+
+        <!-- 内容区域 -->
+        <div id="learnContent">
+            <!-- 由JS动态渲染 -->
+        </div>
+    </div>
+
+    <script>
+        // ============================================================
+        //  学习内容数据
+        // ============================================================
+        
+        const learnData = {
+            basics: {
+                title: '📖 加密货币基础知识',
+                cards: [
+                    {
+                        title: '什么是加密货币？',
+                        content: `
+                            <strong>加密货币</strong>是一种基于区块链技术的数字货币，使用密码学原理确保交易安全和控制新单位的创建。
+                            
+                            <strong>核心特点：</strong>
+                            <ul>
+                                <li><strong>去中心化：</strong>不受任何中央机构控制</li>
+                                <li><strong>不可篡改：</strong>交易记录一旦确认无法修改</li>
+                                <li><strong>全球流通：</strong>24/7全天候交易</li>
+                                <li><strong>匿名性：</strong>交易地址与真实身份分离</li>
+                            </ul>
+                            
+                            <span class="highlight">主流加密货币：</span>比特币(BTC)、以太坊(ETH)、Solana(SOL)等
+                        `
+                    },
+                    {
+                        title: '区块链技术原理',
+                        content: `
+                            <strong>区块链</strong>是一种分布式账本技术，由多个区块按时间顺序连接而成。
+                            
+                            <strong>区块结构：</strong>
+                            <ul>
+                                <li><strong>区块头：</strong>包含时间戳、哈希值、前区块哈希</li>
+                                <li><strong>交易数据：</strong>记录所有转账信息</li>
+                                <li><strong>共识机制：</strong>PoW（工作量证明）、PoS（权益证明）</li>
+                            </ul>
+                            
+                            <strong>关键概念：</strong>
+                            <ul>
+                                <li><strong>哈希函数：</strong>将任意数据映射为固定长度字符串</li>
+                                <li><strong>私钥：</strong>用于签名交易，必须保密</li>
+                                <li><strong>公钥：</strong>用于验证签名，可以公开</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: '交易所类型介绍',
+                        content: `
+                            <strong>中心化交易所（CEX）：</strong>
+                            <ul>
+                                <li>币安(Binance)、OKX、Coinbase等</li>
+                                <li>优点：流动性好、速度快、功能丰富</li>
+                                <li>缺点：需要信任平台、存在黑客风险</li>
+                            </ul>
+                            
+                            <strong>去中心化交易所（DEX）：</strong>
+                            <ul>
+                                <li>Uniswap、PancakeSwap、dYdX等</li>
+                                <li>优点：无需注册、资产自持、隐私保护</li>
+                                <li>缺点：Gas费用高、流动性可能不足</li>
+                            </ul>
+                            
+                            <span class="danger">安全提示：</span>选择有监管、信誉好的交易所
+                        `
+                    },
+                    {
+                        title: '钱包类型与安全',
+                        content: `
+                            <strong>热钱包（在线钱包）：</strong>
+                            <ul>
+                                <li>MetaMask、Trust Wallet等</li>
+                                <li>适合日常交易，方便快捷</li>
+                                <li>风险：联网易受攻击</li>
+                            </ul>
+                            
+                            <strong>冷钱包（离线钱包）：</strong>
+                            <ul>
+                                <li>Ledger、Trezor硬件钱包</li>
+                                <li>适合长期存储，安全性高</li>
+                                <li>缺点：使用不便</li>
+                            </ul>
+                            
+                            <span class="danger">安全守则：</span>
+                            <ul>
+                                <li>永远不要分享私钥/助记词</li>
+                                <li>启用双因素认证(2FA)</li>
+                                <li>定期备份钱包信息</li>
+                                <li>警惕钓鱼网站</li>
+                            </ul>
+                        `
+                    }
+                ]
+            },
+            technical: {
+                title: '📈 技术分析基础',
+                cards: [
+                    {
+                        title: 'K线图基础',
+                        content: `
+                            <strong>K线（蜡烛图）</strong>是最常用的价格图表，每根K线包含：
+                            
+                            <table>
+                                <tr><th>要素</th><th>含义</th></tr>
+                                <tr><td>开盘价</td><td>时间段开始时的价格</td></tr>
+                                <tr><td>收盘价</td><td>时间段结束时的价格</td></tr>
+                                <tr><td>最高价</td><td>时间段内最高价格</td></tr>
+                                <tr><td>最低价</td><td>时间段内最低价格</td></tr>
+                            </table>
+                            
+                            <span class="success">阳线（绿色）：</span>收盘价 > 开盘价，表示上涨<br>
+                            <span class="danger">阴线（红色）：</span>收盘价 < 开盘价，表示下跌
+                        `
+                    },
+                    {
+                        title: '常用技术指标',
+                        content: `
+                            <strong>移动平均线（MA/EMA）：</strong>
+                            <ul>
+                                <li>MA20：短期趋势</li>
+                                <li>MA50：中期趋势</li>
+                                <li>MA200：长期趋势</li>
+                                <li><span class="highlight">金叉：</span>短期上穿长期，买入信号</li>
+                                <li><span class="danger">死叉：</span>短期下穿长期，卖出信号</li>
+                            </ul>
+                            
+                            <strong>相对强弱指数（RSI）：</strong>
+                            <ul>
+                                <li>RSI > 70：超买，可能回调</li>
+                                <li>RSI < 30：超卖，可能反弹</li>
+                                <li>RSI = 50：市场平衡</li>
+                            </ul>
+                            
+                            <strong>布林带（Bollinger Bands）：</strong>
+                            <ul>
+                                <li>上轨：压力位</li>
+                                <li>中轨：趋势线（MA20）</li>
+                                <li>下轨：支撑位</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: '支撑位与阻力位',
+                        content: `
+                            <strong>支撑位（Support）：</strong>
+                            <ul>
+                                <li>价格下跌到某一水平后难以继续下跌</li>
+                                <li>买方力量在此区域聚集</li>
+                                <li>跌破支撑位可能继续下跌</li>
+                            </ul>
+                            
+                            <strong>阻力位（Resistance）：</strong>
+                            <ul>
+                                <li>价格上涨到某一水平后难以继续上涨</li>
+                                <li>卖方力量在此区域聚集</li>
+                                <li>突破阻力位可能继续上涨</li>
+                            </ul>
+                            
+                            <strong>判断方法：</strong>
+                            <ul>
+                                <li>历史高低点</li>
+                                <li>整数关口（如$60,000、$3,000）</li>
+                                <li>均线位置</li>
+                                <li>斐波那契回撤位</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: '趋势分析方法',
+                        content: `
+                            <strong>上升趋势：</strong>
+                            <ul>
+                                <li>高点不断抬高，低点不断抬高</li>
+                                <li>均线多头排列（MA20 > MA50 > MA200）</li>
+                                <li>适合逢低买入</li>
+                            </ul>
+                            
+                            <strong>下降趋势：</strong>
+                            <ul>
+                                <li>高点不断降低，低点不断降低</li>
+                                <li>均线空头排列（MA20 < MA50 < MA200）</li>
+                                <li>适合逢高卖出</li>
+                            </ul>
+                            
+                            <strong>震荡趋势：</strong>
+                            <ul>
+                                <li>价格在区间内波动</li>
+                                <li>均线缠绕</li>
+                                <li>适合高抛低吸</li>
+                            </ul>
+                            
+                            <span class="highlight">趋势线画法：</span>连接两个以上低点（上升）或高点（下降）
+                        `
+                    }
+                ]
+            },
+            risk: {
+                title: '🛡️ 风险管理',
+                cards: [
+                    {
+                        title: '仓位管理原则',
+                        content: `
+                            <strong>基本原则：</strong>
+                            <ul>
+                                <li>单笔交易不超过总资金的<span class="danger">5-10%</span></li>
+                                <li>总持仓不超过总资金的<span class="danger">60%</span></li>
+                                <li>永远保留<span class="success">20-30%</span>备用资金</li>
+                                <li>不把所有鸡蛋放在一个篮子里</li>
+                            </ul>
+                            
+                            <strong>仓位计算公式：</strong>
+                            <ul>
+                                <li>保守型：单笔仓位 = 总资金 × 3%</li>
+                                <li>均衡型：单笔仓位 = 总资金 × 5%</li>
+                                <li>激进型：单笔仓位 = 总资金 × 10%</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: '止损止盈策略',
+                        content: `
+                            <strong>止损（Stop Loss）：</strong>
+                            <ul>
+                                <li>硬止损：固定百分比（如-5%）</li>
+                                <li>技术止损：跌破关键支撑位</li>
+                                <li>移动止损：随盈利上移</li>
+                            </ul>
+                            
+                            <strong>止盈（Take Profit）：</strong>
+                            <ul>
+                                <li>固定止盈：达到目标收益率（如+10%）</li>
+                                <li>分批止盈：分多次卖出</li>
+                                <li>移动止盈：趋势跟随</li>
+                            </ul>
+                            
+                            <span class="highlight">盈亏比：</span>止盈幅度应大于止损幅度（建议2:1以上）
+                        `
+                    },
+                    {
+                        title: '常见风险类型',
+                        content: `
+                            <strong>市场风险：</strong>
+                            <ul>
+                                <li>价格波动风险</li>
+                                <li>流动性风险</li>
+                                <li>黑天鹅事件</li>
+                            </ul>
+                            
+                            <strong>操作风险：</strong>
+                            <ul>
+                                <li>错误下单</li>
+                                <li>忘记设置止损</li>
+                                <li>情绪化交易</li>
+                            </ul>
+                            
+                            <strong>安全风险：</strong>
+                            <ul>
+                                <li>私钥泄露</li>
+                                <li>钓鱼攻击</li>
+                                <li>交易所跑路</li>
+                            </ul>
+                            
+                            <span class="danger">风险提示：</span>加密货币波动极大，可能损失全部本金
+                        `
+                    },
+                    {
+                        title: '风险管理清单',
+                        content: `
+                            <strong>交易前检查：</strong>
+                            <ul>
+                                <li>✅ 是否设置了止损？</li>
+                                <li>✅ 仓位是否在合理范围？</li>
+                                <li>✅ 是否有明确交易计划？</li>
+                                <li>✅ 是否了解项目基本面？</li>
+                                <li>✅ 能否承受可能的亏损？</li>
+                            </ul>
+                            
+                            <strong>交易中纪律：</strong>
+                            <ul>
+                                <li>✅ 严格执行止损止盈</li>
+                                <li>✅ 不追涨杀跌</li>
+                                <li>✅ 不过度交易</li>
+                                <li>✅ 保持情绪稳定</li>
+                            </ul>
+                        `
+                    }
+                ]
+            },
+            strategy: {
+                title: '📊 交易策略',
+                cards: [
+                    {
+                        title: '网格交易策略',
+                        content: `
+                            <strong>原理：</strong>在价格区间内设置多个买卖点，低买高卖赚取差价。
+                            
+                            <strong>适用场景：</strong>
+                            <ul>
+                                <li>震荡市场</li>
+                                <li>波动率适中的币种</li>
+                                <li>长期持有者的增强收益</li>
+                            </ul>
+                            
+                            <strong>参数设置：</strong>
+                            <ul>
+                                <li>网格间距：1-3%</li>
+                                <li>网格数量：20-30格</li>
+                                <li>单格仓位：5-10%</li>
+                            </ul>
+                            
+                            <span class="success">优点：</span>自动化交易、无需预测方向<br>
+                            <span class="danger">缺点：</span>单边行情可能亏损
+                        `
+                    },
+                    {
+                        title: '趋势跟踪策略',
+                        content: `
+                            <strong>原理：</strong>跟随市场趋势，顺势而为。
+                            
+                            <strong>入场信号：</strong>
+                            <ul>
+                                <li>EMA20上穿EMA50（金叉）</li>
+                                <li>突破关键阻力位</li>
+                                <li>成交量放大配合</li>
+                            </ul>
+                            
+                            <strong>出场信号：</strong>
+                            <ul>
+                                <li>EMA20下穿EMA50（死叉）</li>
+                                <li>跌破关键支撑位</li>
+                                <li>RSI超买/超卖</li>
+                            </ul>
+                            
+                            <span class="highlight">关键：</span>让利润奔跑，截断亏损
+                        `
+                    },
+                    {
+                        title: '定投策略（DCA）',
+                        content: `
+                            <strong>原理：</strong>定期定额买入，平摊成本。
+                            
+                            <strong>优势：</strong>
+                            <ul>
+                                <li>无需预测市场时机</li>
+                                <li>降低单次买入风险</li>
+                                <li>适合长期投资者</li>
+                                <li>培养投资纪律</li>
+                            </ul>
+                            
+                            <strong>执行方式：</strong>
+                            <ul>
+                                <li>每周/每月固定金额买入</li>
+                                <li>选择优质主流币种</li>
+                                <li>长期坚持（1年以上）</li>
+                            </ul>
+                            
+                            <span class="success">适合人群：</span>新手、长期投资者
+                        `
+                    },
+                    {
+                        title: '套利策略',
+                        content: `
+                            <strong>跨所套利：</strong>
+                            <ul>
+                                <li>利用不同交易所价格差异</li>
+                                <li>低买高卖赚取差价</li>
+                                <li>需要快速执行</li>
+                            </ul>
+                            
+                            <strong>期现套利：</strong>
+                            <ul>
+                                <li>利用期货与现货价格差异</li>
+                                <li>对冲风险</li>
+                                <li>收益稳定但较低</li>
+                            </ul>
+                            
+                            <span class="danger">注意：</span>套利空间小，需要专业工具和资金
+                        `
+                    }
+                ]
+            },
+            advanced: {
+                title: '🚀 进阶知识',
+                cards: [
+                    {
+                        title: 'DeFi（去中心化金融）',
+                        content: `
+                            <strong>核心概念：</strong>
+                            <ul>
+                                <li><strong>借贷：</strong>Aave、Compound</li>
+                                <li><strong>DEX：</strong>Uniswap、PancakeSwap</li>
+                                <li><strong>质押：</strong>Lido、Rocket Pool</li>
+                                <li><strong>稳定币：</strong>USDC、DAI</li>
+                            </ul>
+                            
+                            <strong>收益来源：</strong>
+                            <ul>
+                                <li>借贷利息</li>
+                                <li>流动性挖矿</li>
+                                <li>质押奖励</li>
+                                <li>交易手续费分成</li>
+                            </ul>
+                            
+                            <span class="danger">风险：</span>智能合约漏洞、无常损失、清算风险
+                        `
+                    },
+                    {
+                        title: '合约交易基础',
+                        content: `
+                            <strong>合约类型：</strong>
+                            <ul>
+                                <li><strong>永续合约：</strong>无到期日</li>
+                                <li><strong>交割合约：</strong>有到期日</li>
+                                <li><strong>期权合约：</strong>有权选择是否行权</li>
+                            </ul>
+                            
+                            <strong>杠杆机制：</strong>
+                            <ul>
+                                <li>1x-100x杠杆</li>
+                                <li>保证金制度</li>
+                                <li>爆仓风险</li>
+                            </ul>
+                            
+                            <span class="danger">警告：</span>高杠杆可能导致全部本金损失
+                        `
+                    },
+                    {
+                        title: '链上分析',
+                        content: `
+                            <strong>链上指标：</strong>
+                            <ul>
+                                <li><strong>活跃地址数：</strong>反映用户活跃度</li>
+                                <li><strong>交易量：</strong>反映网络使用情况</li>
+                                <li><strong>Gas费：</strong>反映网络拥堵程度</li>
+                                <li><strong>巨鲸动向：</strong>大户买卖行为</li>
+                            </ul>
+                            
+                            <strong>常用工具：</strong>
+                            <ul>
+                                <li>Glassnode</li>
+                                <li>Dune Analytics</li>
+                                <li>Nansen</li>
+                                <li>Etherscan</li>
+                            </ul>
+                        `
+                    },
+                    {
+                        title: '市场周期分析',
+                        content: `
+                            <strong>比特币减半周期：</strong>
+                            <ul>
+                                <li>约每4年一次</li>
+                                <li>减半后通常出现牛市</li>
+                                <li>历史规律：2012、2016、2020、2024</li>
+                            </ul>
+                            
+                            <strong>市场阶段：</strong>
+                            <ul>
+                                <li><strong>积累期：</strong>价格低迷，成交量小</li>
+                                <li><strong>上升期：</strong>价格攀升，关注度增加</li>
+                                <li><strong>分配期：</strong>高位震荡，主力出货</li>
+                                <li><strong>下跌期：</strong>恐慌抛售，价格暴跌</li>
+                            </ul>
+                            
+                            <span class="highlight">关键：</span>识别所处阶段，制定相应策略
+                        `
+                    }
+                ]
+            }
+        };
+
+        // ============================================================
+        //  切换分类
+        // ============================================================
+        function switchCategory(category) {
+            // 更新标签激活状态
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.category === category);
+            });
+            
+            renderLearnContent(category);
+        }
+
+        // ============================================================
+        //  渲染学习内容
+        // ============================================================
+        function renderLearnContent(category) {
+            const container = document.getElementById('learnContent');
+            const data = learnData[category];
+            
+            if (!data) return;
+            
+            let html = '';
+            data.cards.forEach(card => {
+                html += `
+                    <div class="learn-card">
+                        <div class="card-title">${card.title}</div>
+                        <div class="card-content">${card.content}</div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            
+            // 滚动到顶部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // ============================================================
+        //  初始化
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            renderLearnContent('basics');
+            
+            window.switchCategory = switchCategory;
+        });
+    </script>
+</body>
+</html>
