@@ -3,10 +3,13 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>现货交易 - AI 金融助手</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <title>现货交易</title>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js">
+    </script>
     <style>
+        /* ===== 全局重置 ===== */
         * {
             margin: 0;
             padding: 0;
@@ -17,10 +20,9 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
             background: #0a0a0f;
             color: #e8e8f0;
-            min-height: 100vh;
-            overflow-y: auto;
+            height: 100vh;
+            overflow: hidden;
             touch-action: manipulation;
-            -webkit-text-size-adjust: 100%;
         }
         ::-webkit-scrollbar {
             width: 3px;
@@ -36,1783 +38,825 @@
             transform: scale(0.96);
             opacity: 0.7;
         }
-
-        .spot-container {
-            max-width: 900px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 20px;
-            min-height: 100vh;
+        .safe-area-bottom {
+            padding-bottom: env(safe-area-inset-bottom, 12px);
         }
 
-        .back-btn {
-            cursor: pointer;
-            padding: 4px 6px;
-            border-radius: 6px;
-            transition: background 0.2s;
-            color: #8a8a9a;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: transparent;
-            border: none;
-            margin-bottom: 16px;
-            font-size: 0;
-            text-decoration: none;
+        /* ===== 交易所选择器样式 ===== */
+        .exchange-selector {
+            background: #12121f;
+            border-bottom: 1px solid #1a1a2a;
+            padding: 8px 12px;
+            flex-shrink: 0;
+            overflow: hidden;
         }
-        .back-btn:active {
-            background: #1a1a2a;
-        }
-        .back-btn svg {
-            width: 24px;
-            height: 24px;
-            stroke: #8a8a9a;
-            fill: none;
-            stroke-width: 2;
-        }
-
-        .page-header {
+        .exchange-selector-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 16px;
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 14px 20px;
+            margin-bottom: 6px;
         }
-        .page-header .title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #60a5fa;
+        .exchange-selector-title {
+            font-size: 11px;
+            color: #6a6a7a;
+            font-weight: 500;
         }
-        .page-header .current-price-info {
+        .exchange-selector-status {
+            font-size: 10px;
+            color: #4ade80;
             display: flex;
-            flex-direction: column;
-            align-items: flex-end;
+            align-items: center;
             gap: 4px;
         }
-        .page-header .current-price-info .price {
-            font-size: 24px;
-            font-weight: 700;
-            color: #e8e8f0;
+        .exchange-selector-status .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s ease-in-out infinite;
         }
-        .page-header .current-price-info .change {
-            font-size: 14px;
-            font-weight: 600;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
         }
-
-        .symbol-bar {
+        .exchange-selector-list {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            padding-bottom: 2px;
+        }
+        .exchange-selector-list::-webkit-scrollbar {
+            display: none;
+        }
+        .exchange-option {
             display: flex;
             align-items: center;
-            width: 100%;
-            border-bottom: 1px solid #1a1a2a;
-            padding: 12px 0 8px 0;
-            margin-bottom: 12px;
-            position: relative;
-        }
-        .symbol-list {
-            display: flex;
-            gap: 18px;
-            overflow-x: auto;
-            overflow-y: hidden;
-            scrollbar-width: thin;
-            scrollbar-color: #3b82f6 #1a1a2a;
-            flex: 1;
-            padding-bottom: 4px;
-            -webkit-overflow-scrolling: touch;
-        }
-        .symbol-list::-webkit-scrollbar {
-            height: 4px;
-        }
-        .symbol-list::-webkit-scrollbar-thumb {
-            background-color: #3b82f6;
-            border-radius: 2px;
-        }
-        .symbol-list::-webkit-scrollbar-track {
-            background: #1a1a2a;
-        }
-        .symbol-item {
-            color: #6a6a7a;
-            font-size: 14px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            border: 1px solid #1a1a2a;
+            background: #0a0a12;
             cursor: pointer;
-            transition: color 0.3s ease;
-            position: relative;
             white-space: nowrap;
+            transition: all 0.2s ease;
             flex-shrink: 0;
-            padding: 4px 0;
-            touch-action: manipulation;
             -webkit-tap-highlight-color: transparent;
         }
-        .symbol-item:hover {
-            color: #9ca3af;
+        .exchange-option:active {
+            transform: scale(0.95);
         }
-        .symbol-item.active {
-            color: #3b82f6;
+        .exchange-option.active {
+            border-color: #3b82f6;
+            background: #1a2a3a;
         }
-        .add-pair-btn {
-            width: 28px;
-            height: 28px;
-            border: 1px solid #3b82f6;
-            color: #3b82f6;
-            background: transparent;
+        .exchange-option .exchange-icon {
+            width: 22px;
+            height: 22px;
             border-radius: 50%;
-            font-size: 16px;
-            font-weight: 300;
-            margin-left: 12px;
-            cursor: pointer;
-            transition: all 0.3s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            flex-shrink: 0;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .add-pair-btn:active {
-            background-color: #3b82f6;
-            color: #0a0a0f;
-        }
-
-        .chart-container {
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 20px;
-            min-height: 320px;
-            position: relative;
-        }
-        .chart-container .chart-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .chart-container .chart-header .chart-title {
-            color: #60a5fa;
-            font-size: 16px;
-            font-weight: 600;
-        }
-        .chart-container .chart-header .chart-pair {
-            color: #6a6a7a;
-            font-size: 14px;
-            font-weight: 500;
-            background: #1a1a2a;
-            padding: 2px 12px;
-            border-radius: 12px;
-            border: 1px solid #2a2a3a;
-        }
-        .chart-type-tabs {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 12px;
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-        }
-        .chart-type-tabs::-webkit-scrollbar {
-            display: none;
-        }
-        .chart-type-tab {
-            padding: 4px 12px;
-            border-radius: 12px;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid #1a1a2a;
-            background: #12121f;
-            color: #6a6a7a;
-            touch-action: manipulation;
-            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 700;
             flex-shrink: 0;
         }
-        .chart-type-tab.active {
-            background: #3b82f6;
-            color: #fff;
-            border-color: #3b82f6;
+        .exchange-option .exchange-icon.gateio {
+            background: #1a3a2a;
+            color: #4ade80;
         }
-        .chart-wrapper {
-            position: relative;
-            height: 220px;
-        }
-        .chart-wrapper canvas {
-            width: 100% !important;
-            height: 220px !important;
-        }
-        .chart-time-labels {
-            display: flex;
-            justify-content: flex-end;
-            gap: 6px;
-            margin-top: 8px;
-            padding-right: 4px;
-            flex-wrap: nowrap;
-        }
-        .chart-time-labels .time-label {
-            font-size: 11px;
-            color: #5a5a6a;
-            cursor: pointer;
-            padding: 2px 10px;
-            border-radius: 12px;
-            transition: all 0.2s;
-            border: 1px solid transparent;
-            white-space: nowrap;
-        }
-        .chart-time-labels .time-label:hover {
-            color: #8a8a9a;
-            border-color: #2a2a3a;
-        }
-        .chart-time-labels .time-label.active {
-            color: #3b82f6;
-            border-color: #3b82f6;
-            background: rgba(59, 130, 246, 0.08);
-        }
-
-        .account-card {
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 20px;
-        }
-        .account-card .card-title {
-            color: #60a5fa;
-            font-size: 16px;
-            font-weight: 600;
-            border-bottom: 1px solid #1a1a2a;
-            padding-bottom: 10px;
-            margin-bottom: 14px;
-        }
-        .account-card .account-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            min-height: 24px;
-            gap: 12px;
-        }
-        .account-card .account-row .label {
-            font-size: 13px;
-            color: #6a6a7a;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .account-card .account-row .value {
-            font-size: 15px;
-            font-weight: 600;
-            color: #e8e8f0;
-            white-space: nowrap;
-            flex-shrink: 0;
-            text-align: right;
-        }
-        .account-card .account-row .value.btc {
+        .exchange-option .exchange-icon.binance {
+            background: #2a2a1a;
             color: #fbbf24;
         }
-        .account-card .account-row .value.green {
-            color: #10b981;
+        .exchange-option .exchange-icon.okx {
+            background: #1a1a2a;
+            color: #60a5fa;
         }
-        .account-card .account-row .value.red {
-            color: #ef4444;
+        .exchange-option .exchange-icon.bybit {
+            background: #2a1a2a;
+            color: #e879f9;
         }
-        .account-card .divider {
-            border-top: 1px solid #1a1a2a;
-            margin: 12px 0;
+        .exchange-option .exchange-icon.mexc {
+            background: #1a2a2a;
+            color: #2dd4bf;
+        }
+        .exchange-option .exchange-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: #c8c8d8;
+        }
+        .exchange-option.active .exchange-name {
+            color: #e8e8f0;
+        }
+        .exchange-option .exchange-check {
+            font-size: 10px;
+            color: #3b82f6;
+            font-weight: 700;
         }
 
-        .amount-input-section {
-            margin-bottom: 12px;
+        /* ===== 行情栏 ===== */
+        .market-bar {
+            background: #12121f;
+            border-bottom: 1px solid #1a1a2a;
+            padding: 8px 12px;
+            flex-shrink: 0;
         }
-        .amount-input-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
+        .market-bar .price-display {
+            font-size: 20px;
+            font-weight: 700;
+            color: #4ade80;
+        }
+        .market-bar .price-change {
+            font-size: 12px;
+        }
+
+        /* ===== K线图区域 ===== */
+        .chart-container {
             background: #0a0a12;
-            border: 1px solid #1a1a2a;
-            border-radius: 10px;
-            padding: 10px 12px;
-        }
-        .amount-input-row:focus-within {
-            border-color: #3b82f6;
-        }
-        .amount-input-row .amount-label {
-            font-size: 12px;
-            color: #6a6a7a;
-            white-space: nowrap;
+            border-bottom: 1px solid #1a1a2a;
+            padding: 8px;
             flex-shrink: 0;
+            height: 260px;
+            position: relative;
         }
-        .amount-input-row input {
-            flex: 1;
-            background: transparent;
-            border: none;
-            color: #e8e8f0;
-            font-size: 14px;
-            font-weight: 600;
-            outline: none;
-            text-align: right;
-            min-width: 0;
+        .chart-container canvas {
+            width: 100% !important;
+            height: 100% !important;
         }
-        .amount-input-row input::placeholder {
-            color: #5a5a6a;
-            font-weight: 400;
-        }
-        .amount-input-row .amount-usdt {
-            font-size: 12px;
-            color: #6a6a7a;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .amount-quick-btns {
+
+        /* ===== 交易对选择 ===== */
+        .pair-selector {
             display: flex;
-            gap: 6px;
-            margin-top: 8px;
-            flex-wrap: nowrap;
+            gap: 4px;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            padding: 6px 12px;
+            flex-shrink: 0;
             scrollbar-width: none;
-            -ms-overflow-style: none;
         }
-        .amount-quick-btns::-webkit-scrollbar {
+        .pair-selector::-webkit-scrollbar {
             display: none;
         }
-        .amount-quick-btn {
-            flex: 0 0 auto;
-            padding: 6px 12px;
-            border: 1px solid #1a1a2a;
+        .pair-btn {
+            padding: 4px 12px;
             border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid #1a1a2a;
             background: #12121f;
             color: #8a8a9a;
-            font-size: 11px;
-            font-weight: 600;
-            cursor: pointer;
-            text-align: center;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
             white-space: nowrap;
-            min-width: 50px;
+            transition: all 0.2s;
         }
-        .amount-quick-btn:active {
-            background: #1a1a2a;
-            color: #e8e8f0;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-        }
-        .button-group .btn {
-            flex: 1;
-            text-align: center;
-            padding: 12px 18px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: opacity 0.2s;
-            color: white;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            white-space: nowrap;
-        }
-        .button-group .btn:active {
-            opacity: 0.85;
-        }
-        .button-group .btn-buy {
-            background: #10b981;
-        }
-        .button-group .btn-sell {
-            background: #ef4444;
-        }
-        .account-card .current-price {
-            margin-top: 10px;
-            font-size: 13px;
-            color: #6a6a7a;
-        }
-
-        .tp-sl-section {
-            background: #0a0a12;
-            border: 1px solid #1a1a2a;
-            border-radius: 12px;
-            padding: 12px;
-            margin-top: 12px;
-        }
-        .tp-sl-title {
-            font-size: 12px;
-            font-weight: 600;
-            color: #60a5fa;
-            margin-bottom: 10px;
-        }
-        .tp-sl-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        .tp-sl-row:last-child {
-            margin-bottom: 0;
-        }
-        .tp-sl-label {
-            font-size: 11px;
-            color: #6a6a7a;
-            min-width: 50px;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .tp-sl-input {
-            flex: 1;
-            background: #1a1a2a;
-            border: 1px solid #2a2a3a;
-            border-radius: 6px;
-            padding: 8px 10px;
-            font-size: 12px;
-            color: #e8e8f0;
-            outline: none;
-            min-width: 0;
-        }
-        .tp-sl-input:focus {
-            border-color: #3b82f6;
-        }
-        .tp-sl-btn-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: nowrap;
-        }
-        .tp-sl-btn {
-            background: #3b82f6;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            padding: 8px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            touch-action: manipulation;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .tp-sl-btn:active {
-            background: #2563eb;
-        }
-        .tp-sl-status {
-            font-size: 13px;
-            color: #9ca3af;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            flex: 1;
-            font-weight: 500;
-        }
-        .tp-sl-status.active {
-            color: #10b981;
-            font-weight: 600;
-        }
-
-        /* 订单记录卡片 */
-        .orders-card {
-            background: transparent;
-            border: none;
-            padding: 0;
-            margin-bottom: 20px;
-        }
-        .orders-card .section-title {
-            color: #60a5fa;
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 14px;
-            padding: 0 4px;
-        }
-        .orders-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        .order-card {
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            padding: 16px;
-            transition: all 0.3s ease;
-            width: 100%;
-            overflow: hidden;
-        }
-        .order-card.active {
-            border-color: #3b82f6;
-        }
-        .order-card.closed {
-            border-color: #2a2a3a;
-            opacity: 0.8;
-        }
-        .order-card.cancelled {
-            border-color: #3a1a1a;
-            opacity: 0.6;
-        }
-        
-        .order-card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: nowrap;
-            gap: 8px;
-            border-bottom: 1px solid #1a1a2a;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
-        }
-        .order-card-header .order-pair {
-            font-size: 13px;
-            font-weight: 700;
-            color: #e8e8f0;
-            white-space: nowrap;
-            flex-shrink: 0;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 120px;
-        }
-        .order-card-header .order-badges {
-            display: flex;
-            gap: 6px;
-            align-items: center;
-            flex-shrink: 0;
-        }
-        .order-card-header .order-type-badge {
-            font-size: 9px;
-            padding: 2px 8px;
-            border-radius: 8px;
-            font-weight: 600;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .order-card-header .order-type-badge.buy {
-            background: #1a3a2a;
-            color: #10b981;
-        }
-        .order-card-header .order-type-badge.sell {
-            background: #3a1a1a;
-            color: #ef4444;
-        }
-        .order-card-header .order-status-badge {
-            font-size: 9px;
-            padding: 2px 8px;
-            border-radius: 8px;
-            font-weight: 600;
-            white-space: nowrap;
-            flex-shrink: 0;
-        }
-        .order-card-header .order-status-badge.active {
+        .pair-btn.active {
             background: #1a2a3a;
-            color: #60a5fa;
+            border-color: #3b82f6;
+            color: #e8e8f0;
         }
-        .order-card-header .order-status-badge.closed {
-            background: #1a1a2a;
-            color: #8a8a9a;
-        }
-        .order-card-header .order-status-badge.cancelled {
-            background: #3a1a1a;
-            color: #ef4444;
-        }
-        
-        .order-card-body {
+
+        /* ===== 买卖面板 ===== */
+        .trade-panel {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
-            margin-bottom: 10px;
+            padding: 12px;
+            flex-shrink: 0;
+            background: #12121f;
+            border-bottom: 1px solid #1a1a2a;
         }
-        .order-info-item {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 2px;
-            min-width: 0;
-            overflow: hidden;
-            padding: 4px 0;
-        }
-        .order-info-item .info-label {
-            font-size: 10px;
-            color: #6a6a7a;
-            white-space: nowrap;
-        }
-        .order-info-item .info-value {
-            font-size: 12px;
-            font-weight: 600;
-            color: #e8e8f0;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            text-align: left;
-        }
-        .order-info-item .info-value.profit {
-            color: #10b981;
-        }
-        .order-info-item .info-value.loss {
-            color: #ef4444;
-        }
-        .order-info-item.full-width {
-            grid-column: 1 / -1;
-        }
-        
-        .order-card-footer {
-            display: flex;
-            gap: 8px;
-        }
-        .order-action-btn {
-            flex: 1;
-            padding: 8px 12px;
+        .trade-btn-buy {
+            background: #10b981;
+            color: white;
             border: none;
-            border-radius: 8px;
-            font-size: 12px;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
             font-weight: 600;
             cursor: pointer;
-            transition: opacity 0.2s;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-            white-space: nowrap;
+            transition: all 0.2s;
         }
-        .order-action-btn:active {
-            opacity: 0.7;
+        .trade-btn-buy:active {
+            background: #0d9668;
+            transform: scale(0.97);
         }
-        .btn-cancel-order {
-            background: #3a1a1a;
-            color: #ef4444;
+        .trade-btn-sell {
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
         }
-        .btn-close-order {
-            background: #1a2a3a;
-            color: #60a5fa;
-        }
-        .btn-cancel-order:disabled,
-        .btn-close-order:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
-        .no-orders {
-            text-align: center;
-            padding: 30px;
-            background: #12121f;
-            border: 1px solid #1a1a2a;
-            border-radius: 16px;
-            color: #5a5a6a;
-            font-size: 13px;
+        .trade-btn-sell:active {
+            background: #dc2626;
+            transform: scale(0.97);
         }
 
-        /* 统一交易对选择弹窗 */
-        .pair-modal-overlay {
+        /* ===== 订单簿 ===== */
+        .orderbook {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 12px;
+            background: #0a0a0f;
+        }
+        .orderbook-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            font-size: 12px;
+            border-bottom: 1px solid #0d0d18;
+        }
+        .orderbook-row .price-bid {
+            color: #4ade80;
+        }
+        .orderbook-row .price-ask {
+            color: #ef4444;
+        }
+        .orderbook-row .amount {
+            color: #8a8a9a;
+        }
+        .orderbook-header {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 10px;
+            color: #5a5a6a;
+            border-bottom: 1px solid #1a1a2a;
+            font-weight: 600;
+        }
+
+        /* ===== 底部操作栏 ===== */
+        .bottom-actions {
+            display: flex;
+            gap: 8px;
+            padding: 8px 12px;
+            background: #12121f;
+            border-top: 1px solid #1a1a2a;
+            flex-shrink: 0;
+        }
+        .bottom-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+            border: 1px solid #1a1a2a;
+            background: #0a0a12;
+            color: #8a8a9a;
+        }
+        .bottom-btn:active {
+            background: #1a1a2a;
+            color: #e8e8f0;
+        }
+
+        /* ===== 弹窗 ===== */
+        .modal-overlay {
             position: fixed;
             inset: 0;
             background: rgba(0, 0, 0, 0.7);
-            z-index: 2000;
+            z-index: 999;
             display: none;
             align-items: center;
             justify-content: center;
         }
-        .pair-modal-overlay.show {
+        .modal-overlay.show {
             display: flex;
         }
-        .pair-modal {
+        .modal {
             background: #12121f;
             border: 1px solid #1a1a2a;
             border-radius: 16px;
-            padding: 16px;
+            padding: 20px;
             width: 85%;
             max-width: 350px;
-            display: flex;
-            flex-direction: column;
-            max-height: 80vh;
         }
-        .pair-modal .modal-title {
-            color: #60a5fa;
-            font-size: 14px;
-            font-weight: 700;
+        .modal-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #e8e8f0;
             text-align: center;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
-        .pair-modal .search-input {
+        .modal-input {
             width: 100%;
             background: #0a0a12;
             border: 1px solid #1a1a2a;
             border-radius: 8px;
             padding: 10px 12px;
-            font-size: 13px;
-            color: #e8e8f0;
-            outline: none;
-            margin-bottom: 12px;
-        }
-        .pair-modal .search-input:focus {
-            border-color: #3b82f6;
-        }
-        .pair-modal .search-input::placeholder {
-            color: #5a5a6a;
-        }
-        .pair-modal .pair-list {
-            max-height: 250px;
-            overflow-y: auto;
-            margin-bottom: 12px;
-            flex: 1;
-        }
-        .pair-modal .pair-option {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-bottom: 4px;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .pair-modal .pair-option:active {
-            background: #1a1a2a;
-        }
-        .pair-modal .pair-option.selected {
-            background: #1a2a3a;
-            border: 1px solid #3b82f6;
-        }
-        .pair-modal .pair-option .pair-name {
-            font-size: 13px;
-            font-weight: 600;
-            color: #e8e8f0;
-            white-space: nowrap;
-        }
-        .pair-modal .pair-option .pair-price {
-            font-size: 11px;
-            color: #6a6a7a;
-            white-space: nowrap;
-        }
-        .pair-modal .pair-option .check-icon {
-            color: #3b82f6;
             font-size: 14px;
-            font-weight: 700;
-        }
-        .pair-modal .no-results {
-            text-align: center;
-            padding: 15px;
-            color: #5a5a6a;
-            font-size: 12px;
-        }
-        .add-pair-section {
-            border-top: 1px solid #1a1a2a;
-            padding-top: 12px;
-        }
-        .add-pair-row {
-            display: flex;
-            gap: 8px;
-        }
-        .add-pair-row input {
-            flex: 1;
-            background: #0a0a12;
-            border: 1px solid #1a1a2a;
-            border-radius: 8px;
-            padding: 8px 10px;
-            font-size: 12px;
             color: #e8e8f0;
             outline: none;
-            min-width: 0;
+            margin-bottom: 12px;
         }
-        .add-pair-row input:focus {
+        .modal-input:focus {
             border-color: #3b82f6;
         }
-        .add-pair-row input::placeholder {
-            color: #5a5a6a;
+        .modal-btn {
+            width: 100%;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
         }
-        .add-pair-modal-btn {
+        .modal-btn-primary {
             background: #3b82f6;
             color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            white-space: nowrap;
-            touch-action: manipulation;
-            flex-shrink: 0;
         }
-        .add-pair-modal-btn:active {
+        .modal-btn-primary:active {
             background: #2563eb;
         }
-        .pair-modal .save-btn {
-            width: 100%;
-            background: #10b981;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            padding: 10px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
+        .modal-btn-secondary {
+            background: #1a1a2a;
+            color: #8a8a9a;
             margin-top: 8px;
-        }
-        .pair-modal .save-btn:active {
-            background: #0d9668;
-        }
-
-        /* 响应式 */
-        @media (max-width: 480px) {
-            .spot-container {
-                padding: 12px;
-            }
-            .page-header .title {
-                font-size: 15px;
-            }
-            .page-header .current-price-info .price {
-                font-size: 20px;
-            }
-            .order-card-body {
-                grid-template-columns: 1fr 1fr;
-                gap: 6px;
-            }
-            .order-info-item.full-width {
-                grid-column: 1 / -1;
-            }
-            .order-card-header .order-pair {
-                font-size: 12px;
-                max-width: 90px;
-            }
-            .account-card .account-row .label {
-                font-size: 12px;
-            }
-            .account-card .account-row .value {
-                font-size: 13px;
-            }
-            .tp-sl-status {
-                font-size: 12px;
-            }
-        }
-
-        @media (max-width: 360px) {
-            .order-card-header .order-pair {
-                max-width: 70px;
-                font-size: 11px;
-            }
-            .order-info-item .info-value {
-                font-size: 11px;
-            }
-            .order-info-item .info-label {
-                font-size: 9px;
-            }
-            .account-card .account-row .label {
-                font-size: 11px;
-            }
-            .account-card .account-row .value {
-                font-size: 12px;
-            }
-            .amount-quick-btn {
-                padding: 5px 10px;
-                font-size: 10px;
-                min-width: 40px;
-            }
-            .tp-sl-status {
-                font-size: 11px;
-            }
         }
     </style>
 </head>
 <body>
-    <div class="spot-container">
-        <!-- 返回按钮 -->
-        <a class="back-btn" href="index.html" title="返回">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="15 18 9 12 15 6"/>
-            </svg>
-        </a>
 
-        <!-- 1. 顶部价格卡片 -->
-        <div class="page-header">
-            <span class="title">💰 现货交易</span>
-            <div class="current-price-info">
-                <span class="price" id="spotCurrentPrice">$65,432.10</span>
-                <span class="change" id="spotPriceChange" style="color:#10b981;">+3.21%</span>
+    <div id="app" style="display:flex;flex-direction:column;height:100vh;background:#0a0a0f;">
+
+        <!-- 顶部导航 -->
+        <div class="flex items-center justify-between px-4 py-2 border-b border-[#1a1a2a] bg-[#0a0a0f] flex-shrink-0" style="padding-top:3.6px;padding-bottom:3.6px;">
+            <button onclick="goBack()" class="p-1.5 -ml-2 tap-active" aria-label="返回">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="flex flex-col items-center">
+                <span class="text-sm font-medium text-[#e8e8f0]">现货交易</span>
+                <span class="text-[10px] text-[#5a5a6a]" id="currentExchangeLabel">Gate.io</span>
             </div>
+            <button onclick="openSettings()" class="p-1.5 -mr-2 tap-active" aria-label="设置">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
         </div>
 
-        <!-- 2. 交易对选择栏 -->
-        <div class="symbol-bar">
-            <div class="symbol-list" id="spotSymbolList">
+        <!-- 交易所选择器（新增） -->
+        <div class="exchange-selector">
+            <div class="exchange-selector-header">
+                <span class="exchange-selector-title">选择交易所</span>
+                <span class="exchange-selector-status">
+                    <span class="status-dot"></span>
+                    <span id="exchangeStatusText">已连接</span>
+                </span>
+            </div>
+            <div class="exchange-selector-list" id="exchangeSelectorList">
                 <!-- 由JS渲染 -->
             </div>
-            <button class="add-pair-btn" onclick="openUnifiedPairModal()">+</button>
         </div>
 
-        <!-- 3. 价格走势卡片 -->
+        <!-- 行情栏 -->
+        <div class="market-bar">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-sm text-[#8a8a9a]" id="currentPair">BTC/USDT</span>
+                    <span class="text-xs text-[#5a5a6a] ml-2" id="exchangeTag">Gate.io</span>
+                </div>
+                <div class="price-change text-emerald-400" id="priceChange">+2.34%</div>
+            </div>
+            <div class="price-display" id="currentPrice">$65,432.10</div>
+        </div>
+
+        <!-- K线图 -->
         <div class="chart-container">
-            <div class="chart-header">
-                <span class="chart-title">📈 价格走势</span>
-                <span class="chart-pair" id="chartPairDisplay">BTC/USDT</span>
-            </div>
-            
-            <div class="chart-type-tabs">
-                <span class="chart-type-tab active" data-type="line" onclick="switchChartType('line', this)">📉 折线图</span>
-                <span class="chart-type-tab" data-type="candle" onclick="switchChartType('candle', this)">🕯️ K线图</span>
-                <span class="chart-type-tab" data-type="bar" onclick="switchChartType('bar', this)">📊 柱状图</span>
-            </div>
-            
-            <div class="chart-wrapper">
-                <canvas id="spotPriceChart"></canvas>
-            </div>
-            
-            <div class="chart-time-labels" id="chartTimeLabels">
-                <span class="time-label active" data-period="1h" onclick="spotSetTimePeriod('1h', this)">1小时</span>
-                <span class="time-label" data-period="4h" onclick="spotSetTimePeriod('4h', this)">4小时</span>
-                <span class="time-label" data-period="1d" onclick="spotSetTimePeriod('1d', this)">日线</span>
-                <span class="time-label" data-period="1m" onclick="spotSetTimePeriod('1m', this)">月线</span>
-            </div>
+            <canvas id="klineChart"></canvas>
         </div>
 
-        <!-- 4. 账户操作卡片 -->
-        <div class="account-card">
-            <div class="card-title">📊 账户操作</div>
-            
-            <div class="account-row">
-                <span class="label">总资产</span>
-                <span class="value" id="spotTotalBalance">$10,000.00</span>
-            </div>
-            <div class="account-row">
-                <span class="label">USDT 余额</span>
-                <span class="value" id="spotUsdtBalance">10,000.00</span>
-            </div>
-            <div class="account-row">
-                <span class="label" id="spotAssetLabel">BTC 持仓</span>
-                <span class="value btc" id="spotBtcBalance">0.0000</span>
-            </div>
-            <div class="account-row">
-                <span class="label">总盈亏</span>
-                <span class="value green" id="spotTotalPnl">+$0.00</span>
-            </div>
-            
-            <div class="divider"></div>
-
-            <div class="amount-input-section">
-                <div class="amount-input-row">
-                    <span class="amount-label">金额</span>
-                    <input type="number" id="tradeAmountInput" placeholder="输入交易金额" step="0.01" min="0">
-                    <span class="amount-usdt">USDT</span>
-                </div>
-                <div class="amount-quick-btns">
-                    <button class="amount-quick-btn" onclick="setQuickAmount(100)">$100</button>
-                    <button class="amount-quick-btn" onclick="setQuickAmount(500)">$500</button>
-                    <button class="amount-quick-btn" onclick="setQuickAmount(1000)">$1,000</button>
-                    <button class="amount-quick-btn" onclick="setQuickAmount(5000)">$5,000</button>
-                    <button class="amount-quick-btn" onclick="setQuickAmount('max')">最大</button>
-                </div>
-            </div>
-            
-            <div class="button-group">
-                <button class="btn btn-buy" onclick="spotBuy()">买入</button>
-                <button class="btn btn-sell" onclick="spotSell()">卖出</button>
-            </div>
-            <div class="current-price">
-                当前价格: <span id="spotCurrentPriceDisplay">$65,432.10</span>
-            </div>
-
-            <div class="tp-sl-section">
-                <div class="tp-sl-title">🎯 止盈/止损设置</div>
-                <div class="tp-sl-row">
-                    <span class="tp-sl-label">止盈价</span>
-                    <input type="number" class="tp-sl-input" id="takeProfitInput" placeholder="如: 70000">
-                </div>
-                <div class="tp-sl-row">
-                    <span class="tp-sl-label">止损价</span>
-                    <input type="number" class="tp-sl-input" id="stopLossInput" placeholder="如: 60000">
-                </div>
-                <div class="tp-sl-btn-row">
-                    <span class="tp-sl-status" id="tpSlStatus">未设置止盈止损</span>
-                    <button class="tp-sl-btn" onclick="setTpSl()">设置</button>
-                </div>
-            </div>
+        <!-- 交易对选择 -->
+        <div class="pair-selector" id="pairSelector">
+            <!-- 由JS渲染 -->
         </div>
 
-        <!-- 5. 订单记录 -->
-        <div class="orders-card">
-            <div class="section-title">📋 订单记录</div>
-            <div class="orders-list" id="ordersContainer">
-                <div class="no-orders">暂无订单记录</div>
+        <!-- 买卖按钮 -->
+        <div class="trade-panel">
+            <button class="trade-btn-buy" onclick="openTradeModal('buy')">买入</button>
+            <button class="trade-btn-sell" onclick="openTradeModal('sell')">卖出</button>
+        </div>
+
+        <!-- 订单簿 -->
+        <div class="orderbook" id="orderbook">
+            <div class="orderbook-header">
+                <span>价格 (USDT)</span>
+                <span>数量 (BTC)</span>
+                <span>合计</span>
             </div>
+            <!-- 由JS渲染 -->
+        </div>
+
+        <!-- 底部操作栏 -->
+        <div class="bottom-actions safe-area-bottom">
+            <div class="bottom-btn" onclick="alert('持仓功能开发中')">📊 持仓</div>
+            <div class="bottom-btn" onclick="alert('订单功能开发中')">📋 订单</div>
+            <div class="bottom-btn" onclick="alert('资产功能开发中')">💰 资产</div>
+            <div class="bottom-btn" onclick="goBack()">🏠 返回</div>
         </div>
     </div>
 
-    <!-- 统一交易对选择弹窗 -->
-    <div class="pair-modal-overlay" id="pairModalOverlay" onclick="closeUnifiedPairModal(event)">
-        <div class="pair-modal" onclick="event.stopPropagation()">
-            <div class="modal-title">🔍 选择交易对</div>
-            <input type="text" class="search-input" id="pairSearchInput" placeholder="搜索交易对..." oninput="filterUnifiedPairList()">
-            <div class="pair-list" id="pairModalContent"></div>
-            <div class="add-pair-section">
-                <div class="add-pair-row">
-                    <input type="text" id="newPairInput" placeholder="输入新交易对 (如: ATOM/USDT)" onkeydown="handleNewPairKeydown(event)">
-                    <button class="add-pair-modal-btn" onclick="addNewPairFromModal()">添加</button>
-                </div>
-                <button class="save-btn" onclick="savePairSelection()">💾 保存选择</button>
+    <!-- 交易弹窗 -->
+    <div class="modal-overlay" id="tradeModal" onclick="closeTradeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-title" id="tradeModalTitle">买入 BTC</div>
+            <input type="number" class="modal-input" id="tradePriceInput" placeholder="价格 (USDT)">
+            <input type="number" class="modal-input" id="tradeAmountInput" placeholder="数量 (BTC)">
+            <div class="flex justify-between text-xs text-[#6a6a7a] mb-3">
+                <span>可用: <span id="availableBalance">0.00</span> USDT</span>
+                <span>预估: <span id="estimatedTotal">0.00</span> USDT</span>
             </div>
+            <button class="modal-btn modal-btn-primary" id="confirmTradeBtn" onclick="confirmTrade()">确认交易</button>
+            <button class="modal-btn modal-btn-secondary" onclick="closeTradeModal()">取消</button>
+        </div>
+    </div>
+
+    <!-- 设置弹窗 -->
+    <div class="modal-overlay" id="settingsModal" onclick="closeSettingsModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-title">⚙️ 交易设置</div>
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-sm text-[#8a8a9a]">当前交易所</span>
+                <span class="text-sm text-[#e8e8f0]" id="settingsExchangeName">Gate.io</span>
+            </div>
+            <div class="flex justify-between items-center mb-3">
+                <span class="text-sm text-[#8a8a9a]">API连接状态</span>
+                <span class="text-sm text-emerald-400">✓ 已连接</span>
+            </div>
+            <button class="modal-btn modal-btn-secondary" onclick="disconnectExchange()">断开连接</button>
+            <button class="modal-btn modal-btn-secondary" onclick="closeSettingsModal()">关闭</button>
         </div>
     </div>
 
     <script>
         // ============================================================
-        //  现货交易核心逻辑
+        //  交易所配置
         // ============================================================
-        
-        let spotUsdtBalance = 10000;
-        let spotBtcBalance = 0;
-        let spotBtcPrice = 65432.10;
-        let spotCurrentSymbol = 'BTC/USDT';
-        let spotCurrentPeriod = '1h';
-        let spotChartType = 'line';
-        let spotChart = null;
-        let spotChartData = [];
-        let spotPriceHistory = [];
-        let spotOrders = [];
-        let spotOrdersInitialized = false;
-        
-        let takeProfitPrice = null;
-        let stopLossPrice = null;
-        let tpSlActive = false;
-        let tpSlCheckInterval = null;
-        
-        let spotPairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT', 'ADA/USDT', 'DOT/USDT', 'AVAX/USDT'];
-        
-        let spotPairData = {
-            'BTC/USDT': { price: 65432.10, change: 3.21, base: 'USDT', asset: 'BTC' },
-            'ETH/USDT': { price: 3456.78, change: -1.23, base: 'USDT', asset: 'ETH' },
-            'SOL/USDT': { price: 187.50, change: 5.67, base: 'USDT', asset: 'SOL' },
-            'BNB/USDT': { price: 598.20, change: 0.87, base: 'USDT', asset: 'BNB' },
-            'XRP/USDT': { price: 0.612, change: -0.45, base: 'USDT', asset: 'XRP' },
-            'ADA/USDT': { price: 0.456, change: 3.21, base: 'USDT', asset: 'ADA' },
-            'DOT/USDT': { price: 7.89, change: -2.10, base: 'USDT', asset: 'DOT' },
-            'AVAX/USDT': { price: 38.76, change: 4.56, base: 'USDT', asset: 'AVAX' },
-            'LINK/USDT': { price: 16.45, change: 2.34, base: 'USDT', asset: 'LINK' },
-            'UNI/USDT': { price: 8.92, change: -0.78, base: 'USDT', asset: 'UNI' },
-            'ATOM/USDT': { price: 9.87, change: 1.45, base: 'USDT', asset: 'ATOM' },
-            'LTC/USDT': { price: 72.34, change: 0.56, base: 'USDT', asset: 'LTC' },
-            'BCH/USDT': { price: 345.67, change: -1.89, base: 'USDT', asset: 'BCH' },
-            'FIL/USDT': { price: 5.67, change: 3.45, base: 'USDT', asset: 'FIL' },
-            'APT/USDT': { price: 12.34, change: 7.89, base: 'USDT', asset: 'APT' },
-            'SUI/USDT': { price: 1.89, change: 4.56, base: 'USDT', asset: 'SUI' },
-            'NEAR/USDT': { price: 5.67, change: -2.34, base: 'USDT', asset: 'NEAR' },
-            'OP/USDT': { price: 2.34, change: 1.23, base: 'USDT', asset: 'OP' },
-            'ARB/USDT': { price: 1.56, change: -0.89, base: 'USDT', asset: 'ARB' },
-            'MATIC/USDT': { price: 0.78, change: 2.45, base: 'USDT', asset: 'MATIC' },
-            'DOGE/USDT': { price: 0.156, change: 8.90, base: 'USDT', asset: 'DOGE' },
-            'SHIB/USDT': { price: 0.0000234, change: 6.78, base: 'USDT', asset: 'SHIB' },
-            'TRX/USDT': { price: 0.234, change: 1.56, base: 'USDT', asset: 'TRX' },
-            'ETC/USDT': { price: 23.45, change: -1.23, base: 'USDT', asset: 'ETC' },
-            'AAVE/USDT': { price: 156.78, change: 3.45, base: 'USDT', asset: 'AAVE' },
-            'MKR/USDT': { price: 2345.67, change: -0.56, base: 'USDT', asset: 'MKR' },
-            'COMP/USDT': { price: 56.78, change: 1.89, base: 'USDT', asset: 'COMP' },
-            'CRV/USDT': { price: 0.567, change: -2.34, base: 'USDT', asset: 'CRV' },
-            'SNX/USDT': { price: 3.45, change: 4.56, base: 'USDT', asset: 'SNX' },
-            'YFI/USDT': { price: 6789.01, change: 0.89, base: 'USDT', asset: 'YFI' },
-        };
-        
-        const periodDataPoints = {
-            '1h': 24,
-            '4h': 30,
-            '1d': 30,
-            '1m': 30
-        };
-        
-        function openUnifiedPairModal() {
-            document.getElementById('pairSearchInput').value = '';
-            document.getElementById('newPairInput').value = '';
-            renderUnifiedPairList('');
-            document.getElementById('pairModalOverlay').classList.add('show');
-        }
-        
-        function closeUnifiedPairModal(e) {
-            if (e && e.target !== e.currentTarget) return;
-            document.getElementById('pairModalOverlay').classList.remove('show');
-        }
-        
-        function renderUnifiedPairList(filter) {
-            const container = document.getElementById('pairModalContent');
-            const filterLower = filter.toLowerCase();
-            const allPairs = Object.keys(spotPairData);
-            const filteredPairs = allPairs.filter(pair => pair.toLowerCase().includes(filterLower));
-            
-            if (filteredPairs.length === 0) {
-                container.innerHTML = '<div class="no-results">未找到匹配的交易对</div>';
-                return;
-            }
-            
-            let html = '';
-            filteredPairs.forEach(pair => {
-                const isSelected = spotPairs.includes(pair);
-                const price = spotPairData[pair]?.price || 0;
-                html += `
-                    <div class="pair-option ${isSelected ? 'selected' : ''}" onclick="togglePairSelection('${pair}')">
-                        <span class="pair-name">${pair}</span>
-                        <span class="pair-price">$${price.toFixed(2)}</span>
-                        <span class="check-icon">${isSelected ? '✓' : '+'}</span>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function filterUnifiedPairList() {
-            const filter = document.getElementById('pairSearchInput').value;
-            renderUnifiedPairList(filter);
-        }
-        
-        function togglePairSelection(pair) {
-            if (spotPairs.includes(pair)) {
-                if (spotPairs.length <= 1) {
-                    alert('至少保留一个交易对');
-                    return;
-                }
-                spotPairs = spotPairs.filter(p => p !== pair);
-            } else {
-                spotPairs.push(pair);
-            }
-            renderUnifiedPairList(document.getElementById('pairSearchInput').value);
-        }
-        
-        function handleNewPairKeydown(event) {
-            if (event.key === 'Enter') {
-                addNewPairFromModal();
-            }
-        }
-        
-        function addNewPairFromModal() {
-            const input = document.getElementById('newPairInput');
-            const newPair = input.value.trim().toUpperCase();
-            
-            if (!newPair) {
-                alert('请输入交易对名称');
-                return;
-            }
-            
-            if (!newPair.includes('/')) {
-                alert('请输入正确格式，如: ATOM/USDT');
-                return;
-            }
-            
-            if (spotPairData[newPair]) {
-                if (!spotPairs.includes(newPair)) {
-                    spotPairs.push(newPair);
-                    input.value = '';
-                    renderUnifiedPairList(document.getElementById('pairSearchInput').value);
-                    alert(`✅ 已添加交易对: ${newPair}`);
-                } else {
-                    alert('该交易对已在列表中');
-                    input.value = '';
-                }
-                return;
-            }
-            
-            const randomPrice = (Math.random() * 100 + 1).toFixed(2);
-            const assetName = newPair.split('/')[0];
-            spotPairData[newPair] = {
-                price: parseFloat(randomPrice),
-                change: (Math.random() * 10 - 5).toFixed(2),
-                base: 'USDT',
-                asset: assetName
-            };
-            
-            spotPairs.push(newPair);
-            input.value = '';
-            renderUnifiedPairList(document.getElementById('pairSearchInput').value);
-            
-            alert(`✅ 已添加新交易对: ${newPair}\n价格: $${randomPrice}`);
-        }
-        
-        function savePairSelection() {
-            spotRenderSymbols();
-            closeUnifiedPairModal();
-            alert(`✅ 交易对列表已保存\n当前共 ${spotPairs.length} 个交易对`);
-        }
-        
-        function setQuickAmount(value) {
-            const input = document.getElementById('tradeAmountInput');
-            if (value === 'max') {
-                input.value = spotUsdtBalance.toFixed(2);
-            } else {
-                input.value = value;
-            }
-        }
-        
-        function getTradeAmount() {
-            const input = document.getElementById('tradeAmountInput');
-            const value = parseFloat(input.value);
-            if (isNaN(value) || value <= 0) {
-                alert('请输入有效的交易金额');
-                return null;
-            }
-            return value;
-        }
-        
-        function setTpSl() {
-            const tpInput = document.getElementById('takeProfitInput');
-            const slInput = document.getElementById('stopLossInput');
-            
-            const tpValue = parseFloat(tpInput.value);
-            const slValue = parseFloat(slInput.value);
-            
-            if (isNaN(tpValue) && isNaN(slValue)) {
-                alert('请至少输入止盈价或止损价');
-                return;
-            }
-            
-            if (!isNaN(tpValue) && tpValue <= spotBtcPrice) {
-                alert('止盈价应高于当前价格');
-                return;
-            }
-            
-            if (!isNaN(slValue) && slValue >= spotBtcPrice) {
-                alert('止损价应低于当前价格');
-                return;
-            }
-            
-            takeProfitPrice = !isNaN(tpValue) ? tpValue : null;
-            stopLossPrice = !isNaN(slValue) ? slValue : null;
-            tpSlActive = true;
-            
-            const statusEl = document.getElementById('tpSlStatus');
-            if (statusEl) {
-                let statusText = '✅ ';
-                const parts = [];
-                if (takeProfitPrice) parts.push(`止盈$${takeProfitPrice.toFixed(2)}`);
-                if (stopLossPrice) parts.push(`止损$${stopLossPrice.toFixed(2)}`);
-                statusText += parts.join(' | ');
-                statusEl.textContent = statusText;
-                statusEl.style.color = '#10b981';
-            }
-            
-            if (tpSlCheckInterval) {
-                clearInterval(tpSlCheckInterval);
-            }
-            
-            tpSlCheckInterval = setInterval(checkTpSl, 2000);
-            
-            alert(`✅ 止盈止损已设置\n${takeProfitPrice ? '止盈: $' + takeProfitPrice.toFixed(2) : ''}\n${stopLossPrice ? '止损: $' + stopLossPrice.toFixed(2) : ''}`);
-        }
-        
-        function checkTpSl() {
-            if (!tpSlActive) return;
-            
-            if (takeProfitPrice && spotBtcPrice >= takeProfitPrice && spotBtcBalance > 0.001) {
-                executeTpSl('take_profit');
-            }
-            
-            if (stopLossPrice && spotBtcPrice <= stopLossPrice && spotBtcBalance > 0.001) {
-                executeTpSl('stop_loss');
-            }
-        }
-        
-        function executeTpSl(type) {
-            const assetSymbol = spotCurrentSymbol.split('/')[0];
-            const sellQuantity = spotBtcBalance;
-            const sellAmount = sellQuantity * spotBtcPrice;
-            
-            spotBtcBalance = 0;
-            spotUsdtBalance += sellAmount;
-            spotUpdateDisplay();
-            
-            takeProfitPrice = null;
-            stopLossPrice = null;
-            tpSlActive = false;
-            
-            if (tpSlCheckInterval) {
-                clearInterval(tpSlCheckInterval);
-                tpSlCheckInterval = null;
-            }
-            
-            const statusEl = document.getElementById('tpSlStatus');
-            if (statusEl) {
-                statusEl.textContent = '已触发，止盈止损已清除';
-                statusEl.style.color = '#6a6a7a';
-            }
-            
-            const typeText = type === 'take_profit' ? '止盈' : '止损';
-            alert(`🎯 ${typeText}触发！\n已卖出全部 ${sellQuantity.toFixed(6)} ${assetSymbol}\n价格: $${spotBtcPrice.toFixed(2)}\n金额: $${sellAmount.toFixed(2)}`);
-            
-            const order = {
-                id: Date.now(),
-                pair: spotCurrentSymbol,
-                type: 'sell',
-                asset: assetSymbol,
-                quantity: sellQuantity,
-                price: spotBtcPrice,
-                amount: sellAmount,
-                pnl: 0,
-                status: 'closed',
-                time: new Date().toLocaleString(),
-                trigger: typeText
-            };
-            spotOrders.push(order);
-            spotRenderOrders();
-        }
-        
-        function spotRenderSymbols() {
-            const container = document.getElementById('spotSymbolList');
-            if (container) {
-                let html = '';
-                spotPairs.forEach((symbol, index) => {
-                    const activeClass = index === 0 ? 'active' : '';
-                    html += `<span class="symbol-item ${activeClass}" onclick="spotSelectSymbol(this, '${symbol}')">${symbol}</span>`;
-                });
-                container.innerHTML = html;
-                if (spotPairs.length > 0) {
-                    spotCurrentSymbol = spotPairs[0];
-                }
-            }
-        }
-        
-        function spotSelectSymbol(el, symbol) {
-            document.querySelectorAll('#spotSymbolList .symbol-item').forEach(s => s.classList.remove('active'));
-            el.classList.add('active');
-            spotCurrentSymbol = symbol;
-            
-            const data = spotPairData[symbol] || spotPairData['BTC/USDT'];
-            spotBtcPrice = data.price;
-            
-            document.getElementById('spotCurrentPrice').textContent = '$' + data.price.toFixed(2);
-            const changeEl = document.getElementById('spotPriceChange');
-            if (changeEl) {
-                changeEl.textContent = (data.change >= 0 ? '+' : '') + data.change.toFixed(2) + '%';
-                changeEl.style.color = data.change >= 0 ? '#10b981' : '#ef4444';
-            }
-            
-            document.getElementById('chartPairDisplay').textContent = symbol;
-            document.getElementById('spotAssetLabel').textContent = data.asset + ' 持仓';
-            document.getElementById('spotCurrentPriceDisplay').textContent = '$' + data.price.toFixed(2);
-            
-            spotGenerateChartData();
-            spotUpdateDisplay();
-        }
-        
-        function switchChartType(type, el) {
-            spotChartType = type;
-            document.querySelectorAll('.chart-type-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.type === type);
-            });
-            spotGenerateChartData();
-        }
-        
-        function spotSetTimePeriod(period, el) {
-            spotCurrentPeriod = period;
-            document.querySelectorAll('.chart-time-labels .time-label').forEach(label => {
-                label.classList.remove('active');
-            });
-            if (el) el.classList.add('active');
-            spotGenerateChartData();
-        }
-        
-        function spotGenerateChartData() {
-            const data = spotPairData[spotCurrentSymbol] || spotPairData['BTC/USDT'];
-            const basePrice = data.price;
-            const volatility = basePrice * 0.025;
-            const numPoints = periodDataPoints[spotCurrentPeriod] || 24;
-            
-            spotChartData = [];
-            spotPriceHistory = [];
-            let current = basePrice * 0.97;
-            for (let i = 0; i < numPoints; i++) {
-                current += (Math.random() - 0.5) * volatility * 2;
-                current = Math.max(basePrice * 0.85, Math.min(basePrice * 1.15, current));
-                spotChartData.push(Math.round(current * 100) / 100);
-                spotPriceHistory.push(Math.round(current * 100) / 100);
-            }
-            
-            spotUpdateChart();
-        }
-        
-        function spotUpdateChart() {
-            const canvas = document.getElementById('spotPriceChart');
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            
-            if (spotChart) {
-                spotChart.destroy();
-            }
-            
-            if (spotChartType === 'line') {
-                spotChart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: Array(spotChartData.length).fill(''),
-                        datasets: [{
-                            label: spotCurrentSymbol,
-                            data: spotChartData,
-                            borderColor: '#3b82f6',
-                            backgroundColor: 'rgba(59,130,246,0.1)',
-                            fill: true,
-                            tension: 0.2,
-                            pointRadius: 0,
-                            borderWidth: 2,
-                        }]
-                    },
-                    options: getChartOptions()
-                });
-            } else if (spotChartType === 'candle') {
-                const candleData = spotChartData.map((price, index) => {
-                    const open = index > 0 ? spotChartData[index - 1] : price * 0.998;
-                    const close = price;
-                    const high = Math.max(open, close) * 1.002;
-                    const low = Math.min(open, close) * 0.998;
-                    return { open, close, high, low };
-                });
-                
-                spotChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: Array(candleData.length).fill(''),
-                        datasets: [{
-                            label: spotCurrentSymbol,
-                            data: candleData.map(d => d.high - d.low),
-                            backgroundColor: candleData.map(d => d.close >= d.open ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
-                            borderColor: candleData.map(d => d.close >= d.open ? '#10b981' : '#ef4444'),
-                            borderWidth: 1,
-                        }]
-                    },
-                    options: getChartOptions()
-                });
-            } else if (spotChartType === 'bar') {
-                const barData = spotChartData.map((price, index) => {
-                    return index > 0 ? price - spotChartData[index - 1] : 0;
-                });
-                
-                spotChart = new Chart(ctx, {
-                    type: 'bar',
-                    data: {
-                        labels: Array(barData.length).fill(''),
-                        datasets: [{
-                            label: '涨跌',
-                            data: barData,
-                            backgroundColor: barData.map(v => v >= 0 ? 'rgba(16,185,129,0.7)' : 'rgba(239,68,68,0.7)'),
-                            borderColor: barData.map(v => v >= 0 ? '#10b981' : '#ef4444'),
-                            borderWidth: 1,
-                        }]
-                    },
-                    options: getChartOptions()
-                });
-            }
-        }
-        
-        function getChartOptions() {
-            return {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                if (spotChartType === 'bar') {
-                                    return (context.parsed.y >= 0 ? '+' : '') + context.parsed.y.toFixed(2);
-                                }
-                                return '$' + context.parsed.y.toFixed(2);
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: { display: false },
-                    y: {
-                        ticks: {
-                            color: '#6a6a7a',
-                            callback: function(value) { return '$' + value.toFixed(0); }
-                        },
-                        grid: { color: '#1a1a2a' }
-                    }
-                }
-            };
-        }
-        
-        function spotUpdateDisplay() {
-            const total = spotUsdtBalance + spotBtcBalance * spotBtcPrice;
-            const pnl = total - 10000;
-            
-            document.getElementById('spotCurrentPrice').textContent = '$' + spotBtcPrice.toFixed(2);
-            document.getElementById('spotTotalBalance').textContent = '$' + total.toFixed(2);
-            document.getElementById('spotUsdtBalance').textContent = spotUsdtBalance.toFixed(2);
-            document.getElementById('spotBtcBalance').textContent = spotBtcBalance.toFixed(4);
-            
-            const pnlEl = document.getElementById('spotTotalPnl');
-            if (pnlEl) {
-                pnlEl.textContent = (pnl >= 0 ? '+' : '') + '$' + pnl.toFixed(2);
-                pnlEl.className = 'value ' + (pnl >= 0 ? 'green' : 'red');
-            }
-            
-            document.getElementById('spotCurrentPriceDisplay').textContent = '$' + spotBtcPrice.toFixed(2);
-        }
-        
-        function spotBuy() {
-            const assetSymbol = spotCurrentSymbol.split('/')[0];
-            const tradeAmount = getTradeAmount();
-            if (tradeAmount === null) return;
-            
-            if (tradeAmount > spotUsdtBalance) {
-                alert('USDT 余额不足');
-                return;
-            }
-            
-            const quantity = tradeAmount / spotBtcPrice;
-            if (quantity < 0.001) {
-                alert('买入量太小');
-                return;
-            }
-            
-            spotBtcBalance += quantity;
-            spotUsdtBalance -= tradeAmount;
-            spotUpdateDisplay();
-            
-            const order = {
-                id: Date.now(),
-                pair: spotCurrentSymbol,
-                type: 'buy',
-                asset: assetSymbol,
-                quantity: quantity,
-                price: spotBtcPrice,
-                amount: tradeAmount,
-                pnl: 0,
-                status: 'active',
-                time: new Date().toLocaleString()
-            };
-            spotOrders.push(order);
-            spotRenderOrders();
-            
-            document.getElementById('tradeAmountInput').value = '';
-        }
-        
-        function spotSell() {
-            const assetSymbol = spotCurrentSymbol.split('/')[0];
-            const tradeAmount = getTradeAmount();
-            if (tradeAmount === null) return;
-            
-            const sellQuantity = tradeAmount / spotBtcPrice;
-            
-            if (sellQuantity > spotBtcBalance) {
-                alert(assetSymbol + ' 持仓不足');
-                return;
-            }
-            
-            spotBtcBalance -= sellQuantity;
-            spotUsdtBalance += tradeAmount;
-            spotUpdateDisplay();
-            
-            const order = {
-                id: Date.now(),
-                pair: spotCurrentSymbol,
-                type: 'sell',
-                asset: assetSymbol,
-                quantity: sellQuantity,
-                price: spotBtcPrice,
-                amount: tradeAmount,
-                pnl: 0,
-                status: 'active',
-                time: new Date().toLocaleString()
-            };
-            spotOrders.push(order);
-            spotRenderOrders();
-            
-            document.getElementById('tradeAmountInput').value = '';
-        }
-        
-        function spotRenderOrders() {
-            const container = document.getElementById('ordersContainer');
-            
-            if (spotOrders.length === 0) {
-                container.innerHTML = '<div class="no-orders">暂无订单记录</div>';
-                return;
-            }
-            
-            let html = '';
-            spotOrders.forEach(order => {
-                const pnlClass = order.pnl >= 0 ? 'profit' : 'loss';
-                const pnlText = (order.pnl >= 0 ? '+' : '') + '$' + order.pnl.toFixed(2);
-                const typeClass = order.type === 'buy' ? 'buy' : 'sell';
-                const typeText = order.type === 'buy' ? '买入' : '卖出';
-                const statusClass = order.status;
-                const statusText = order.status === 'active' ? '持仓中' : (order.status === 'closed' ? '已平仓' : '已撤销');
-                
-                const isActionable = order.status === 'active';
-                
-                html += `
-                    <div class="order-card ${statusClass}" id="order_${order.id}">
-                        <div class="order-card-header">
-                            <span class="order-pair">${order.pair}${order.trigger ? ' (' + order.trigger + ')' : ''}</span>
-                            <div class="order-badges">
-                                <span class="order-type-badge ${typeClass}">${typeText}</span>
-                                <span class="order-status-badge ${statusClass}">${statusText}</span>
-                            </div>
-                        </div>
-                        <div class="order-card-body">
-                            <div class="order-info-item">
-                                <span class="info-label">数量</span>
-                                <span class="info-value">${order.quantity.toFixed(6)} ${order.asset}</span>
-                            </div>
-                            <div class="order-info-item">
-                                <span class="info-label">价格</span>
-                                <span class="info-value">$${order.price.toFixed(2)}</span>
-                            </div>
-                            <div class="order-info-item">
-                                <span class="info-label">金额</span>
-                                <span class="info-value">$${order.amount.toFixed(2)}</span>
-                            </div>
-                            <div class="order-info-item">
-                                <span class="info-label">盈亏</span>
-                                <span class="info-value ${pnlClass}">${pnlText}</span>
-                            </div>
-                            <div class="order-info-item full-width">
-                                <span class="info-label">时间</span>
-                                <span class="info-value">${order.time}</span>
-                            </div>
-                        </div>
-                        <div class="order-card-footer">
-                            <button class="order-action-btn btn-cancel-order" onclick="spotCancelOrder(${order.id})" ${isActionable ? '' : 'disabled'}>撤单</button>
-                            <button class="order-action-btn btn-close-order" onclick="spotCloseOrder(${order.id})" ${isActionable ? '' : 'disabled'}>平仓</button>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-        }
-        
-        function spotCancelOrder(orderId) {
-            const order = spotOrders.find(o => o.id === orderId);
-            if (!order) return;
-            
-            if (order.status !== 'active') {
-                alert('该订单已处理，无法撤单');
-                return;
-            }
-            
-            if (order.type === 'buy') {
-                spotBtcBalance -= order.quantity;
-                spotUsdtBalance += order.amount;
-            } else {
-                spotBtcBalance += order.quantity;
-                spotUsdtBalance -= order.amount;
-            }
-            
-            order.status = 'cancelled';
-            spotUpdateDisplay();
-            spotRenderOrders();
-            
-            alert(`✅ 订单已撤销\n${order.pair} ${order.type === 'buy' ? '买入' : '卖出'} $${order.amount.toFixed(2)}`);
-        }
-        
-        function spotCloseOrder(orderId) {
-            const order = spotOrders.find(o => o.id === orderId);
-            if (!order) return;
-            
-            if (order.status !== 'active') {
-                alert('该订单已处理，无法平仓');
-                return;
-            }
-            
-            if (order.type === 'buy') {
-                const currentValue = order.quantity * spotBtcPrice;
-                const pnl = currentValue - order.amount;
-                order.pnl = pnl;
-                
-                spotBtcBalance -= order.quantity;
-                spotUsdtBalance += currentValue;
-            } else {
-                const currentValue = order.quantity * spotBtcPrice;
-                const pnl = order.amount - currentValue;
-                order.pnl = pnl;
-                
-                spotBtcBalance += order.quantity;
-                spotUsdtBalance -= currentValue;
-            }
-            
-            order.status = 'closed';
-            spotUpdateDisplay();
-            spotRenderOrders();
-            
-            const pnlText = (order.pnl >= 0 ? '+' : '') + '$' + order.pnl.toFixed(2);
-            alert(`✅ 订单已平仓\n盈亏: ${pnlText}`);
-        }
-        
-        function spotInitOrders() {
-            if (spotOrdersInitialized) return;
-            spotOrdersInitialized = true;
-            
-            const now = new Date();
-            spotOrders.push({
-                id: Date.now() - 86400000,
-                pair: 'BTC/USDT',
-                type: 'buy',
-                asset: 'BTC',
-                quantity: 0.05,
-                price: 62000,
-                amount: 3100,
-                pnl: 171.60,
-                status: 'closed',
-                time: now.toLocaleString()
-            });
-            
-            spotOrders.push({
-                id: Date.now() - 43200000,
-                pair: 'ETH/USDT',
-                type: 'sell',
-                asset: 'ETH',
-                quantity: 2.5,
-                price: 3500,
-                amount: 8750,
-                pnl: -250.25,
-                status: 'active',
-                time: now.toLocaleString()
-            });
-            
-            spotRenderOrders();
-        }
-        
+        const EXCHANGES = [
+            { id: 'gateio', name: 'Gate.io', icon: 'G', color: 'gateio', supportedPairs: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ARB/USDT', 'DOGE/USDT'] },
+            { id: 'binance', name: 'Binance', icon: 'B', color: 'binance', supportedPairs: ['BTC/USDT', 'ETH/USDT', 'BNB/USDT', 'SOL/USDT', 'XRP/USDT'] },
+            { id: 'okx', name: 'OKX', icon: 'O', color: 'okx', supportedPairs: ['BTC/USDT', 'ETH/USDT', 'OKB/USDT', 'SOL/USDT', 'DOT/USDT'] },
+            { id: 'bybit', name: 'Bybit', icon: 'B', color: 'bybit', supportedPairs: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'AVAX/USDT', 'LINK/USDT'] },
+            { id: 'mexc', name: 'MEXC', icon: 'M', color: 'mexc', supportedPairs: ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'APT/USDT', 'SUI/USDT'] },
+        ];
+
+        // ============================================================
+        //  状态变量
+        // ============================================================
+        let currentExchange = 'gateio';
+        let currentPair = 'BTC/USDT';
+        let currentPrice = 65432.10;
+        let tradeType = 'buy';
+        let klineChartInstance = null;
+        let orderbookData = [];
+
         // ============================================================
         //  初始化
         // ============================================================
         document.addEventListener('DOMContentLoaded', function() {
-            spotRenderSymbols();
-            spotGenerateChartData();
-            spotUpdateDisplay();
-            spotInitOrders();
+            renderExchangeSelector();
+            renderPairSelector();
+            renderOrderbook();
+            initKlineChart();
+            updateMarketDisplay();
             
-            window.spotSelectSymbol = spotSelectSymbol;
-            window.spotSetTimePeriod = spotSetTimePeriod;
-            window.switchChartType = switchChartType;
-            window.spotBuy = spotBuy;
-            window.spotSell = spotSell;
-            window.spotCancelOrder = spotCancelOrder;
-            window.spotCloseOrder = spotCloseOrder;
-            window.setTpSl = setTpSl;
-            window.setQuickAmount = setQuickAmount;
-            window.openUnifiedPairModal = openUnifiedPairModal;
-            window.closeUnifiedPairModal = closeUnifiedPairModal;
-            window.filterUnifiedPairList = filterUnifiedPairList;
-            window.togglePairSelection = togglePairSelection;
-            window.handleNewPairKeydown = handleNewPairKeydown;
-            window.addNewPairFromModal = addNewPairFromModal;
-            window.savePairSelection = savePairSelection;
+            // 监听价格输入
+            document.getElementById('tradePriceInput').addEventListener('input', updateEstimatedTotal);
+            document.getElementById('tradeAmountInput').addEventListener('input', updateEstimatedTotal);
+        });
+
+        // ============================================================
+        //  交易所选择器
+        // ============================================================
+        function renderExchangeSelector() {
+            const container = document.getElementById('exchangeSelectorList');
             
-            document.getElementById('pairModalOverlay').addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeUnifiedPairModal();
+            container.innerHTML = EXCHANGES.map(exchange => {
+                const isActive = exchange.id === currentExchange;
+                return `
+                    <div class="exchange-option ${isActive ? 'active' : ''}" onclick="selectExchange('${exchange.id}')">
+                        <div class="exchange-icon ${exchange.color}">${exchange.icon}</div>
+                        <span class="exchange-name">${exchange.name}</span>
+                        ${isActive ? '<span class="exchange-check">✓</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectExchange(exchangeId) {
+            currentExchange = exchangeId;
+            renderExchangeSelector();
+            
+            // 更新当前交易所标签
+            const exchange = EXCHANGES.find(e => e.id === exchangeId);
+            document.getElementById('currentExchangeLabel').textContent = exchange.name;
+            document.getElementById('exchangeTag').textContent = exchange.name;
+            document.getElementById('settingsExchangeName').textContent = exchange.name;
+            document.getElementById('exchangeStatusText').textContent = '已连接';
+            
+            // 更新交易对列表
+            renderPairSelector();
+            
+            // 更新模拟价格
+            updateMockPrice();
+            updateMarketDisplay();
+        }
+
+        // ============================================================
+        //  交易对选择
+        // ============================================================
+        function renderPairSelector() {
+            const container = document.getElementById('pairSelector');
+            const exchange = EXCHANGES.find(e => e.id === currentExchange);
+            
+            container.innerHTML = exchange.supportedPairs.map(pair => {
+                const isActive = pair === currentPair;
+                return `
+                    <button class="pair-btn ${isActive ? 'active' : ''}" onclick="selectPair('${pair}')">${pair}</button>
+                `;
+            }).join('');
+        }
+
+        function selectPair(pair) {
+            currentPair = pair;
+            renderPairSelector();
+            updateMockPrice();
+            updateMarketDisplay();
+            renderOrderbook();
+        }
+
+        // ============================================================
+        //  模拟价格更新
+        // ============================================================
+        function updateMockPrice() {
+            const basePrices = {
+                'BTC/USDT': 65432.10,
+                'ETH/USDT': 3456.78,
+                'SOL/USDT': 187.50,
+                'ARB/USDT': 1.56,
+                'DOGE/USDT': 0.156,
+                'BNB/USDT': 598.20,
+                'XRP/USDT': 0.612,
+                'OKB/USDT': 45.67,
+                'DOT/USDT': 7.89,
+                'AVAX/USDT': 38.76,
+                'LINK/USDT': 16.45,
+                'APT/USDT': 12.34,
+                'SUI/USDT': 1.89,
+            };
+            
+            const basePrice = basePrices[currentPair] || 100;
+            const randomVariation = (Math.random() - 0.5) * basePrice * 0.002;
+            currentPrice = basePrice + randomVariation;
+        }
+
+        function updateMarketDisplay() {
+            document.getElementById('currentPair').textContent = currentPair;
+            document.getElementById('currentPrice').textContent = '$' + currentPrice.toFixed(2);
+            
+            const change = (Math.random() * 4 - 1).toFixed(2);
+            const changeEl = document.getElementById('priceChange');
+            changeEl.textContent = (change >= 0 ? '+' : '') + change + '%';
+            changeEl.className = 'price-change ' + (change >= 0 ? 'text-emerald-400' : 'text-red-400');
+        }
+
+        // ============================================================
+        //  K线图
+        // ============================================================
+        function initKlineChart() {
+            const canvas = document.getElementById('klineChart');
+            const ctx = canvas.getContext('2d');
+            
+            klineChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: currentPair,
+                        data: [],
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: '#12121f',
+                            titleColor: '#e8e8f0',
+                            bodyColor: '#8a8a9a',
+                            borderColor: '#1a1a2a',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: '#0d0d18' },
+                            ticks: { color: '#5a5a6a', font: { size: 10 } }
+                        },
+                        y: {
+                            grid: { color: '#0d0d18' },
+                            ticks: { color: '#5a5a6a', font: { size: 10 } }
+                        }
+                    }
                 }
             });
             
-            setInterval(() => {
-                const volatility = 100;
-                const change = (Math.random() - 0.5) * volatility * 2;
-                spotBtcPrice = Math.max(10000, spotBtcPrice + change);
-                spotBtcPrice = Math.round(spotBtcPrice * 100) / 100;
-                
-                spotChartData.push(spotBtcPrice);
-                const maxPoints = periodDataPoints[spotCurrentPeriod] || 24;
-                if (spotChartData.length > maxPoints) spotChartData.shift();
-                
-                spotUpdateChart();
-                spotUpdateDisplay();
-                
-                checkTpSl();
-            }, 5000);
-        });
+            updateKlineData();
+        }
+
+        function updateKlineData() {
+            if (!klineChartInstance) return;
+            
+            const labels = [];
+            const data = [];
+            const now = new Date();
+            
+            for (let i = 30; i >= 0; i--) {
+                const time = new Date(now - i * 60000);
+                labels.push(time.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }));
+                const variation = (Math.random() - 0.5) * currentPrice * 0.01;
+                data.push(currentPrice + variation);
+            }
+            
+            klineChartInstance.data.labels = labels;
+            klineChartInstance.data.datasets[0].data = data;
+            klineChartInstance.data.datasets[0].label = currentPair;
+            klineChartInstance.update();
+        }
+
+        // ============================================================
+        //  订单簿
+        // ============================================================
+        function renderOrderbook() {
+            const container = document.getElementById('orderbook');
+            const header = container.querySelector('.orderbook-header');
+            
+            // 生成模拟订单簿数据
+            const asks = [];
+            const bids = [];
+            
+            for (let i = 0; i < 10; i++) {
+                const askPrice = currentPrice * (1 + (i + 1) * 0.001);
+                const bidPrice = currentPrice * (1 - (i + 1) * 0.001);
+                const askAmount = Math.random() * 2;
+                const bidAmount = Math.random() * 2;
+                asks.push({ price: askPrice, amount: askAmount });
+                bids.push({ price: bidPrice, amount: bidAmount });
+            }
+            
+            let html = header.outerHTML;
+            
+            // 卖单（从上到下）
+            asks.reverse().forEach(ask => {
+                html += `
+                    <div class="orderbook-row">
+                        <span class="price-ask">$${ask.price.toFixed(2)}</span>
+                        <span class="amount">${ask.amount.toFixed(4)}</span>
+                        <span class="amount">$${(ask.price * ask.amount).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            
+            // 当前价格
+            html += `
+                <div class="orderbook-row" style="justify-content:center;border-bottom:none;padding:6px 0;">
+                    <span style="color:#e8e8f0;font-weight:700;">$${currentPrice.toFixed(2)}</span>
+                </div>
+            `;
+            
+            // 买单
+            bids.forEach(bid => {
+                html += `
+                    <div class="orderbook-row">
+                        <span class="price-bid">$${bid.price.toFixed(2)}</span>
+                        <span class="amount">${bid.amount.toFixed(4)}</span>
+                        <span class="amount">$${(bid.price * bid.amount).toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+
+        // ============================================================
+        //  交易弹窗
+        // ============================================================
+        function openTradeModal(type) {
+            tradeType = type;
+            const modal = document.getElementById('tradeModal');
+            const title = document.getElementById('tradeModalTitle');
+            const confirmBtn = document.getElementById('confirmTradeBtn');
+            
+            const pairBase = currentPair.split('/')[0];
+            
+            if (type === 'buy') {
+                title.textContent = '买入 ' + pairBase;
+                confirmBtn.className = 'modal-btn modal-btn-primary';
+                confirmBtn.style.background = '#10b981';
+            } else {
+                title.textContent = '卖出 ' + pairBase;
+                confirmBtn.className = 'modal-btn modal-btn-primary';
+                confirmBtn.style.background = '#ef4444';
+            }
+            
+            document.getElementById('tradePriceInput').value = currentPrice.toFixed(2);
+            document.getElementById('tradeAmountInput').value = '';
+            document.getElementById('estimatedTotal').textContent = '0.00';
+            document.getElementById('availableBalance').textContent = '10,000.00';
+            
+            modal.classList.add('show');
+        }
+
+        function closeTradeModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('tradeModal').classList.remove('show');
+        }
+
+        function updateEstimatedTotal() {
+            const price = parseFloat(document.getElementById('tradePriceInput').value) || 0;
+            const amount = parseFloat(document.getElementById('tradeAmountInput').value) || 0;
+            const total = price * amount;
+            document.getElementById('estimatedTotal').textContent = total.toFixed(2);
+        }
+
+        function confirmTrade() {
+            const price = parseFloat(document.getElementById('tradePriceInput').value);
+            const amount = parseFloat(document.getElementById('tradeAmountInput').value);
+            const exchange = EXCHANGES.find(e => e.id === currentExchange);
+            
+            if (!price || !amount || price <= 0 || amount <= 0) {
+                alert('请输入有效的价格和数量');
+                return;
+            }
+            
+            const total = price * amount;
+            const action = tradeType === 'buy' ? '买入' : '卖出';
+            
+            alert(`✅ ${action}订单已提交\n\n交易所: ${exchange.name}\n交易对: ${currentPair}\n价格: $${price.toFixed(2)}\n数量: ${amount}\n总金额: $${total.toFixed(2)}\n\n（演示版，未实际执行）`);
+            
+            closeTradeModal();
+        }
+
+        // ============================================================
+        //  设置弹窗
+        // ============================================================
+        function openSettings() {
+            document.getElementById('settingsModal').classList.add('show');
+        }
+
+        function closeSettingsModal(e) {
+            if (e && e.target !== e.currentTarget) return;
+            document.getElementById('settingsModal').classList.remove('show');
+        }
+
+        function disconnectExchange() {
+            const exchange = EXCHANGES.find(e => e.id === currentExchange);
+            alert(`已断开 ${exchange.name} 连接`);
+            closeSettingsModal();
+        }
+
+        // ============================================================
+        //  返回
+        // ============================================================
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        // ============================================================
+        //  定时刷新
+        // ============================================================
+        setInterval(() => {
+            updateMockPrice();
+            updateMarketDisplay();
+            updateKlineData();
+            renderOrderbook();
+        }, 5000);
+
+        // 暴露全局函数
+        window.selectExchange = selectExchange;
+        window.selectPair = selectPair;
+        window.openTradeModal = openTradeModal;
+        window.closeTradeModal = closeTradeModal;
+        window.confirmTrade = confirmTrade;
+        window.openSettings = openSettings;
+        window.closeSettingsModal = closeSettingsModal;
+        window.disconnectExchange = disconnectExchange;
+        window.goBack = goBack;
     </script>
+
 </body>
 </html>
