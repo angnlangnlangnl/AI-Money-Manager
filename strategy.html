@@ -47,7 +47,6 @@
         .chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 4px; flex-shrink: 0; height: 180px; }
         .chart-container canvas { width: 100% !important; height: 100% !important; }
 
-        /* 涨跌幅柱容器 - 新增 */
         .change-chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 4px; flex-shrink: 0; height: 60px; display: none; }
         .change-chart-container canvas { width: 100% !important; height: 100% !important; }
 
@@ -168,7 +167,7 @@
         <!-- K线图 -->
         <div class="chart-container"><canvas id="klineChart"></canvas></div>
 
-        <!-- 涨跌幅柱状图 - 新增 -->
+        <!-- 涨跌幅柱状图 -->
         <div class="change-chart-container" id="changeChartContainer"><canvas id="changeChart"></canvas></div>
 
         <!-- 时间周期 -->
@@ -729,13 +728,11 @@
         // ============ 指标切换 ============
         function toggleIndicator(indicator) {
             activeIndicators[indicator] = !activeIndicators[indicator];
-            // 特殊处理涨跌幅容器显示
             if (indicator === 'change') {
                 document.getElementById('changeChartContainer').style.display = activeIndicators.change ? 'block' : 'none';
                 if (activeIndicators.change) updateChangeChart();
             }
             updateKlineChart();
-            // 更新按钮样式
             document.querySelectorAll('.indicator-btn').forEach(btn => {
                 const text = btn.textContent;
                 const key = text === 'MA' ? 'ma' : text === 'EMA' ? 'ema' : text === 'BOLL' ? 'boll' : text === '成交量' ? 'volume' : text === '涨跌幅' ? 'change' : '';
@@ -804,7 +801,7 @@
             klineChartInstance.update();
         }
 
-        // ============ 涨跌幅柱状图（新增） ============
+        // ============ 涨跌幅柱状图 ============
         function initChangeChart() {
             const ctx = document.getElementById('changeChart').getContext('2d');
             changeChartInstance = new Chart(ctx, {
@@ -825,7 +822,7 @@
             const klines=marketData.klineCache;
             const changes = klines.map(k => k.open ? ((k.close - k.open) / k.open) * 100 : 0);
             const labels = klines.map(k => new Date(k.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
-            const colors = changes.map(c => c >= 0 ? '#ef4444' : '#3b82f6'); // 红涨蓝跌
+            const colors = changes.map(c => c >= 0 ? '#ef4444' : '#3b82f6');
             changeChartInstance.data.labels = labels;
             changeChartInstance.data.datasets = [{
                 label:'涨跌幅',
