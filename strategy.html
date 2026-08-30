@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BTC/USDT 交易界面（真实行情）</title>
+    <title>BTC/USDT 交易界面（真实行情+完整指标+价格标签）</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -36,8 +36,9 @@
         #kline { width: 100%; height: 100%; }
 
         .indicators { display: flex; gap: 15px; padding: 10px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; }
-        .indicators span.active { color: #eaecef; }
-        .indicators span:hover { color: #eaecef; cursor: pointer; }
+        .indicators span { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; white-space: nowrap; }
+        .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
+        .indicators span:hover { color: #eaecef; }
 
         .performance { display: flex; justify-content: space-between; padding: 10px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
         .perf-item span:last-child { margin-left: 5px; }
@@ -116,12 +117,18 @@
         <div class="error-msg" id="kline-error">K线数据加载失败，请检查网络</div>
     </div>
 
-    <!-- MA 指标 -->
-    <div class="indicators">
-        <span class="active">MA</span><span>EMA</span><span>BOLL</span><span>SAR</span><span>AVL</span><span>VOL</span><span>MACD</span>
+    <!-- 指标按钮 -->
+    <div class="indicators" id="indicator-buttons">
+        <span class="active" data-indicator="MA">MA</span>
+        <span data-indicator="EMA">EMA</span>
+        <span data-indicator="BOLL">BOLL</span>
+        <span data-indicator="SAR">SAR</span>
+        <span data-indicator="AVL">AVL</span>
+        <span data-indicator="VOL">VOL</span>
+        <span data-indicator="MACD">MACD</span>
     </div>
 
-    <!-- 周期涨跌（全部真实数据） -->
+    <!-- 周期涨跌 -->
     <div class="performance" id="performance">
         <div class="perf-item">今日 <span id="perf-today">--</span></div>
         <div class="perf-item">7天 <span id="perf-7d">--</span></div>
@@ -131,7 +138,7 @@
         <div class="perf-item">1年 <span id="perf-365d">--</span></div>
     </div>
 
-    <!-- 买卖盘比例（真实订单簿数据） -->
+    <!-- 买卖盘比例 -->
     <div class="order-labels">
         <span>委托订单</span><span>深度</span><span>最新成交</span><span>网络</span>
     </div>
@@ -155,72 +162,104 @@
 </div>
 
 <script>
-    // =================== 常量配置 ===================
+    // =================== 常量 ===================
     const BASE_URL = 'https://api.gateio.ws/api/v4';
     const PAIR = 'BTC_USDT';
     const CNY_RATE = 7.2;
-    let currentInterval = '1h'; // 默认1小时
+    let currentInterval = '1h';
 
-    // 缓存上次成功数据
-    let cache = {
-        ticker: null,
-        klines: null,
-        orderBook: null
-    };
+    const indicatorState = { MA: true, EMA: false, BOLL: false, SAR: false, AVL: false, VOL: false, MACD: false };
+    let cache = { ticker: null, klines: null, orderBook: null };
 
-    // =================== 初始化 ECharts ===================
+    // =================== 技术指标计算库 ===================
+    class Indicators {
+        static SMA(data, period) {
+            const result = new Array(data.length).fill(null);
+            for (let i = period - 1; i < data.length; i++) {
+                let sum = 0;
+                for (let j = i - period + 1; j <= i; j++) sum += data[j];
+                result[i] = sum / period;
+            }
+            return result;
+        }
+        static EMA(data, period) {
+            const result = new Array(data.length).fill(null);
+            const multiplier = 2 / (period + 1);
+            result[0] = data[0];
+            for (let i = 1; i < data.length; i++) result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1];
+            return result;
+        }
+        static BOLL(data, period = 20, stdDev = 2) {
+            const middle = this.SMA(data, period);
+            const upper = new Array(data.length).fill(null);
+            const lower = new Array(data.length).fill(null);
+            for (let i = period - 1; i < data.length; i++) {
+                let sum = 0;
+                for (let j = i - period + 1; j <= i; j++) sum += Math.pow(data[j] - middle[i], 2);
+                const std = Math.sqrt(sum / period);
+                upper[i] = middle[i] + stdDev * std;
+                lower[i] = middle[i] - stdDev * std;
+            }
+            return { upper, middle, lower };
+        }
+        static SAR(highs, lows, step = 0.02, maxStep = 0.2) {
+            const result = new Array(highs.length).fill(null);
+            let isUp = true;
+            let sar = lows[0];
+            let ep = highs[0];
+            let af = step;
+            for (let i = 1; i < highs.length; i++) {
+                sar = sar + af * (ep - sar);
+                if (isUp) {
+                    if (lows[i] < sar) {
+                        isUp = false; sar = ep; ep = lows[i]; af = step;
+                    } else {
+                        if (highs[i] > ep) { ep = highs[i]; af = Math.min(af + step, maxStep); }
+                        if (lows[i - 1] < sar) sar = lows[i - 1];
+                        if (lows[i - 2] < sar) sar = lows[i - 2];
+                    }
+                } else {
+                    if (highs[i] > sar) {
+                        isUp = true; sar = ep; ep = highs[i]; af = step;
+                    } else {
+                        if (lows[i] < ep) { ep = lows[i]; af = Math.min(af + step, maxStep); }
+                        if (highs[i - 1] > sar) sar = highs[i - 1];
+                        if (highs[i - 2] > sar) sar = highs[i - 2];
+                    }
+                }
+                result[i] = sar;
+            }
+            return result;
+        }
+        static MACD(data, fast = 12, slow = 26, signal = 9) {
+            const emaFast = this.EMA(data, fast);
+            const emaSlow = this.EMA(data, slow);
+            const dif = new Array(data.length).fill(null);
+            for (let i = 0; i < data.length; i++) if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i];
+            const validDif = dif.filter(v => v !== null);
+            const deaValid = this.EMA(validDif, signal);
+            const dea = new Array(data.length).fill(null);
+            const offset = dif.length - deaValid.length;
+            for (let i = 0; i < deaValid.length; i++) dea[offset + i] = deaValid[i];
+            const macd = new Array(data.length).fill(null);
+            for (let i = 0; i < data.length; i++) if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2;
+            return { dif, dea, macd };
+        }
+    }
+
+    // =================== ECharts 初始化 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom);
-    const baseOption = {
-        backgroundColor: 'transparent',
-        grid: { left: 0, right: 0, top: 10, bottom: 0 },
-        xAxis: {
-            type: 'category',
-            data: [],
-            axisLine: { show: false },
-            axisTick: { show: false },
-            splitLine: { show: false },
-            axisLabel: { show: false }
-        },
-        yAxis: {
-            scale: true,
-            position: 'right',
-            splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } },
-            axisLabel: { color: '#848e9c', fontSize: 10 }
-        },
-        series: [{
-            type: 'candlestick',
-            data: [],
-            itemStyle: {
-                color: '#0ecb81',
-                color0: '#f6465d',
-                borderColor: '#0ecb81',
-                borderColor0: '#f6465d'
-            }
-        }],
-        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
-    };
-    myChart.setOption(baseOption);
+    let chartData = { dates: [], klines: [], volumes: [] };
 
     // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) {
         const n = parseFloat(num);
         if (isNaN(n)) return '--';
-        return n.toLocaleString('en-US', {
-            minimumFractionDigits: decimals,
-            maximumFractionDigits: decimals
-        });
+        return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
     }
-
-    function setColor(el, value) {
-        el.className = value >= 0 ? 'green' : 'red';
-    }
-
-    function formatPercent(value) {
-        return (value >= 0 ? '+' : '') + value.toFixed(2) + '%';
-    }
-
-    // 带超时的 fetch
+    function setColor(el, value) { el.className = value >= 0 ? 'green' : 'red'; }
+    function formatPercent(value) { return (value >= 0 ? '+' : '') + value.toFixed(2) + '%'; }
     async function fetchWithTimeout(url, timeout = 8000) {
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), timeout);
@@ -228,163 +267,245 @@
             const res = await fetch(url, { signal: controller.signal, cache: 'no-store' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             return await res.json();
-        } finally {
-            clearTimeout(timer);
-        }
+        } finally { clearTimeout(timer); }
     }
 
-    // =================== 获取 Ticker ===================
+    // =================== 获取数据 ===================
     async function fetchTicker() {
         try {
             const data = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`);
             if (!data || data.length === 0) throw new Error('空数据');
-            const t = data[0];
-            cache.ticker = t;
-            updateTickerUI(t);
-        } catch (e) {
-            console.error('Ticker获取失败:', e);
-            if (cache.ticker) updateTickerUI(cache.ticker); // 使用缓存
-        }
+            cache.ticker = data[0];
+            updateTickerUI(data[0]);
+            // 更新图表中的价格标签
+            if (chartData.klines.length) updateChart();
+        } catch (e) { console.error('Ticker失败:', e); if (cache.ticker) updateTickerUI(cache.ticker); }
     }
 
     function updateTickerUI(t) {
         const last = parseFloat(t.last);
         const change = parseFloat(t.change_percentage);
-
         document.getElementById('last-price').innerText = formatNum(last);
         const changeClass = change >= 0 ? 'green' : 'red';
-        document.getElementById('cn-price').innerHTML =
-            `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${formatPercent(change)}</span>`;
-
+        document.getElementById('cn-price').innerHTML = `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${formatPercent(change)}</span>`;
         document.getElementById('high-24').innerText = formatNum(t.high_24h);
         document.getElementById('low-24').innerText = formatNum(t.low_24h);
         document.getElementById('vol-24').innerText = formatNum(t.base_volume, 2);
         document.getElementById('amount-24').innerText = formatNum(t.quote_volume / 100000000, 2) + '亿';
-
         const perfToday = document.getElementById('perf-today');
         perfToday.innerText = formatPercent(change);
         setColor(perfToday, change);
     }
 
-    // =================== 获取 K 线 ===================
     async function fetchKline() {
         try {
-            const data = await fetchWithTimeout(
-                `${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=${currentInterval}&limit=100`
-            );
-            if (!data || data.length === 0) throw new Error('空K线数据');
+            const data = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=${currentInterval}&limit=120`);
+            if (!data || data.length === 0) throw new Error('空K线');
             cache.klines = data;
-            updateKlineUI(data);
+            processKlineData(data);
             document.getElementById('kline-error').style.display = 'none';
-        } catch (e) {
-            console.error('K线获取失败:', e);
-            document.getElementById('kline-error').style.display = 'block';
-            if (cache.klines) updateKlineUI(cache.klines); // 使用缓存
-        }
+        } catch (e) { console.error('K线失败:', e); document.getElementById('kline-error').style.display = 'block'; }
     }
 
-    function updateKlineUI(rawData) {
-        // Gate K线格式: [时间戳, 计价币成交量, 收盘价, 最高价, 最低价, 开盘价, 基础币成交量, 窗口关闭时间戳]
-        const kLineData = rawData.map(item => [
-            parseFloat(item[5]), // Open
-            parseFloat(item[2]), // Close
-            parseFloat(item[4]), // Low
-            parseFloat(item[3])  // High
-        ]);
-
-        const dates = rawData.map(item => {
+    function processKlineData(rawData) {
+        const dates = [], klines = [], volumes = [];
+        for (const item of rawData) {
+            const open = parseFloat(item[5]);
+            const close = parseFloat(item[2]);
+            const low = parseFloat(item[4]);
+            const high = parseFloat(item[3]);
+            const vol = parseFloat(item[6]) || parseFloat(item[1]);
+            klines.push([open, close, low, high]);
+            volumes.push(vol);
             const d = new Date(parseInt(item[0]) * 1000);
-            if (currentInterval === '1d') {
-                return `${d.getMonth() + 1}-${d.getDate()}`;
-            }
-            return `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:00`;
-        });
-
-        myChart.setOption({
-            xAxis: { data: dates },
-            series: [{ data: kLineData }]
-        });
+            dates.push(currentInterval === '1d' ? `${d.getMonth() + 1}-${d.getDate()}` : `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:00`);
+        }
+        chartData = { dates, klines, volumes };
+        updateChart();
     }
 
-    // =================== 获取订单簿（真实数据） ===================
+    // =================== 获取订单簿 ===================
     async function fetchOrderBook() {
         try {
-            const data = await fetchWithTimeout(
-                `${BASE_URL}/spot/order_book?currency_pair=${PAIR}&limit=20`
-            );
+            const data = await fetchWithTimeout(`${BASE_URL}/spot/order_book?currency_pair=${PAIR}&limit=20`);
             if (!data) throw new Error('空订单簿');
             cache.orderBook = data;
             updateOrderBookUI(data);
-        } catch (e) {
-            console.error('订单簿获取失败:', e);
-            if (cache.orderBook) updateOrderBookUI(cache.orderBook);
-        }
+        } catch (e) { console.error('订单簿失败:', e); if (cache.orderBook) updateOrderBookUI(cache.orderBook); }
     }
 
     function updateOrderBookUI(data) {
-        const asks = data.asks || [];
-        const bids = data.bids || [];
-        let askVolume = 0;
-        let bidVolume = 0;
-        for (const a of asks) askVolume += parseFloat(a[1]);
-        for (const b of bids) bidVolume += parseFloat(b[1]);
-        const total = askVolume + bidVolume;
+        let askVol = 0, bidVol = 0;
+        for (const a of (data.asks || [])) askVol += parseFloat(a[1]);
+        for (const b of (data.bids || [])) bidVol += parseFloat(b[1]);
+        const total = askVol + bidVol;
         if (total === 0) return;
-        const bidPct = (bidVolume / total) * 100;
+        const bidPct = (bidVol / total) * 100;
         const askPct = 100 - bidPct;
-
-        const sellBar = document.getElementById('sell-bar');
-        const buyBar = document.getElementById('buy-bar');
-        sellBar.style.width = askPct + '%';
-        buyBar.style.width = bidPct + '%';
-        sellBar.innerText = '卖 ' + askPct.toFixed(1) + '%';
-        buyBar.innerText = '买 ' + bidPct.toFixed(1) + '%';
+        document.getElementById('sell-bar').style.width = askPct + '%';
+        document.getElementById('buy-bar').style.width = bidPct + '%';
+        document.getElementById('sell-bar').innerText = '卖 ' + askPct.toFixed(1) + '%';
+        document.getElementById('buy-bar').innerText = '买 ' + bidPct.toFixed(1) + '%';
     }
 
-    // =================== 获取周期涨跌幅（真实数据） ===================
+    // =================== 周期涨跌幅 ===================
     async function fetchPeriodChanges() {
         const periods = [
-            { id: 'perf-today', days: 1, interval: '1d' },
-            { id: 'perf-7d', days: 7, interval: '1d' },
-            { id: 'perf-30d', days: 30, interval: '1d' },
-            { id: 'perf-90d', days: 90, interval: '1d' },
-            { id: 'perf-180d', days: 180, interval: '1d' },
-            { id: 'perf-365d', days: 365, interval: '1d' }
+            { id: 'perf-today', days: 1 },
+            { id: 'perf-7d', days: 7 },
+            { id: 'perf-30d', days: 30 },
+            { id: 'perf-90d', days: 90 },
+            { id: 'perf-180d', days: 180 },
+            { id: 'perf-365d', days: 365 }
         ];
-
         try {
-            // 获取当前价格
             let currentPrice;
-            if (cache.ticker) {
-                currentPrice = parseFloat(cache.ticker.last);
-            } else {
-                const tickerData = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`);
-                currentPrice = parseFloat(tickerData[0].last);
+            if (cache.ticker) currentPrice = parseFloat(cache.ticker.last);
+            else {
+                const td = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`);
+                currentPrice = parseFloat(td[0].last);
             }
-
-            for (const period of periods) {
+            for (const p of periods) {
                 try {
                     const now = Math.floor(Date.now() / 1000);
-                    const from = now - period.days * 86400;
-                    const resp = await fetchWithTimeout(
-                        `${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=1d&from=${from}&to=${now}&limit=1`
-                    );
+                    const from = now - p.days * 86400;
+                    const resp = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=1d&from=${from}&to=${now}&limit=1`);
                     if (resp && resp.length > 0) {
-                        // 日K格式: [时间戳, 计价币成交量, 收盘价, 最高价, 最低价, 开盘价, ...]
                         const oldClose = parseFloat(resp[0][2]);
                         const change = ((currentPrice - oldClose) / oldClose) * 100;
-                        const el = document.getElementById(period.id);
+                        const el = document.getElementById(p.id);
                         el.innerText = formatPercent(change);
                         setColor(el, change);
                     }
-                } catch (err) {
-                    console.error(`${period.id}获取失败:`, err);
-                }
+                } catch (err) {}
             }
-        } catch (e) {
-            console.error('周期涨跌幅获取失败:', e);
-        }
+        } catch (e) {}
     }
+
+    // =================== 图表更新（含价格标签 markLine） ===================
+    function updateChart() {
+        if (!chartData.klines.length) return;
+        const { dates, klines, volumes } = chartData;
+        const closes = klines.map(k => k[1]);
+        const highs = klines.map(k => k[3]);
+        const lows = klines.map(k => k[2]);
+
+        const series = [];
+        const grids = [];
+        const xAxes = [];
+        const yAxes = [];
+
+        const showVolume = indicatorState.VOL || indicatorState.AVL;
+        const showMacd = indicatorState.MACD;
+        let mainHeight = showVolume && showMacd ? 55 : showVolume || showMacd ? 68 : 100;
+        let currentTop = 5;
+
+        grids.push({ left: 0, right: 0, top: currentTop + '%', height: mainHeight + '%' });
+        xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
+        yAxes.push({ scale: true, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10 } });
+
+        // K线 series 添加 markLine 价格标签
+        const klineSeries = {
+            type: 'candlestick',
+            data: klines,
+            xAxisIndex: 0,
+            yAxisIndex: 0,
+            itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
+            markLine: {
+                symbol: 'none',
+                label: { position: 'end', color: '#848e9c', fontSize: 10, formatter: '{c}' },
+                lineStyle: { type: 'dashed', width: 1 },
+                data: []
+            }
+        };
+
+        // 动态添加三条价格水平线（当前价、24h高、24h低）
+        if (cache.ticker) {
+            const t = cache.ticker;
+            klineSeries.markLine.data.push(
+                { yAxis: parseFloat(t.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(t.last), position: 'end', color: '#f0b90b' } },
+                { yAxis: parseFloat(t.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(t.high_24h), position: 'end', color: '#f6465d' } },
+                { yAxis: parseFloat(t.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(t.low_24h), position: 'end', color: '#0ecb81' } }
+            );
+        }
+        series.push(klineSeries);
+
+        // 其余指标（MA、EMA等）不变...
+        if (indicatorState.MA) {
+            const ma5 = Indicators.SMA(closes, 5);
+            const ma10 = Indicators.SMA(closes, 10);
+            const ma20 = Indicators.SMA(closes, 20);
+            series.push({ type: 'line', data: ma5, xAxisIndex: 0, yAxisIndex: 0, name: 'MA5', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma10, xAxisIndex: 0, yAxisIndex: 0, name: 'MA10', lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma20, xAxisIndex: 0, yAxisIndex: 0, name: 'MA20', lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true });
+        }
+        if (indicatorState.EMA) {
+            const ema12 = Indicators.EMA(closes, 12);
+            const ema26 = Indicators.EMA(closes, 26);
+            series.push({ type: 'line', data: ema12, xAxisIndex: 0, yAxisIndex: 0, name: 'EMA12', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ema26, xAxisIndex: 0, yAxisIndex: 0, name: 'EMA26', lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true });
+        }
+        if (indicatorState.BOLL) {
+            const boll = Indicators.BOLL(closes, 20, 2);
+            series.push({ type: 'line', data: boll.upper, xAxisIndex: 0, yAxisIndex: 0, name: 'BOLL上', lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.middle, xAxisIndex: 0, yAxisIndex: 0, name: 'BOLL中', lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.lower, xAxisIndex: 0, yAxisIndex: 0, name: 'BOLL下', lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none' });
+        }
+        if (indicatorState.SAR) {
+            const sar = Indicators.SAR(highs, lows);
+            series.push({ type: 'line', data: sar, xAxisIndex: 0, yAxisIndex: 0, name: 'SAR', lineStyle: { color: '#ff6b6b', width: 0 }, itemStyle: { color: '#ff6b6b' }, symbol: 'circle', symbolSize: 3 });
+        }
+
+        // 副图 VOL/AVL
+        if (showVolume) {
+            currentTop += mainHeight;
+            const volHeight = showMacd ? 18 : 25;
+            grids.push({ left: 0, right: 0, top: currentTop + '%', height: volHeight + '%' });
+            xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
+            yAxes.push({ gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
+            if (indicatorState.VOL) {
+                const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
+                series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: 1, yAxisIndex: 1, name: 'VOL' });
+            }
+            if (indicatorState.AVL) {
+                const avl = Indicators.SMA(volumes, 10);
+                series.push({ type: 'line', data: avl, xAxisIndex: 1, yAxisIndex: 1, name: 'AVL', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
+            }
+            currentTop += volHeight;
+        }
+
+        // 副图 MACD
+        if (showMacd) {
+            const macdHeight = showVolume ? 18 : 25;
+            grids.push({ left: 0, right: 0, top: currentTop + '%', height: macdHeight + '%' });
+            const macdGridIndex = showVolume ? 2 : 1;
+            xAxes.push({ type: 'category', data: dates, gridIndex: macdGridIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
+            yAxes.push({ gridIndex: macdGridIndex, splitLine: { show: false }, axisLabel: { show: false } });
+            const macdResult = Indicators.MACD(closes);
+            const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
+            series.push({ type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: macdGridIndex, yAxisIndex: macdGridIndex, name: 'MACD' });
+            series.push({ type: 'line', data: macdResult.dif, xAxisIndex: macdGridIndex, yAxisIndex: macdGridIndex, name: 'DIF', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: macdResult.dea, xAxisIndex: macdGridIndex, yAxisIndex: macdGridIndex, name: 'DEA', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
+        }
+
+        myChart.setOption({
+            grid: grids,
+            xAxis: xAxes,
+            yAxis: yAxes,
+            series: series,
+            tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+        }, true);
+    }
+
+    // =================== 指标按钮切换 ===================
+    document.getElementById('indicator-buttons').addEventListener('click', function(e) {
+        const span = e.target.closest('span[data-indicator]');
+        if (!span) return;
+        const key = span.dataset.indicator;
+        indicatorState[key] = !indicatorState[key];
+        span.classList.toggle('active', indicatorState[key]);
+        updateChart();
+    });
 
     // =================== 时间周期切换 ===================
     document.getElementById('timeframes').addEventListener('click', function(e) {
@@ -396,29 +517,14 @@
         fetchKline();
     });
 
-    // =================== 启动与定时刷新（每10秒） ===================
+    // =================== 启动与定时刷新 ===================
     async function refreshAll() {
-        await Promise.all([
-            fetchTicker(),
-            fetchKline(),
-            fetchOrderBook()
-        ]);
-        fetchPeriodChanges(); // 周期涨跌幅可稍慢，不阻塞主流程
+        await Promise.all([fetchTicker(), fetchKline(), fetchOrderBook()]);
+        fetchPeriodChanges();
     }
-
     document.addEventListener('DOMContentLoaded', refreshAll);
-
-    // 每10秒刷新行情、K线、订单簿
-    setInterval(() => {
-        fetchTicker();
-        fetchKline();
-        fetchOrderBook();
-    }, 10000);
-
-    // 每60秒刷新周期涨跌幅
+    setInterval(() => { fetchTicker(); fetchKline(); fetchOrderBook(); }, 10000);
     setInterval(fetchPeriodChanges, 60000);
-
-    // 窗口大小自适应
     window.addEventListener('resize', () => myChart.resize());
 </script>
 </body>
