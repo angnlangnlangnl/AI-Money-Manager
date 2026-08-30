@@ -391,7 +391,7 @@
         } catch (e) {}
     }
 
-    // =================== 图表更新（垂直参考线标签水平显示在左侧） ===================
+    // =================== 图表更新（核心修改：添加 dataZoom 支持拖动） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -455,7 +455,7 @@
                 formatter: dates[i],
                 color: '#848e9c',
                 fontSize: 10,
-                rotate: 0,          // 关键：水平显示
+                rotate: 0,
                 backgroundColor: 'transparent',
                 padding: 0
             }
@@ -568,12 +568,25 @@
             series.push({ type: 'line', data: macdResult.dea, xAxisIndex: macdGridIndex, yAxisIndex: macdGridIndex, name: 'DEA', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
         }
 
+        // 添加 dataZoom：支持左右拖动和缩放
+        const dataZoom = [
+            {
+                type: 'inside',
+                xAxisIndex: [1, 2, 3], // 主图 + 成交量副图 + MACD副图（如有）
+                start: 0,
+                end: 100,
+                zoomOnMouseWheel: true,
+                moveOnMouseMove: true
+            }
+        ];
+
         myChart.setOption({
             animation: false,
             grid: grids,
             xAxis: xAxes,
             yAxis: yAxes,
             series: series,
+            dataZoom: dataZoom,
             tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
         }, true);
     }
