@@ -8,64 +8,81 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .app { width: 390px; height: 844px; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px; box-shadow: 0 0 20px rgba(255,255,255,0.1); }
+        .app {
+            width: 390px;
+            height: 100vh;
+            background-color: #181a20;
+            color: #eaecef;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(255,255,255,0.1);
+        }
 
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; height: 60px; }
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; height: 50px; }
         .header-left { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
         .header-icons { display: flex; gap: 15px; font-size: 18px; }
 
-        .tabs { display: flex; justify-content: space-around; padding: 10px 15px; border-bottom: 1px solid #2b3139; }
+        .tabs { display: flex; justify-content: space-around; padding: 8px 15px; border-bottom: 1px solid #2b3139; }
         .tab { color: #848e9c; font-size: 14px; }
         .tab.active { color: #f0b90b; position: relative; }
-        .tab.active::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
+        .tab.active::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
 
-        .quote-section { display: flex; justify-content: space-between; padding: 15px; }
-        .price-main { font-size: 32px; font-weight: bold; }
-        .price-sub { font-size: 13px; color: #848e9c; margin-top: 5px; }
+        .quote-section { display: flex; justify-content: space-between; padding: 10px 15px; }
+        .price-main { font-size: 28px; font-weight: bold; }
+        .price-sub { font-size: 12px; color: #848e9c; margin-top: 3px; }
         .price-sub span.green { color: #0ecb81; }
         .price-sub span.red { color: #f6465d; }
-        .quote-details { font-size: 12px; color: #848e9c; text-align: right; line-height: 1.6; }
+        .quote-details { font-size: 11px; color: #848e9c; text-align: right; line-height: 1.5; }
         .quote-details b { color: #eaecef; font-weight: normal; }
 
-        .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 10px; font-size: 12px; color: #848e9c; }
+        .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 8px; font-size: 12px; color: #848e9c; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
         .timeframes span { cursor: pointer; }
         .timeframes span:hover { color: #eaecef; }
 
-        .chart-container { flex: 1; position: relative; background: #181a20; }
+        .chart-container {
+            flex: 0 0 40.5vh;
+            position: relative;
+            background: #181a20;
+            margin-top: -5px;  /* 向上移动一点 */
+        }
         #kline { width: 100%; height: 100%; }
 
         .indicators {
             display: flex;
             gap: 15px;
-            padding: 10px 15px;
+            padding: 8px 15px;
             font-size: 12px;
             color: #848e9c;
             overflow-x: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
+            margin-top: 10px;   /* 新增：指标容器整体下移10px，远离K线容器边框 */
         }
         .indicators::-webkit-scrollbar { display: none; }
         .indicators span { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; white-space: nowrap; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
         .indicators span:hover { color: #eaecef; }
 
-        .performance { display: flex; justify-content: space-between; padding: 10px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
+        .performance { display: flex; justify-content: space-between; padding: 8px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
         .perf-item span:last-child { margin-left: 5px; }
         .green { color: #0ecb81; }
         .red { color: #f6465d; }
 
-        .order-book-bar { display: flex; align-items: center; padding: 10px 15px; font-size: 12px; font-weight: bold; }
+        .order-book-bar { display: flex; align-items: center; padding: 8px 15px; font-size: 12px; font-weight: bold; }
         .sell-bar { width: 50%; background: #0ecb81; color: #181a20; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
         .buy-bar { width: 50%; background: #f6465d; color: #181a20; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
         .order-labels { display: flex; justify-content: space-around; font-size: 12px; color: #848e9c; padding: 5px 0; border-bottom: 1px solid #2b3139; }
 
-        .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #181a20; border-top: 1px solid #2b3139; }
-        .tools { display: flex; gap: 20px; font-size: 12px; color: #848e9c; text-align: center; }
+        .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: #181a20; border-top: 1px solid #2b3139; }
+        .tools { display: flex; gap: 15px; font-size: 12px; color: #848e9c; text-align: center; }
         .tools div { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-        .tools i { font-size: 18px; }
-        .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 12px 0; border-radius: 4px; font-size: 16px; font-weight: bold; color: #fff; cursor: pointer; }
-        .buy-btn { background: #0ecb81; margin-right: 10px; }
+        .tools i { font-size: 16px; }
+        .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 10px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; }
+        .buy-btn { background: #0ecb81; margin-right: 8px; }
         .sell-btn { background: #f6465d; }
         .icon { font-style: normal; }
         .error-msg { color: #f6465d; font-size: 11px; text-align: center; padding: 3px; display: none; }
@@ -391,7 +408,7 @@
         } catch (e) {}
     }
 
-    // =================== 图表更新（核心修改：添加 dataZoom 支持拖动） ===================
+    // =================== 图表更新（垂直参考线标签水平显示在左侧，带dataZoom） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -568,11 +585,10 @@
             series.push({ type: 'line', data: macdResult.dea, xAxisIndex: macdGridIndex, yAxisIndex: macdGridIndex, name: 'DEA', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
         }
 
-        // 添加 dataZoom：支持左右拖动和缩放
         const dataZoom = [
             {
                 type: 'inside',
-                xAxisIndex: [1, 2, 3], // 主图 + 成交量副图 + MACD副图（如有）
+                xAxisIndex: [1, 2, 3],
                 start: 0,
                 end: 100,
                 zoomOnMouseWheel: true,
