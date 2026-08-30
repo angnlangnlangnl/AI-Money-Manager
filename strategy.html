@@ -3,28 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BTC/USDT 交易界面</title>
+    <title>BTC/USDT 交易界面（真实行情）</title>
     <!-- 引入 ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        
-        /* 模拟手机屏幕 */
+
         .app { width: 390px; height: 844px; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px; box-shadow: 0 0 20px rgba(255,255,255,0.1); }
 
-        /* 顶部导航 */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; height: 60px; }
         .header-left { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
         .header-icons { display: flex; gap: 15px; font-size: 18px; }
 
-        /* 标签页 */
         .tabs { display: flex; justify-content: space-around; padding: 10px 15px; border-bottom: 1px solid #2b3139; }
         .tab { color: #848e9c; font-size: 14px; }
         .tab.active { color: #f0b90b; position: relative; }
         .tab.active::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
 
-        /* 价格区 */
         .quote-section { display: flex; justify-content: space-between; padding: 15px; }
         .price-main { font-size: 32px; font-weight: bold; }
         .price-sub { font-size: 13px; color: #848e9c; margin-top: 5px; }
@@ -33,32 +29,26 @@
         .quote-details { font-size: 12px; color: #848e9c; text-align: right; line-height: 1.6; }
         .quote-details b { color: #eaecef; font-weight: normal; }
 
-        /* 时间维度 */
         .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 10px; font-size: 12px; color: #848e9c; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
 
-        /* 图表区 */
         .chart-container { flex: 1; position: relative; background: #181a20; }
         #kline { width: 100%; height: 100%; }
 
-        /* 技术指标 */
         .indicators { display: flex; gap: 15px; padding: 10px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; }
         .indicators span.active { color: #eaecef; }
         .indicators span:hover { color: #eaecef; cursor: pointer; }
 
-        /* 涨跌幅 */
         .performance { display: flex; justify-content: space-between; padding: 10px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
         .perf-item span:last-child { margin-left: 5px; }
         .green { color: #0ecb81; }
         .red { color: #f6465d; }
 
-        /* 买卖盘比例 */
         .order-book-bar { display: flex; align-items: center; padding: 10px 15px; font-size: 12px; font-weight: bold; }
-        .sell-bar { width: 10.19%; background: #0ecb81; color: #eaecef; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
-        .buy-bar { width: 89.81%; background: #f6465d; color: #eaecef; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
+        .sell-bar { width: 50%; background: #0ecb81; color: #181a20; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
+        .buy-bar { width: 50%; background: #f6465d; color: #181a20; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
         .order-labels { display: flex; justify-content: space-around; font-size: 12px; color: #848e9c; padding: 5px 0; border-bottom: 1px solid #2b3139; }
 
-        /* 底部操作栏 */
         .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #181a20; border-top: 1px solid #2b3139; }
         .tools { display: flex; gap: 20px; font-size: 12px; color: #848e9c; text-align: center; }
         .tools div { display: flex; flex-direction: column; align-items: center; gap: 5px; }
@@ -66,8 +56,7 @@
         .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 12px 0; border-radius: 4px; font-size: 16px; font-weight: bold; color: #fff; }
         .buy-btn { background: #0ecb81; margin-right: 10px; }
         .sell-btn { background: #f6465d; }
-        
-        /* 简单图标 */
+
         .icon { font-style: normal; }
     </style>
 </head>
@@ -138,7 +127,7 @@
         <span>MACD</span>
     </div>
 
-    <!-- 周期涨跌 (保留原UI，仅将"今日"更新为真实数据) -->
+    <!-- 周期涨跌 -->
     <div class="performance">
         <div class="perf-item">今日 <span id="perf-today">0.00%</span></div>
         <div class="perf-item">7天 <span>1.38%</span></div>
@@ -153,8 +142,8 @@
         <span>委托订单</span><span>深度</span><span>最新成交</span><span>网络</span>
     </div>
     <div class="order-book-bar">
-        <div class="sell-bar" id="sell-bar">--</div>
-        <div class="buy-bar" id="buy-bar">--</div>
+        <div class="sell-bar" id="sell-bar">50%</div>
+        <div class="buy-bar" id="buy-bar">50%</div>
     </div>
 
     <!-- 底部操作按钮 -->
@@ -171,8 +160,8 @@
     </div>
 </div>
 
-<!-- 获取真实 API 数据的 JS 逻辑 -->
 <script>
+    // =================== 初始化 ECharts ===================
     var chartDom = document.getElementById('kline');
     var myChart = echarts.init(chartDom);
     var option = {
@@ -196,40 +185,51 @@
             type: 'candlestick',
             data: [],
             itemStyle: {
-                color: '#0ecb81', color0: '#f6465d',
-                borderColor: '#0ecb81', borderColor0: '#f6465d'
+                color: '#0ecb81',        // 阳线（涨）
+                color0: '#f6465d',       // 阴线（跌）
+                borderColor: '#0ecb81',
+                borderColor0: '#f6465d'
             }
         }],
         tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
     };
     myChart.setOption(option);
 
+    // =================== 常量配置 ===================
     const BASE_URL = 'https://api.gateio.ws/api/v4';
     const PAIR = 'BTC_USDT';
     const INTERVAL = '1h';
-    const CNY_RATE = 7.2; // 简单模拟汇率
+    const CNY_RATE = 7.2; // 可替换为实时汇率 API
 
-    // 格式化数字
+    // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) {
-        return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+        const n = parseFloat(num);
+        if (isNaN(n)) return '--';
+        return n.toLocaleString('en-US', {
+            minimumFractionDigits: decimals,
+            maximumFractionDigits: decimals
+        });
     }
 
-    // 获取实时 Ticker 数据
+    // =================== 获取 Ticker 数据 ===================
     async function fetchTicker() {
         try {
             const res = await fetch(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
+            if (!data || data.length === 0) throw new Error('空数据');
             const t = data[0];
 
             const last = parseFloat(t.last);
-            const change = parseFloat(t.change_percentage).toFixed(2);
-            
+            const change = parseFloat(t.change_percentage);
+
             // 更新主价格
             document.getElementById('last-price').innerText = formatNum(last);
 
-            // 更新汇率及涨跌幅
+            // 更新人民币价格及涨跌幅
             const changeClass = change >= 0 ? 'green' : 'red';
-            document.getElementById('cn-price').innerHTML = `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${change >= 0 ? '+' : ''}${change}%</span>`;
+            document.getElementById('cn-price').innerHTML =
+                `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
 
             // 更新24小时数据
             document.getElementById('high-24').innerText = formatNum(t.high_24h);
@@ -237,36 +237,44 @@
             document.getElementById('vol-24').innerText = formatNum(t.base_volume, 2);
             document.getElementById('amount-24').innerText = formatNum(t.quote_volume / 100000000, 2) + '亿';
 
-            // 更新"今日"表现
+            // 更新“今日”涨跌幅
             const perfToday = document.getElementById('perf-today');
-            perfToday.innerText = `${change >= 0 ? '+' : ''}${change}%`;
+            perfToday.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
             perfToday.className = changeClass;
 
-            // 动态计算买卖盘比例（基于当前价处于24h高低区间的相对位置）
+            // 模拟买卖盘比例（根据当前价在24h高低区间的位置估算）
+            const high = parseFloat(t.high_24h);
+            const low = parseFloat(t.low_24h);
             let buyPct = 50;
-            if (last >= parseFloat(t.high_24h) * 0.95) buyPct = 89.81;
-            else if (last <= parseFloat(t.low_24h) * 1.05) buyPct = 10.19;
-            else buyPct = Math.max(10, Math.min(90, (1 - (last - parseFloat(t.low_24h)) / (parseFloat(t.high_24h) - parseFloat(t.low_24h))) * 100));
-            let sellPct = 100 - buyPct;
+            if (high > low) {
+                buyPct = ((last - low) / (high - low)) * 100;
+                // 限制在10~90之间，避免极端值
+                buyPct = Math.max(10, Math.min(90, buyPct));
+            }
+            const sellPct = 100 - buyPct;
 
-            document.getElementById('sell-bar').style.width = sellPct + '%';
-            document.getElementById('buy-bar').style.width = buyPct + '%';
-            document.getElementById('sell-bar').innerText = sellPct.toFixed(2) + '%';
-            document.getElementById('buy-bar').innerText = buyPct.toFixed(2) + '%';
+            const sellBar = document.getElementById('sell-bar');
+            const buyBar = document.getElementById('buy-bar');
+            sellBar.style.width = sellPct + '%';
+            buyBar.style.width = buyPct + '%';
+            sellBar.innerText = sellPct.toFixed(2) + '%';
+            buyBar.innerText = buyPct.toFixed(2) + '%';
 
         } catch (e) {
-            console.error("行情获取失败", e);
+            console.error("行情获取失败:", e);
+            // 可显示错误提示，此处保持原有占位符
         }
     }
 
-    // 获取真实 K 线数据
+    // =================== 获取真实 K 线数据 ===================
     async function fetchKline() {
         try {
-            // Gate 返回格式: [时间戳, 成交量额, 收盘, 最高, 最低, 开盘, 成交量]
             const res = await fetch(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=${INTERVAL}&limit=100`);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const rawData = await res.json();
+            if (!rawData || rawData.length === 0) throw new Error('空K线数据');
 
-            // 转换为 ECharts 需要的 [开盘, 收盘, 最低, 最高]
+            // Gate 返回格式: [时间戳, 成交量额, 收盘, 最高, 最低, 开盘, 成交量]
             const kLineData = rawData.map(item => [
                 parseFloat(item[5]), // Open
                 parseFloat(item[2]), // Close
@@ -283,16 +291,29 @@
                 xAxis: { data: dates },
                 series: [{ data: kLineData }]
             });
+
+            // 响应容器大小变化
+            myChart.resize();
         } catch (e) {
-            console.error("K线获取失败", e);
+            console.error("K线获取失败:", e);
         }
     }
 
-    // 初始化并定时刷新
-    fetchTicker();
-    fetchKline();
-    setInterval(fetchTicker, 30000); // 每30秒更新行情
-    setInterval(fetchKline, 60000);  // 每60秒更新K线
+    // =================== 启动与定时刷新 ===================
+    window.addEventListener('load', () => {
+        fetchTicker();
+        fetchKline();
+    });
+
+    // 每30秒刷新行情
+    setInterval(fetchTicker, 30000);
+    // 每60秒刷新K线
+    setInterval(fetchKline, 60000);
+
+    // 窗口大小改变时自适应
+    window.addEventListener('resize', () => {
+        myChart.resize();
+    });
 </script>
 
 </body>
