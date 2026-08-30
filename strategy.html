@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BTC/USDT 交易界面（真实行情+完整指标+价格标签+缩放）</title>
+    <title>BTC/USDT 交易界面（真实行情+完整指标+价格标签）</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -259,7 +259,7 @@
 
     // =================== ECharts 初始化 ===================
     const chartDom = document.getElementById('kline');
-    const myChart = echarts.init(chartDom);
+    const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
     let chartData = { dates: [], klines: [], volumes: [] };
 
     // =================== 工具函数 ===================
@@ -391,13 +391,19 @@
         } catch (e) {}
     }
 
-    // =================== 图表更新（含内部价格标签、缩放） ===================
+    // =================== 图表更新（垂直参考线标签水平显示在左侧） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
         const closes = klines.map(k => k[1]);
         const highs = klines.map(k => k[3]);
         const lows = klines.map(k => k[2]);
+
+        const minLow = Math.min(...lows);
+        const maxHigh = Math.max(...highs);
+        const padding = (maxHigh - minLow) * 0.1;
+        const yMin = minLow - padding;
+        const yMax = maxHigh + padding;
 
         const series = [];
         const grids = [];
@@ -409,89 +415,141 @@
         let mainHeight = showVolume && showMacd ? 55 : showVolume || showMacd ? 68 : 100;
         let currentTop = 5;
 
-        // 主图 grid：右侧留出空间给标签
-        const gridRight = 60;
-        grids.push({ left: 0, right: gridRight, top: currentTop + '%', height: mainHeight + '%' });
-        xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
+        const labelIndices = [
+            Math.floor(dates.length * 0.2),
+            Math.floor(dates.length * 0.4),
+            Math.floor(dates.length * 0.6),
+            Math.floor(dates.length * 0.8)
+        ];
+
+        // ---------- 背景网格 (满屏，无标签) ----------
+        grids.push({ left: 0, right: 0, top: currentTop + '%', height: mainHeight + '%' });
+        xAxes.push({
+            type: 'category',
+            data: dates,
+            gridIndex: 0,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false }
+        });
         yAxes.push({
-            scale: true,
+            scale: false,
+            min: yMin,
+            max: yMax,
+            splitNumber: 6,
             position: 'right',
             gridIndex: 0,
             splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } },
-            axisLabel: {
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 4, formatter: value => formatNum(value, 1) }
+        });
+
+        // 垂直参考线：标签水平显示在线条左侧
+        const verticalMarks = labelIndices.map(i => ({
+            xAxis: dates[i],
+            lineStyle: { color: '#2b3139', type: 'dashed', width: 1 },
+            label: {
+                show: true,
+                position: 'insideStart',
+                distance: -12,
+                formatter: dates[i],
                 color: '#848e9c',
                 fontSize: 10,
-                inside: true,
-                margin: 4,
-                formatter: function(value) { return formatNum(value, 1); }
+                rotate: 0,          // 关键：水平显示
+                backgroundColor: 'transparent',
+                padding: 0
+            }
+        }));
+        series.push({
+            type: 'line',
+            data: [],
+            xAxisIndex: 0,
+            yAxisIndex: 0,
+            silent: true,
+            markLine: {
+                symbol: 'none',
+                animation: false,
+                data: verticalMarks
             }
         });
 
-        // K线
+        // ---------- 主图 K线区域 (右侧留空20%) ----------
+        grids.push({ left: 0, right: '20%', top: currentTop + '%', height: mainHeight + '%' });
+        xAxes.push({
+            type: 'category',
+            data: dates,
+            gridIndex: 1,
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false }
+        });
+        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
+
         const klineSeries = {
             type: 'candlestick',
             data: klines,
-            xAxisIndex: 0,
-            yAxisIndex: 0,
+            xAxisIndex: 1,
+            yAxisIndex: 1,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: {
                 symbol: 'none',
-                label: { position: 'insideEnd', color: '#848e9c', fontSize: 10, formatter: '{c}' },
+                animation: false,
                 lineStyle: { type: 'dashed', width: 1 },
+                label: { position: 'insideEnd', distance: 10, color: '#848e9c', fontSize: 10, formatter: '{c}' },
                 data: []
             }
         };
-
         if (cache.ticker) {
             const t = cache.ticker;
             klineSeries.markLine.data.push(
-                { yAxis: parseFloat(t.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(t.last), position: 'insideEnd', color: '#f0b90b' } },
-                { yAxis: parseFloat(t.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(t.high_24h), position: 'insideEnd', color: '#f6465d' } },
-                { yAxis: parseFloat(t.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(t.low_24h), position: 'insideEnd', color: '#0ecb81' } }
+                { yAxis: parseFloat(t.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(t.last), color: '#f0b90b', distance: 20 } },
+                { yAxis: parseFloat(t.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(t.high_24h), color: '#f6465d', distance: 10 } },
+                { yAxis: parseFloat(t.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(t.low_24h), color: '#0ecb81', distance: 10 } }
             );
         }
         series.push(klineSeries);
 
-        // 指标
+        // 指标（使用 xAxisIndex:1, yAxisIndex:1）
         if (indicatorState.MA) {
             const ma5 = Indicators.SMA(closes, 5);
             const ma10 = Indicators.SMA(closes, 10);
             const ma20 = Indicators.SMA(closes, 20);
-            series.push({ type: 'line', data: ma5, xAxisIndex: 0, yAxisIndex: 0, name: 'MA5', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
-            series.push({ type: 'line', data: ma10, xAxisIndex: 0, yAxisIndex: 0, name: 'MA10', lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true });
-            series.push({ type: 'line', data: ma20, xAxisIndex: 0, yAxisIndex: 0, name: 'MA20', lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma5, xAxisIndex: 1, yAxisIndex: 1, name: 'MA5', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma10, xAxisIndex: 1, yAxisIndex: 1, name: 'MA10', lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma20, xAxisIndex: 1, yAxisIndex: 1, name: 'MA20', lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true });
         }
         if (indicatorState.EMA) {
             const ema12 = Indicators.EMA(closes, 12);
             const ema26 = Indicators.EMA(closes, 26);
-            series.push({ type: 'line', data: ema12, xAxisIndex: 0, yAxisIndex: 0, name: 'EMA12', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
-            series.push({ type: 'line', data: ema26, xAxisIndex: 0, yAxisIndex: 0, name: 'EMA26', lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ema12, xAxisIndex: 1, yAxisIndex: 1, name: 'EMA12', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ema26, xAxisIndex: 1, yAxisIndex: 1, name: 'EMA26', lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true });
         }
         if (indicatorState.BOLL) {
             const boll = Indicators.BOLL(closes, 20, 2);
-            series.push({ type: 'line', data: boll.upper, xAxisIndex: 0, yAxisIndex: 0, name: 'BOLL上', lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none' });
-            series.push({ type: 'line', data: boll.middle, xAxisIndex: 0, yAxisIndex: 0, name: 'BOLL中', lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none' });
-            series.push({ type: 'line', data: boll.lower, xAxisIndex: 0, yAxisIndex: 0, name: 'BOLL下', lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.upper, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL上', lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.middle, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL中', lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.lower, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL下', lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none' });
         }
         if (indicatorState.SAR) {
             const sar = Indicators.SAR(highs, lows);
-            series.push({ type: 'line', data: sar, xAxisIndex: 0, yAxisIndex: 0, name: 'SAR', lineStyle: { color: '#ff6b6b', width: 0 }, itemStyle: { color: '#ff6b6b' }, symbol: 'circle', symbolSize: 3 });
+            series.push({ type: 'line', data: sar, xAxisIndex: 1, yAxisIndex: 1, name: 'SAR', lineStyle: { color: '#ff6b6b', width: 0 }, itemStyle: { color: '#ff6b6b' }, symbol: 'circle', symbolSize: 3 });
         }
 
         // 副图 VOL/AVL
         if (showVolume) {
             currentTop += mainHeight;
             const volHeight = showMacd ? 18 : 25;
-            grids.push({ left: 0, right: gridRight, top: currentTop + '%', height: volHeight + '%' });
-            xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
-            yAxes.push({ gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
+            grids.push({ left: 0, right: '20%', top: currentTop + '%', height: volHeight + '%' });
+            xAxes.push({ type: 'category', data: dates, gridIndex: 2, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
+            yAxes.push({ gridIndex: 2, splitLine: { show: false }, axisLabel: { show: false } });
             if (indicatorState.VOL) {
                 const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
-                series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: 1, yAxisIndex: 1, name: 'VOL' });
+                series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: 2, yAxisIndex: 2, name: 'VOL' });
             }
             if (indicatorState.AVL) {
                 const avl = Indicators.SMA(volumes, 10);
-                series.push({ type: 'line', data: avl, xAxisIndex: 1, yAxisIndex: 1, name: 'AVL', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
+                series.push({ type: 'line', data: avl, xAxisIndex: 2, yAxisIndex: 2, name: 'AVL', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
             }
             currentTop += volHeight;
         }
@@ -499,8 +557,8 @@
         // 副图 MACD
         if (showMacd) {
             const macdHeight = showVolume ? 18 : 25;
-            grids.push({ left: 0, right: gridRight, top: currentTop + '%', height: macdHeight + '%' });
-            const macdGridIndex = showVolume ? 2 : 1;
+            grids.push({ left: 0, right: '20%', top: currentTop + '%', height: macdHeight + '%' });
+            const macdGridIndex = showVolume ? 3 : 2;
             xAxes.push({ type: 'category', data: dates, gridIndex: macdGridIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: macdGridIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closes);
@@ -510,31 +568,14 @@
             series.push({ type: 'line', data: macdResult.dea, xAxisIndex: macdGridIndex, yAxisIndex: macdGridIndex, name: 'DEA', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
         }
 
-        // 更新图表（使用 merge 模式，不覆盖 dataZoom）
-        const option = {
+        myChart.setOption({
+            animation: false,
             grid: grids,
             xAxis: xAxes,
             yAxis: yAxes,
             series: series,
             tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
-        };
-
-        // 首次添加 dataZoom（如果尚未存在）
-        if (!myChart.getOption().dataZoom || myChart.getOption().dataZoom.length === 0) {
-            option.dataZoom = [
-                {
-                    type: 'inside',
-                    xAxisIndex: [0, 1, 2],
-                    start: 0,
-                    end: 100,
-                    zoomOnMouseWheel: true,
-                    moveOnMouseMove: true,
-                    moveOnMouseWheel: false
-                }
-            ];
-        }
-
-        myChart.setOption(option, false); // merge 模式
+        }, true);
     }
 
     // =================== 指标按钮切换 ===================
