@@ -1,896 +1,299 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>现货交易 - Gate.io 模拟积分</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BTC/USDT 交易界面</title>
+    <!-- 引入 ECharts -->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #0a0a0f; color: #e8e8f0; height: 100vh; overflow: hidden; touch-action: manipulation; }
-        ::-webkit-scrollbar { width: 3px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
-        .tap-active:active { transform: scale(0.96); opacity: 0.7; }
-        .safe-area-bottom { padding-bottom: env(safe-area-inset-bottom, 12px); }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        
+        /* 模拟手机屏幕 */
+        .app { width: 390px; height: 844px; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px; box-shadow: 0 0 20px rgba(255,255,255,0.1); }
 
-        /* ===== 移动端优化：减小间距，紧凑布局 ===== */
-        .exchange-selector { background: #12121f; border-bottom: 1px solid #1a1a2a; padding: 6px 10px; flex-shrink: 0; overflow: hidden; }
-        .exchange-selector-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-        .exchange-selector-title { font-size: 10px; color: #6a6a7a; font-weight: 500; }
-        .exchange-selector-status { font-size: 9px; color: #4ade80; display: flex; align-items: center; gap: 3px; }
-        .status-dot { width: 5px; height: 5px; border-radius: 50%; background: #4ade80; animation: pulse 2s ease-in-out infinite; }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-        .exchange-selector-list { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-        .exchange-selector-list::-webkit-scrollbar { display: none; }
-        .exchange-option { display: flex; align-items: center; gap: 5px; padding: 4px 8px; border-radius: 8px; border: 1px solid #1a1a2a; background: #0a0a12; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0; }
-        .exchange-option.active { border-color: #3b82f6; background: #1a2a3a; }
-        .exchange-icon { width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; background: #1a3a2a; color: #4ade80; }
-        .exchange-name { font-size: 11px; font-weight: 500; color: #c8c8d8; }
-        .exchange-option.active .exchange-name { color: #e8e8f0; }
-        .exchange-check { font-size: 9px; color: #3b82f6; font-weight: 700; }
+        /* 顶部导航 */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; height: 60px; }
+        .header-left { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
+        .header-icons { display: flex; gap: 15px; font-size: 18px; }
 
-        /* 账户概览更紧凑 */
-        .mock-account-overview { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 6px 10px; background: #12121f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; }
-        .mock-stat { text-align: center; padding: 5px 2px; background: #0a0a12; border-radius: 8px; border: 1px solid #1a1a2a; }
-        .mock-stat-label { display: block; font-size: 9px; color: #5a5a6a; margin-bottom: 2px; }
-        .mock-stat-value { font-size: 13px; font-weight: 700; color: #e8e8f0; }
+        /* 标签页 */
+        .tabs { display: flex; justify-content: space-around; padding: 10px 15px; border-bottom: 1px solid #2b3139; }
+        .tab { color: #848e9c; font-size: 14px; }
+        .tab.active { color: #f0b90b; position: relative; }
+        .tab.active::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
 
-        .market-bar { background: #12121f; border-bottom: 1px solid #1a1a2a; padding: 6px 10px; flex-shrink: 0; }
-        .price-display { font-size: 20px; font-weight: 700; color: #4ade80; }
-        .price-change { font-size: 11px; }
+        /* 价格区 */
+        .quote-section { display: flex; justify-content: space-between; padding: 15px; }
+        .price-main { font-size: 32px; font-weight: bold; }
+        .price-sub { font-size: 13px; color: #848e9c; margin-top: 5px; }
+        .price-sub span.green { color: #0ecb81; }
+        .price-sub span.red { color: #f6465d; }
+        .quote-details { font-size: 12px; color: #848e9c; text-align: right; line-height: 1.6; }
+        .quote-details b { color: #eaecef; font-weight: normal; }
 
-        .market-stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px 8px; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; }
-        .market-stat-item { text-align: center; }
-        .market-stat-label { font-size: 8px; color: #5a5a6a; }
-        .market-stat-value { font-size: 10px; color: #c8c8d8; font-weight: 600; }
+        /* 时间维度 */
+        .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 10px; font-size: 12px; color: #848e9c; }
+        .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
 
-        /* 图表高度优化：降低K线高度，保留足够空间 */
-        .chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 2px; flex-shrink: 0; height: 200px; }
-        .chart-container canvas { width: 100% !important; height: 100% !important; }
+        /* 图表区 */
+        .chart-container { flex: 1; position: relative; background: #181a20; }
+        #kline { width: 100%; height: 100%; }
 
-        .change-chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 2px; flex-shrink: 0; height: 50px; display: none; }
-        .change-chart-container canvas { width: 100% !important; height: 100% !important; }
+        /* 技术指标 */
+        .indicators { display: flex; gap: 15px; padding: 10px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; }
+        .indicators span.active { color: #eaecef; }
+        .indicators span:hover { color: #eaecef; cursor: pointer; }
 
-        .timeframe-bar { display: flex; gap: 4px; padding: 3px 6px; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
-        .timeframe-bar::-webkit-scrollbar { display: none; }
-        .timeframe-btn { padding: 2px 7px; border-radius: 4px; font-size: 9px; cursor: pointer; border: 1px solid #1a1a2a; background: #12121f; color: #6a6a7a; white-space: nowrap; }
-        .timeframe-btn.active { background: #1a2a3a; border-color: #3b82f6; color: #e8e8f0; }
+        /* 涨跌幅 */
+        .performance { display: flex; justify-content: space-between; padding: 10px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
+        .perf-item span:last-child { margin-left: 5px; }
+        .green { color: #0ecb81; }
+        .red { color: #f6465d; }
 
-        .indicator-bar { display: flex; gap: 4px; padding: 3px 6px; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
-        .indicator-bar::-webkit-scrollbar { display: none; }
-        .indicator-btn { padding: 2px 7px; border-radius: 4px; font-size: 9px; cursor: pointer; border: 1px solid #1a1a2a; background: #12121f; color: #6a6a7a; white-space: nowrap; }
-        .indicator-btn.active { background: #1a2a3a; border-color: #3b82f6; color: #e8e8f0; }
+        /* 买卖盘比例 */
+        .order-book-bar { display: flex; align-items: center; padding: 10px 15px; font-size: 12px; font-weight: bold; }
+        .sell-bar { width: 10.19%; background: #0ecb81; color: #eaecef; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
+        .buy-bar { width: 89.81%; background: #f6465d; color: #eaecef; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
+        .order-labels { display: flex; justify-content: space-around; font-size: 12px; color: #848e9c; padding: 5px 0; border-bottom: 1px solid #2b3139; }
 
-        /* 订单簿优化：降低最大高度，减小字体 */
-        .depth-section { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px 6px; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; max-height: 130px; overflow: hidden; }
-        .depth-panel { background: #12121f; border-radius: 6px; border: 1px solid #1a1a2a; overflow: hidden; display: flex; flex-direction: column; }
-        .depth-header { padding: 3px 6px; font-size: 9px; font-weight: 600; color: #8a8a9a; border-bottom: 1px solid #1a1a2a; text-align: center; flex-shrink: 0; }
-        .depth-list { flex: 1; overflow-y: auto; padding: 1px 4px; }
-        .depth-list::-webkit-scrollbar { width: 1px; }
-        .depth-row { display: flex; justify-content: space-between; font-size: 8px; padding: 1px 0; color: #8a8a9a; }
-        .depth-row .ask-price { color: #ef4444; }
-        .depth-row .bid-price { color: #4ade80; }
-        .depth-row .depth-amount { color: #6a6a7a; }
-
-        .pair-selector { display: flex; gap: 4px; overflow-x: auto; padding: 4px 8px; flex-shrink: 0; scrollbar-width: none; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; }
-        .pair-selector::-webkit-scrollbar { display: none; }
-        .pair-btn { padding: 3px 10px; border-radius: 5px; font-size: 11px; cursor: pointer; border: 1px solid #1a1a2a; background: #12121f; color: #8a8a9a; white-space: nowrap; }
-        .pair-btn.active { background: #1a2a3a; border-color: #3b82f6; color: #e8e8f0; }
-
-        /* 标签页和面板优化 */
-        .mock-tabs { display: flex; gap: 2px; padding: 6px 8px 0; background: #0a0a0f; flex-shrink: 0; }
-        .mock-tab { flex: 1; padding: 5px; text-align: center; font-size: 10px; font-weight: 600; cursor: pointer; border: none; background: transparent; color: #6a6a7a; border-bottom: 2px solid transparent; }
-        .mock-tab.active { color: #3b82f6; border-bottom-color: #3b82f6; }
-
-        .mock-panel { flex: 1; overflow-y: auto; padding: 6px 8px; background: #0a0a0f; min-height: 0; }
-        .mock-panel::-webkit-scrollbar { width: 2px; }
-        .mock-panel::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
-
-        .mock-order-form { background: #12121f; border: 1px solid #1a1a2a; border-radius: 10px; padding: 8px; margin-bottom: 6px; }
-        .mock-order-side { display: flex; gap: 6px; margin-bottom: 6px; }
-        .mock-side-btn { flex: 1; padding: 7px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid #1a1a2a; background: #0a0a12; color: #8a8a9a; text-align: center; }
-        .mock-side-btn.buy.active { background: #10b981; border-color: #10b981; color: white; }
-        .mock-side-btn.sell.active { background: #ef4444; border-color: #ef4444; color: white; }
-        .mock-input-group { margin-bottom: 4px; }
-        .mock-input-group label { display: block; font-size: 9px; color: #6a6a7a; margin-bottom: 2px; }
-        .mock-input-group input, .mock-input-group select { width: 100%; background: #0a0a12; border: 1px solid #1a1a2a; border-radius: 5px; padding: 6px 7px; font-size: 11px; color: #e8e8f0; outline: none; }
-        .mock-submit-btn { width: 100%; padding: 7px; border-radius: 5px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; color: white; }
-        .mock-submit-btn.buy { background: #10b981; }
-        .mock-submit-btn.sell { background: #ef4444; }
-
-        .mock-section { background: #12121f; border: 1px solid #1a1a2a; border-radius: 10px; margin-bottom: 6px; overflow: hidden; }
-        .mock-section-header { padding: 6px 10px; font-size: 11px; font-weight: 600; color: #8a8a9a; border-bottom: 1px solid #1a1a2a; display: flex; justify-content: space-between; }
-        .mock-section-content { padding: 6px 10px; }
-        .empty-state { text-align: center; padding: 12px; color: #5a5a6a; font-size: 11px; }
-        .order-item, .trade-item { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #0d0d18; font-size: 10px; color: #8a8a9a; }
-        .cancel-order-btn { background: #3a1a1a; color: #ef4444; border: none; border-radius: 3px; padding: 1px 5px; font-size: 8px; cursor: pointer; }
-
-        .bottom-actions { display: flex; gap: 4px; padding: 4px 8px; background: #12121f; border-top: 1px solid #1a1a2a; flex-shrink: 0; }
-        .bottom-btn { flex: 1; padding: 7px; border-radius: 6px; font-size: 11px; font-weight: 500; cursor: pointer; text-align: center; border: 1px solid #1a1a2a; background: #0a0a12; color: #8a8a9a; }
-        .bottom-btn:active { background: #1a1a2a; color: #e8e8f0; }
-
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-        .stats-item { background: #0a0a12; padding: 6px; border-radius: 6px; text-align: center; border: 1px solid #0d0d18; }
-        .stats-value { font-size: 12px; font-weight: 700; color: #e8e8f0; display: block; }
-        .stats-label { font-size: 8px; color: #5a5a6a; }
-
-        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 999; display: none; align-items: center; justify-content: center; }
-        .modal-overlay.show { display: flex; }
-        .modal { background: #12121f; border: 1px solid #1a1a2a; border-radius: 14px; padding: 16px; width: 85%; max-width: 320px; }
-        .modal-title { font-size: 15px; font-weight: 600; color: #e8e8f0; text-align: center; margin-bottom: 12px; }
-        .modal-btn { width: 100%; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
-        .modal-btn-danger { background: #ef4444; color: white; margin-bottom: 6px; }
-        .modal-btn-secondary { background: #1a1a2a; color: #8a8a9a; }
-
-        /* 小屏幕特别优化 */
-        @media (max-width: 380px) {
-            .chart-container { height: 170px; }
-            .price-display { font-size: 18px; }
-            .mock-stat-value { font-size: 11px; }
-        }
+        /* 底部操作栏 */
+        .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #181a20; border-top: 1px solid #2b3139; }
+        .tools { display: flex; gap: 20px; font-size: 12px; color: #848e9c; text-align: center; }
+        .tools div { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+        .tools i { font-size: 18px; }
+        .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 12px 0; border-radius: 4px; font-size: 16px; font-weight: bold; color: #fff; }
+        .buy-btn { background: #0ecb81; margin-right: 10px; }
+        .sell-btn { background: #f6465d; }
+        
+        /* 简单图标 */
+        .icon { font-style: normal; }
     </style>
 </head>
 <body>
-    <div id="app" style="display:flex;flex-direction:column;height:100vh;background:#0a0a0f;">
-        <!-- 顶部导航 -->
-        <div class="flex items-center justify-between px-3 py-2 border-b border-[#1a1a2a] bg-[#0a0a0f] flex-shrink-0">
-            <button onclick="goBack()" class="p-1 -ml-1 tap-active">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-            </button>
-            <span class="text-sm font-medium">现货交易</span>
-            <button onclick="openSettingsModal()" class="p-1 -mr-1 tap-active">⚙️</button>
+
+<div class="app">
+    <!-- 顶部导航 -->
+    <div class="header">
+        <div class="header-left">
+            <i class="icon">‹</i>
+            <span>BTC/USDT ▾</span>
+            <div style="font-size: 10px; color: #848e9c;">Bitcoin</div>
         </div>
-
-        <!-- 交易所选择器 -->
-        <div class="exchange-selector">
-            <div class="exchange-selector-header">
-                <span class="exchange-selector-title">选择交易所</span>
-                <span class="exchange-selector-status"><span class="status-dot"></span>Gate.io 实时行情</span>
-            </div>
-            <div class="exchange-selector-list" id="exchangeSelectorList"></div>
-        </div>
-
-        <!-- 模拟账户概览 -->
-        <div class="mock-account-overview">
-            <div class="mock-stat"><span class="mock-stat-label">USDT积分</span><span class="mock-stat-value" id="mockUSDT">100000.00</span></div>
-            <div class="mock-stat"><span class="mock-stat-label">BTC积分</span><span class="mock-stat-value" id="mockBTC">0.10000000</span></div>
-            <div class="mock-stat"><span class="mock-stat-label">总资产</span><span class="mock-stat-value" id="mockTotalAssets">$100,000</span></div>
-        </div>
-
-        <!-- 行情栏 -->
-        <div class="market-bar">
-            <div class="flex items-center justify-between">
-                <span class="text-sm text-[#8a8a9a]" id="currentPair">BTC/USDT</span>
-                <div class="price-change text-emerald-400" id="priceChange">+0.00%</div>
-            </div>
-            <div class="price-display" id="currentPrice">$0.00</div>
-        </div>
-
-        <!-- 24h统计栏 -->
-        <div class="market-stats-bar">
-            <div class="market-stat-item"><div class="market-stat-label">24h最高</div><div class="market-stat-value" id="high24h">$0.00</div></div>
-            <div class="market-stat-item"><div class="market-stat-label">24h最低</div><div class="market-stat-value" id="low24h">$0.00</div></div>
-            <div class="market-stat-item"><div class="market-stat-label">24h量</div><div class="market-stat-value" id="baseVolume">0</div></div>
-            <div class="market-stat-item"><div class="market-stat-label">24h额</div><div class="market-stat-value" id="quoteVolume">$0</div></div>
-        </div>
-
-        <!-- K线图 -->
-        <div class="chart-container"><canvas id="klineChart"></canvas></div>
-
-        <!-- 涨跌幅柱状图 -->
-        <div class="change-chart-container" id="changeChartContainer"><canvas id="changeChart"></canvas></div>
-
-        <!-- 时间周期 -->
-        <div class="timeframe-bar" id="timeframeBar"></div>
-
-        <!-- 指标 -->
-        <div class="indicator-bar">
-            <button class="indicator-btn active" onclick="toggleIndicator('candle')">蜡烛图</button>
-            <button class="indicator-btn active" onclick="toggleIndicator('ma')">MA</button>
-            <button class="indicator-btn active" onclick="toggleIndicator('ema')">EMA</button>
-            <button class="indicator-btn" onclick="toggleIndicator('boll')">BOLL</button>
-            <button class="indicator-btn" onclick="toggleIndicator('volume')">成交量</button>
-            <button class="indicator-btn" onclick="toggleIndicator('change')">涨跌幅</button>
-        </div>
-
-        <!-- 订单簿 -->
-        <div class="depth-section">
-            <div class="depth-panel">
-                <div class="depth-header">📖 卖盘</div>
-                <div class="depth-list" id="askList"><div class="empty-state">加载中...</div></div>
-            </div>
-            <div class="depth-panel">
-                <div class="depth-header">📖 买盘</div>
-                <div class="depth-list" id="bidList"><div class="empty-state">加载中...</div></div>
-            </div>
-        </div>
-
-        <!-- 交易对 -->
-        <div class="pair-selector" id="pairSelector"></div>
-
-        <!-- 标签页 -->
-        <div class="mock-tabs">
-            <button class="mock-tab active" onclick="switchMockTab('trade')">📊 交易</button>
-            <button class="mock-tab" onclick="switchMockTab('positions')">📈 持仓</button>
-            <button class="mock-tab" onclick="switchMockTab('orders')">📋 挂单</button>
-            <button class="mock-tab" onclick="switchMockTab('history')">📜 历史</button>
-            <button class="mock-tab" onclick="switchMockTab('stats')">📊 统计</button>
-        </div>
-
-        <!-- 面板 -->
-        <div class="mock-panel" id="mockPanel">
-            <div id="tradePanel">
-                <div class="mock-order-form">
-                    <div class="mock-order-side">
-                        <button class="mock-side-btn buy active" id="buySideBtn" onclick="setOrderSide('buy')">买入</button>
-                        <button class="mock-side-btn sell" id="sellSideBtn" onclick="setOrderSide('sell')">卖出</button>
-                    </div>
-                    <div class="mock-input-group">
-                        <label>订单类型</label>
-                        <select id="mockOrderType" onchange="togglePriceInput()">
-                            <option value="market">市价单</option>
-                            <option value="limit">限价单</option>
-                        </select>
-                    </div>
-                    <div class="mock-input-group" id="priceInputGroup" style="display:none;">
-                        <label>价格 (USDT)</label>
-                        <input type="number" id="mockOrderPrice" placeholder="输入价格" step="0.01">
-                    </div>
-                    <div class="mock-input-group">
-                        <label id="amountLabel">数量 (BTC)</label>
-                        <input type="number" id="mockOrderAmount" placeholder="输入数量" step="0.0001" min="0">
-                    </div>
-                    <div class="flex justify-between text-xs text-[#6a6a7a] mb-2">
-                        <span>预估: <span id="estimatedAmount">$0.00</span></span>
-                        <span>手续费: 0.1%</span>
-                    </div>
-                    <button class="mock-submit-btn buy" id="submitOrderBtn" onclick="submitMockOrder()">买入</button>
-                </div>
-            </div>
-            <div id="positionsPanel" style="display:none;">
-                <div class="mock-section">
-                    <div class="mock-section-header"><span>📈 当前持仓</span><span id="positionCount">0个</span></div>
-                    <div class="mock-section-content" id="mockPositions"><div class="empty-state">暂无持仓</div></div>
-                </div>
-            </div>
-            <div id="ordersPanel" style="display:none;">
-                <div class="mock-section">
-                    <div class="mock-section-header"><span>📋 挂单列表</span><span id="pendingOrderCount">0个</span></div>
-                    <div class="mock-section-content" id="mockPendingOrders"><div class="empty-state">暂无挂单</div></div>
-                </div>
-            </div>
-            <div id="historyPanel" style="display:none;">
-                <div class="mock-section">
-                    <div class="mock-section-header"><span>📜 交易历史</span><span id="tradeHistoryCount">0笔</span></div>
-                    <div class="mock-section-content" id="mockTradeHistory"><div class="empty-state">暂无记录</div></div>
-                </div>
-            </div>
-            <div id="statsPanel" style="display:none;">
-                <div class="mock-section">
-                    <div class="mock-section-header">📊 统计</div>
-                    <div class="mock-section-content">
-                        <div class="stats-grid">
-                            <div class="stats-item"><span class="stats-value" id="statTotalTrades">0</span><span class="stats-label">总次数</span></div>
-                            <div class="stats-item"><span class="stats-value" id="statWinRate">0%</span><span class="stats-label">胜率</span></div>
-                            <div class="stats-item"><span class="stats-value" id="statTotalProfit">$0</span><span class="stats-label">总盈亏</span></div>
-                            <div class="stats-item"><span class="stats-value" id="statTotalCommission">$0</span><span class="stats-label">手续费</span></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mock-section">
-                    <div class="mock-section-header">⚙️ 操作</div>
-                    <div class="mock-section-content">
-                        <button class="modal-btn modal-btn-danger" onclick="confirmResetAccount()">🔄 重置模拟账户</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 底部 -->
-        <div class="bottom-actions safe-area-bottom">
-            <div class="bottom-btn" onclick="switchMockTab('trade')">📊 交易</div>
-            <div class="bottom-btn" onclick="switchMockTab('positions')">📈 持仓</div>
-            <div class="bottom-btn" onclick="switchMockTab('stats')">📊 统计</div>
-            <div class="bottom-btn" onclick="goBack()">🏠 返回</div>
+        <div class="header-icons">
+            <i class="icon">✨</i>
+            <i class="icon">★</i>
+            <i class="icon">🔔</i>
         </div>
     </div>
 
-    <!-- 弹窗 -->
-    <div class="modal-overlay" id="resetModal" onclick="closeResetModal(event)">
-        <div class="modal" onclick="event.stopPropagation()">
-            <div class="modal-title">⚠️ 确认重置</div>
-            <p class="text-sm text-[#8a8a9a] text-center mb-4">确定要重置模拟账户吗？</p>
-            <button class="modal-btn modal-btn-danger" onclick="resetMockAccount()">确认重置</button>
-            <button class="modal-btn modal-btn-secondary" onclick="closeResetModal()">取消</button>
+    <!-- 导航标签 -->
+    <div class="tabs">
+        <div class="tab">报价</div>
+        <div class="tab">信息</div>
+        <div class="tab">数据</div>
+        <div class="tab">广场</div>
+        <div class="tab active">交易</div>
+    </div>
+
+    <!-- 价格区 -->
+    <div class="quote-section">
+        <div>
+            <div class="price-main" id="last-price">--</div>
+            <div class="price-sub" id="cn-price">¥0.00 <span class="green">+0.00%</span></div>
+            <div class="price-sub" style="font-size: 11px; color: #848e9c; margin-top: 8px;">支付 成交额 交易赛</div>
+        </div>
+        <div class="quote-details">
+            <div>24h最高价 <b id="high-24">--</b></div>
+            <div>24h最低价 <b id="low-24">--</b></div>
+            <div>24h成交量(BTC) <b id="vol-24">--</b></div>
+            <div>24h成交额(USDT) <b id="amount-24">--</b></div>
         </div>
     </div>
 
-    <script>
-        // ============ Gate.io 行情服务 ============
-        class GateMarketDataService {
-            constructor() {
-                this.baseUrl = 'https://api.gateio.ws/api/v4';
-                this.tickers = {};
-                this.klineCache = [];
-                this.orderBook = { asks: [], bids: [] };
-                this.recentTrades = [];
-                this.supportedPairs = [
-                    { symbol: 'BTC_USDT', display: 'BTC/USDT', base: 'BTC', quote: 'USDT' },
-                    { symbol: 'ETH_USDT', display: 'ETH/USDT', base: 'ETH', quote: 'USDT' },
-                    { symbol: 'SOL_USDT', display: 'SOL/USDT', base: 'SOL', quote: 'USDT' },
-                    { symbol: 'ARB_USDT', display: 'ARB/USDT', base: 'ARB', quote: 'USDT' },
-                    { symbol: 'DOGE_USDT', display: 'DOGE/USDT', base: 'DOGE', quote: 'USDT' }
-                ];
+    <!-- 时间轴 -->
+    <div class="timeframes">
+        <span>分时</span>
+        <span>15分</span>
+        <span class="active">1小时</span>
+        <span>4小时</span>
+        <span>日线</span>
+        <span>更多</span>
+    </div>
+
+    <!-- K线图 -->
+    <div class="chart-container">
+        <div id="kline"></div>
+    </div>
+
+    <!-- MA 指标 -->
+    <div class="indicators">
+        <span class="active">MA</span>
+        <span>EMA</span>
+        <span>BOLL</span>
+        <span>SAR</span>
+        <span>AVL</span>
+        <span>VOL</span>
+        <span>MACD</span>
+    </div>
+
+    <!-- 周期涨跌 (保留原UI，仅将"今日"更新为真实数据) -->
+    <div class="performance">
+        <div class="perf-item">今日 <span id="perf-today">0.00%</span></div>
+        <div class="perf-item">7天 <span>1.38%</span></div>
+        <div class="perf-item">30天 <span>20.56%</span></div>
+        <div class="perf-item">90天 <span>5.95%</span></div>
+        <div class="perf-item">180天 <span>12.88%</span></div>
+        <div class="perf-item">1年 <span>-28.01%</span></div>
+    </div>
+
+    <!-- 买卖盘比例 -->
+    <div class="order-labels">
+        <span>委托订单</span><span>深度</span><span>最新成交</span><span>网络</span>
+    </div>
+    <div class="order-book-bar">
+        <div class="sell-bar" id="sell-bar">--</div>
+        <div class="buy-bar" id="buy-bar">--</div>
+    </div>
+
+    <!-- 底部操作按钮 -->
+    <div class="bottom-action">
+        <div class="tools">
+            <div><i class="icon">⋯</i>更多</div>
+            <div><i class="icon">◧</i>工具</div>
+            <div><i class="icon">⚖</i>杠杆</div>
+        </div>
+        <div style="display: flex; flex: 1; margin-left: 15px;">
+            <button class="buy-btn">买入</button>
+            <button class="sell-btn">卖出</button>
+        </div>
+    </div>
+</div>
+
+<!-- 获取真实 API 数据的 JS 逻辑 -->
+<script>
+    var chartDom = document.getElementById('kline');
+    var myChart = echarts.init(chartDom);
+    var option = {
+        backgroundColor: 'transparent',
+        grid: { left: 0, right: 0, top: 10, bottom: 0 },
+        xAxis: {
+            type: 'category',
+            data: [],
+            axisLine: { show: false },
+            axisTick: { show: false },
+            splitLine: { show: false },
+            axisLabel: { show: false }
+        },
+        yAxis: {
+            scale: true,
+            position: 'right',
+            splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } },
+            axisLabel: { color: '#848e9c', fontSize: 10 }
+        },
+        series: [{
+            type: 'candlestick',
+            data: [],
+            itemStyle: {
+                color: '#0ecb81', color0: '#f6465d',
+                borderColor: '#0ecb81', borderColor0: '#f6465d'
             }
-            async fetchTickers(pairs) {
-                const pairList = pairs.map(p => p.symbol).join(',');
-                try {
-                    const r = await fetch(`${this.baseUrl}/spot/tickers?currency_pair=${pairList}`);
-                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                    const data = await r.json();
-                    data.forEach(t => {
-                        this.tickers[t.currency_pair] = {
-                            last: parseFloat(t.last),
-                            changePercent: parseFloat(t.change_percentage),
-                            high24h: parseFloat(t.high_24h),
-                            low24h: parseFloat(t.low_24h),
-                            baseVolume: parseFloat(t.base_volume),
-                            quoteVolume: parseFloat(t.quote_volume),
-                            lowestAsk: parseFloat(t.lowest_ask),
-                            highestBid: parseFloat(t.highest_bid)
-                        };
-                    });
-                    return this.tickers;
-                } catch(e) { console.error(e); return null; }
-            }
-            async fetchCandlesticks(pair, interval='1m', limit=100) {
-                try {
-                    const r = await fetch(`${this.baseUrl}/spot/candlesticks?currency_pair=${pair}&interval=${interval}&limit=${limit}`);
-                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                    const data = await r.json();
-                    this.klineCache = data.map(item => ({
-                        timestamp: parseInt(item[0]) * 1000,
-                        open: parseFloat(item[5]),
-                        high: parseFloat(item[3]),
-                        low: parseFloat(item[4]),
-                        close: parseFloat(item[2]),
-                        volume: parseFloat(item[1])
-                    }));
-                    return this.klineCache;
-                } catch(e) { console.error(e); return []; }
-            }
-            async fetchOrderBook(pair, limit=20) {
-                try {
-                    const r = await fetch(`${this.baseUrl}/spot/order_book?currency_pair=${pair}&limit=${limit}`);
-                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                    const d = await r.json();
-                    this.orderBook = {
-                        asks: d.asks.map(a => ({price:parseFloat(a[0]), amount:parseFloat(a[1])})).sort((a,b)=>a.price-b.price),
-                        bids: d.bids.map(b => ({price:parseFloat(b[0]), amount:parseFloat(b[1])})).sort((a,b)=>b.price-a.price)
-                    };
-                    return this.orderBook;
-                } catch(e) { console.error(e); return null; }
-            }
-            async fetchRecentTrades(pair, limit=30) {
-                try {
-                    const r = await fetch(`${this.baseUrl}/spot/trades?currency_pair=${pair}&limit=${limit}`);
-                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                    const d = await r.json();
-                    this.recentTrades = d.map(t => ({ id:t.id, price:parseFloat(t.price), amount:parseFloat(t.amount), side:t.side, timestamp:parseInt(t.create_time)*1000 }));
-                    return this.recentTrades;
-                } catch(e) { console.error(e); return []; }
-            }
-            getTicker(symbol) { return this.tickers[symbol] || null; }
+        }],
+        tooltip: { trigger: 'axis', axisPointer: { type: 'cross' } }
+    };
+    myChart.setOption(option);
+
+    const BASE_URL = 'https://api.gateio.ws/api/v4';
+    const PAIR = 'BTC_USDT';
+    const INTERVAL = '1h';
+    const CNY_RATE = 7.2; // 简单模拟汇率
+
+    // 格式化数字
+    function formatNum(num, decimals = 2) {
+        return parseFloat(num).toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+    }
+
+    // 获取实时 Ticker 数据
+    async function fetchTicker() {
+        try {
+            const res = await fetch(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`);
+            const data = await res.json();
+            const t = data[0];
+
+            const last = parseFloat(t.last);
+            const change = parseFloat(t.change_percentage).toFixed(2);
+            
+            // 更新主价格
+            document.getElementById('last-price').innerText = formatNum(last);
+
+            // 更新汇率及涨跌幅
+            const changeClass = change >= 0 ? 'green' : 'red';
+            document.getElementById('cn-price').innerHTML = `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${change >= 0 ? '+' : ''}${change}%</span>`;
+
+            // 更新24小时数据
+            document.getElementById('high-24').innerText = formatNum(t.high_24h);
+            document.getElementById('low-24').innerText = formatNum(t.low_24h);
+            document.getElementById('vol-24').innerText = formatNum(t.base_volume, 2);
+            document.getElementById('amount-24').innerText = formatNum(t.quote_volume / 100000000, 2) + '亿';
+
+            // 更新"今日"表现
+            const perfToday = document.getElementById('perf-today');
+            perfToday.innerText = `${change >= 0 ? '+' : ''}${change}%`;
+            perfToday.className = changeClass;
+
+            // 动态计算买卖盘比例（基于当前价处于24h高低区间的相对位置）
+            let buyPct = 50;
+            if (last >= parseFloat(t.high_24h) * 0.95) buyPct = 89.81;
+            else if (last <= parseFloat(t.low_24h) * 1.05) buyPct = 10.19;
+            else buyPct = Math.max(10, Math.min(90, (1 - (last - parseFloat(t.low_24h)) / (parseFloat(t.high_24h) - parseFloat(t.low_24h))) * 100));
+            let sellPct = 100 - buyPct;
+
+            document.getElementById('sell-bar').style.width = sellPct + '%';
+            document.getElementById('buy-bar').style.width = buyPct + '%';
+            document.getElementById('sell-bar').innerText = sellPct.toFixed(2) + '%';
+            document.getElementById('buy-bar').innerText = buyPct.toFixed(2) + '%';
+
+        } catch (e) {
+            console.error("行情获取失败", e);
         }
+    }
 
-        // ============ 技术指标 ============
-        class TechnicalIndicators {
-            static SMA(data, period) {
-                if (data.length < period) return [];
-                const res = [];
-                for (let i=period-1; i<data.length; i++) {
-                    let sum=0; for (let j=i-period+1; j<=i; j++) sum+=data[j];
-                    res.push(sum/period);
-                }
-                return [...new Array(period-1).fill(null), ...res];
-            }
-            static EMA(data, period) {
-                if (data.length===0) return [];
-                const res=[data[0]], mul=2/(period+1);
-                for (let i=1; i<data.length; i++) res.push((data[i]-res[i-1])*mul+res[i-1]);
-                return res;
-            }
-            static BOLL(data, period=20, stdDev=2) {
-                if (data.length < period) return {upper:[], middle:[], lower:[]};
-                const middle=this.SMA(data, period);
-                const upper=new Array(data.length).fill(null), lower=new Array(data.length).fill(null);
-                for (let i=period-1; i<data.length; i++) {
-                    let sum=0; for (let j=i-period+1; j<=i; j++) sum+=Math.pow(data[j]-middle[i],2);
-                    const std=Math.sqrt(sum/period);
-                    upper[i]=middle[i]+stdDev*std; lower[i]=middle[i]-stdDev*std;
-                }
-                return {upper, middle, lower};
-            }
-        }
+    // 获取真实 K 线数据
+    async function fetchKline() {
+        try {
+            // Gate 返回格式: [时间戳, 成交量额, 收盘, 最高, 最低, 开盘, 成交量]
+            const res = await fetch(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=${INTERVAL}&limit=100`);
+            const rawData = await res.json();
 
-        // ============ 模拟积分账户 ============
-        class MockPointsAccount {
-            constructor(initialUSDT=100000, initialBTC=0.1) {
-                this.initialUSDT=initialUSDT; this.initialBTC=initialBTC;
-                this.usdtPoints=initialUSDT; this.btcPoints=initialBTC;
-                this.frozenUSDT=0; this.frozenBTC=0;
-                this.totalTrades=0; this.totalProfit=0; this.totalCommission=0;
-                this.tradeHistory=[]; this.pendingOrders=[]; this.orderIdCounter=1;
-                this.load();
-            }
-            getTotalAssets(btcPrice){ return this.usdtPoints + this.btcPoints*btcPrice; }
-            buyBTC(btcAmount, btcPrice) {
-                const cost=btcAmount*btcPrice, commission=cost*0.001;
-                if (this.usdtPoints < cost+commission) return {success:false, message:'USDT积分不足'};
-                this.usdtPoints -= (cost+commission); this.btcPoints += btcAmount;
-                this.totalTrades++; this.totalCommission += commission;
-                this.tradeHistory.push({id:'T'+Date.now(), type:'buy', btcAmount, btcPrice, commission, timestamp:new Date(), profit:0});
-                this.save(); return {success:true, message:'买入成功'};
-            }
-            sellBTC(btcAmount, btcPrice) {
-                const revenue=btcAmount*btcPrice, commission=revenue*0.001;
-                if (this.btcPoints < btcAmount) return {success:false, message:'BTC积分不足'};
-                const avgCost=this.getAverageCost();
-                const profit=(btcPrice-avgCost)*btcAmount;
-                this.btcPoints -= btcAmount; this.usdtPoints += (revenue-commission);
-                this.totalTrades++; this.totalProfit += profit; this.totalCommission += commission;
-                this.tradeHistory.push({id:'T'+Date.now(), type:'sell', btcAmount, btcPrice, commission, timestamp:new Date(), profit});
-                this.save(); return {success:true, message:'卖出成功', profit};
-            }
-            getAverageCost() {
-                const buys=this.tradeHistory.filter(t=>t.type==='buy');
-                if (buys.length===0) return 0;
-                const totalCost=buys.reduce((s,t)=>s+t.btcAmount*t.btcPrice,0);
-                const totalAmt=buys.reduce((s,t)=>s+t.btcAmount,0);
-                return totalAmt>0?totalCost/totalAmt:0;
-            }
-            placeLimitOrder(side, btcAmount, limitPrice) {
-                const order={id:'ORD'+Date.now()+this.orderIdCounter++, side, btcAmount, limitPrice, status:'pending', createdAt:new Date()};
-                if (side==='buy') {
-                    if (this.usdtPoints < btcAmount*limitPrice) return {success:false, message:'USDT积分不足'};
-                    this.frozenUSDT += btcAmount*limitPrice;
-                } else {
-                    if (this.btcPoints < btcAmount) return {success:false, message:'BTC积分不足'};
-                    this.frozenBTC += btcAmount;
-                }
-                this.pendingOrders.push(order); this.save(); return {success:true, message:'挂单成功'};
-            }
-            checkLimitOrders(currentPrice) {
-                const toRemove=[];
-                for (const order of this.pendingOrders) {
-                    if (order.side==='buy' && currentPrice<=order.limitPrice) {
-                        this.frozenUSDT -= order.btcAmount*order.limitPrice;
-                        if (this.buyBTC(order.btcAmount, order.limitPrice).success) { order.status='filled'; toRemove.push(order); }
-                    } else if (order.side==='sell' && currentPrice>=order.limitPrice) {
-                        this.frozenBTC -= order.btcAmount;
-                        if (this.sellBTC(order.btcAmount, order.limitPrice).success) { order.status='filled'; toRemove.push(order); }
-                    }
-                }
-                this.pendingOrders = this.pendingOrders.filter(o=>!toRemove.includes(o));
-                this.save();
-            }
-            cancelOrder(orderId) {
-                const order=this.pendingOrders.find(o=>o.id===orderId);
-                if (order) {
-                    if (order.side==='buy') this.frozenUSDT -= order.btcAmount*order.limitPrice;
-                    else this.frozenBTC -= order.btcAmount;
-                    this.pendingOrders = this.pendingOrders.filter(o=>o.id!==orderId);
-                    this.save(); return true;
-                }
-                return false;
-            }
-            reset() {
-                this.usdtPoints=this.initialUSDT; this.btcPoints=this.initialBTC;
-                this.frozenUSDT=0; this.frozenBTC=0; this.totalTrades=0;
-                this.totalProfit=0; this.totalCommission=0; this.tradeHistory=[]; this.pendingOrders=[];
-                this.save();
-            }
-            save() {
-                localStorage.setItem('mock_points_account', JSON.stringify({
-                    usdtPoints:this.usdtPoints, btcPoints:this.btcPoints,
-                    frozenUSDT:this.frozenUSDT, frozenBTC:this.frozenBTC,
-                    totalTrades:this.totalTrades, totalProfit:this.totalProfit,
-                    totalCommission:this.totalCommission, tradeHistory:this.tradeHistory,
-                    pendingOrders:this.pendingOrders, orderIdCounter:this.orderIdCounter
-                }));
-            }
-            load() {
-                const s=localStorage.getItem('mock_points_account');
-                if (s) { try { Object.assign(this, JSON.parse(s)); } catch(e){} }
-            }
-        }
+            // 转换为 ECharts 需要的 [开盘, 收盘, 最低, 最高]
+            const kLineData = rawData.map(item => [
+                parseFloat(item[5]), // Open
+                parseFloat(item[2]), // Close
+                parseFloat(item[4]), // Low
+                parseFloat(item[3])  // High
+            ]);
 
-        // ============ 全局变量 ============
-        let account = new MockPointsAccount();
-        let marketData = new GateMarketDataService();
-        let currentPairSymbol='BTC_USDT', currentPairDisplay='BTC/USDT', currentBaseAsset='BTC';
-        let currentPrice=0, currentTimeframe='1m', orderSide='buy';
-        let klineChartInstance=null, changeChartInstance=null;
-        let activeIndicators = { candle:true, ma:true, ema:true, boll:false, volume:false, change:false };
-
-        document.addEventListener('DOMContentLoaded', async function() {
-            renderExchangeSelector();
-            renderPairSelector();
-            renderTimeframeBar();
-            initKlineChart();
-            initChangeChart();
-            await refreshAllData();
-            updateUI();
-            setInterval(async () => {
-                await refreshAllData();
-                account.checkLimitOrders(currentPrice);
-                updateUI();
-                updateKlineChart();
-                if (activeIndicators.change) updateChangeChart();
-            }, 10000);
-            document.getElementById('mockOrderAmount').addEventListener('input', updateEstimatedAmount);
-            document.getElementById('mockOrderPrice').addEventListener('input', updateEstimatedAmount);
-            window.selectPair=selectPair;
-            window.selectTimeframe=selectTimeframe;
-            window.setOrderSide=setOrderSide;
-            window.submitMockOrder=submitMockOrder;
-            window.switchMockTab=switchMockTab;
-            window.cancelMockOrder=cancelMockOrder;
-            window.confirmResetAccount=confirmResetAccount;
-            window.resetMockAccount=resetMockAccount;
-            window.closeResetModal=closeResetModal;
-            window.openSettingsModal=openSettingsModal;
-            window.togglePriceInput=togglePriceInput;
-            window.toggleIndicator=toggleIndicator;
-            window.goBack=goBack;
-        });
-
-        // ============ 刷新所有数据 ============
-        async function refreshAllData() {
-            await marketData.fetchTickers(marketData.supportedPairs);
-            await marketData.fetchCandlesticks(currentPairSymbol, currentTimeframe, 100);
-            await marketData.fetchOrderBook(currentPairSymbol, 20);
-            await marketData.fetchRecentTrades(currentPairSymbol, 20);
-            updatePriceDisplay();
-            updateMarketStats();
-            renderOrderBook();
-        }
-
-        function updatePriceDisplay() {
-            const ticker = marketData.getTicker(currentPairSymbol);
-            if (ticker) {
-                currentPrice = ticker.last;
-                document.getElementById('currentPrice').textContent = '$' + currentPrice.toFixed(2);
-                const change = ticker.changePercent;
-                const el = document.getElementById('priceChange');
-                el.textContent = (change>=0?'+':'') + change.toFixed(2) + '%';
-                el.className = 'price-change ' + (change>=0?'text-emerald-400':'text-red-400');
-            }
-        }
-
-        function updateMarketStats() {
-            const ticker = marketData.getTicker(currentPairSymbol);
-            if (!ticker) return;
-            document.getElementById('high24h').textContent = '$' + ticker.high24h.toFixed(2);
-            document.getElementById('low24h').textContent = '$' + ticker.low24h.toFixed(2);
-            document.getElementById('baseVolume').textContent = ticker.baseVolume.toFixed(2);
-            document.getElementById('quoteVolume').textContent = '$' + (ticker.quoteVolume/1000000).toFixed(2) + 'M';
-        }
-
-        function renderOrderBook() {
-            const askList = document.getElementById('askList');
-            const bidList = document.getElementById('bidList');
-            const { asks, bids } = marketData.orderBook;
-            askList.innerHTML = asks.length ? asks.slice(0,8).map(a=>`<div class="depth-row"><span class="ask-price">$${a.price.toFixed(2)}</span><span class="depth-amount">${a.amount.toFixed(4)}</span></div>`).join('') : '<div class="empty-state">暂无</div>';
-            bidList.innerHTML = bids.length ? bids.slice(0,8).map(b=>`<div class="depth-row"><span class="bid-price">$${b.price.toFixed(2)}</span><span class="depth-amount">${b.amount.toFixed(4)}</span></div>`).join('') : '<div class="empty-state">暂无</div>';
-        }
-
-        // ============ 渲染静态元素 ============
-        function renderExchangeSelector() {
-            const container = document.getElementById('exchangeSelectorList');
-            const exchanges = [
-                { id:'gateio', name:'Gate.io', icon:'G', active:true },
-                { id:'binance', name:'Binance', icon:'B', active:false },
-                { id:'okx', name:'OKX', icon:'O', active:false },
-                { id:'bybit', name:'Bybit', icon:'B', active:false },
-                { id:'mexc', name:'MEXC', icon:'M', active:false },
-            ];
-            container.innerHTML = exchanges.map(ex=>`
-                <div class="exchange-option ${ex.active?'active':''}" onclick="${ex.active?'':"alert('仅支持Gate.io')"}">
-                    <div class="exchange-icon">${ex.icon}</div>
-                    <span class="exchange-name">${ex.name}</span>
-                    ${ex.active?'<span class="exchange-check">✓</span>':''}
-                </div>
-            `).join('');
-        }
-
-        function renderPairSelector() {
-            const container = document.getElementById('pairSelector');
-            container.innerHTML = marketData.supportedPairs.map(pair=>`
-                <button class="pair-btn ${pair.symbol===currentPairSymbol?'active':''}" onclick="selectPair('${pair.symbol}')">${pair.display}</button>
-            `).join('');
-        }
-
-        function renderTimeframeBar() {
-            const container = document.getElementById('timeframeBar');
-            const tfs = [ {id:'1m',label:'1分'},{id:'5m',label:'5分'},{id:'15m',label:'15分'},{id:'30m',label:'30分'},{id:'1h',label:'1时'},{id:'4h',label:'4时'},{id:'8h',label:'8时'},{id:'1d',label:'1日'},{id:'7d',label:'7日'} ];
-            container.innerHTML = tfs.map(tf=>`<button class="timeframe-btn ${tf.id===currentTimeframe?'active':''}" onclick="selectTimeframe('${tf.id}')">${tf.label}</button>`).join('');
-        }
-
-        function selectPair(symbol) {
-            currentPairSymbol=symbol;
-            const pair=marketData.supportedPairs.find(p=>p.symbol===symbol);
-            if (pair) {
-                currentPairDisplay=pair.display; currentBaseAsset=pair.base;
-                document.getElementById('currentPair').textContent=pair.display;
-                document.getElementById('amountLabel').textContent=`数量 (${currentBaseAsset})`;
-            }
-            document.querySelectorAll('.pair-btn').forEach(btn=>btn.classList.remove('active'));
-            event.target.classList.add('active');
-            refreshAllData(); updateUI();
-        }
-
-        function selectTimeframe(timeframe) {
-            currentTimeframe=timeframe;
-            document.querySelectorAll('.timeframe-btn').forEach(btn=>btn.classList.remove('active'));
-            event.target.classList.add('active');
-            marketData.fetchCandlesticks(currentPairSymbol, currentTimeframe, 100).then(()=>{ updateKlineChart(); if(activeIndicators.change) updateChangeChart(); });
-        }
-
-        // ============ UI更新 ============
-        function updateUI() {
-            document.getElementById('mockUSDT').textContent = account.usdtPoints.toFixed(2);
-            document.getElementById('mockBTC').textContent = account.btcPoints.toFixed(8);
-            const totalAssets = account.getTotalAssets(currentPrice);
-            document.getElementById('mockTotalAssets').textContent = '$' + totalAssets.toFixed(2);
-            updateEstimatedAmount();
-            renderPositions(); renderPendingOrders(); renderTradeHistory(); renderStatistics();
-        }
-
-        function renderPositions() {
-            const container = document.getElementById('mockPositions');
-            if (account.btcPoints>0 || account.frozenBTC>0) {
-                const avgCost=account.getAverageCost();
-                const profit=(currentPrice-avgCost)*account.btcPoints;
-                const profitRate=avgCost>0?(profit/(avgCost*account.btcPoints))*100:0;
-                container.innerHTML = `
-                    <div class="position-item">
-                        <div class="position-header"><span class="position-symbol" style="font-weight:600;">BTC/USDT</span><span style="font-weight:600;color:${profit>=0?'#4ade80':'#ef4444'}">${profit>=0?'+':''}$${profit.toFixed(2)} (${profitRate>=0?'+':''}${profitRate.toFixed(2)}%)</span></div>
-                        <div class="position-details" style="display:flex;justify-content:space-between;font-size:11px;color:#6a6a7a;"><span>可用:${account.btcPoints.toFixed(8)}</span><span>冻结:${account.frozenBTC.toFixed(8)}</span><span>均价:$${avgCost.toFixed(2)}</span></div>
-                    </div>`;
-                document.getElementById('positionCount').textContent='1个';
-            } else { container.innerHTML='<div class="empty-state">暂无持仓</div>'; document.getElementById('positionCount').textContent='0个'; }
-        }
-
-        function renderPendingOrders() {
-            const container=document.getElementById('mockPendingOrders');
-            if (account.pendingOrders.length>0) {
-                container.innerHTML = account.pendingOrders.map(o=>`
-                    <div class="order-item"><span style="color:${o.side==='buy'?'#4ade80':'#ef4444'}">${o.side==='buy'?'买入':'卖出'}</span><span>$${o.limitPrice.toFixed(2)}</span><span>${o.btcAmount} BTC</span><button class="cancel-order-btn" onclick="cancelMockOrder('${o.id}')">取消</button></div>`).join('');
-                document.getElementById('pendingOrderCount').textContent=account.pendingOrders.length+'个';
-            } else { container.innerHTML='<div class="empty-state">暂无挂单</div>'; document.getElementById('pendingOrderCount').textContent='0个'; }
-        }
-
-        function renderTradeHistory() {
-            const container=document.getElementById('mockTradeHistory');
-            if (account.tradeHistory.length>0) {
-                container.innerHTML = account.tradeHistory.slice(-20).reverse().map(t=>`
-                    <div class="trade-item"><span style="color:${t.type==='buy'?'#4ade80':'#ef4444'}">${t.type==='buy'?'买入':'卖出'}</span><span>${t.btcAmount} BTC</span><span>@ $${t.btcPrice.toFixed(2)}</span><span>${t.timestamp.toLocaleTimeString()}</span></div>`).join('');
-                document.getElementById('tradeHistoryCount').textContent=account.tradeHistory.length+'笔';
-            } else { container.innerHTML='<div class="empty-state">暂无记录</div>'; document.getElementById('tradeHistoryCount').textContent='0笔'; }
-        }
-
-        function renderStatistics() {
-            document.getElementById('statTotalTrades').textContent=account.totalTrades;
-            const sells=account.tradeHistory.filter(t=>t.type==='sell');
-            const wins=sells.filter(t=>t.profit>0);
-            document.getElementById('statWinRate').textContent=(sells.length>0?(wins.length/sells.length*100).toFixed(1):'0')+'%';
-            document.getElementById('statTotalProfit').textContent=(account.totalProfit>=0?'+':'')+'$'+account.totalProfit.toFixed(2);
-            document.getElementById('statTotalCommission').textContent='$'+account.totalCommission.toFixed(2);
-        }
-
-        // ============ 下单 ============
-        function setOrderSide(side) {
-            orderSide=side;
-            document.getElementById('buySideBtn').classList.toggle('active', side==='buy');
-            document.getElementById('sellSideBtn').classList.toggle('active', side==='sell');
-            document.getElementById('submitOrderBtn').textContent = side==='buy'?'买入':'卖出';
-            document.getElementById('submitOrderBtn').className = 'mock-submit-btn '+side;
-        }
-        function togglePriceInput() { document.getElementById('priceInputGroup').style.display = document.getElementById('mockOrderType').value==='limit'?'block':'none'; }
-        function updateEstimatedAmount() {
-            const price = document.getElementById('mockOrderPrice').value ? parseFloat(document.getElementById('mockOrderPrice').value) : currentPrice;
-            const amount = document.getElementById('mockOrderAmount').value ? parseFloat(document.getElementById('mockOrderAmount').value) : 0;
-            document.getElementById('estimatedAmount').textContent = '$' + (price*amount).toFixed(2);
-        }
-        function submitMockOrder() {
-            const type=document.getElementById('mockOrderType').value;
-            const amount=parseFloat(document.getElementById('mockOrderAmount').value);
-            const price=parseFloat(document.getElementById('mockOrderPrice').value)||null;
-            if (!amount||amount<=0) { alert('请输入有效的数量'); return; }
-            if (type==='limit'&&(!price||price<=0)) { alert('请输入有效的限价价格'); return; }
-            if (currentPrice<=0) { alert('行情未就绪'); return; }
-            let result;
-            if (type==='market') result = orderSide==='buy' ? account.buyBTC(amount,currentPrice) : account.sellBTC(amount,currentPrice);
-            else result = account.placeLimitOrder(orderSide,amount,price);
-            alert(result.success?'✅ '+result.message:'❌ '+result.message);
-            if (result.success) { document.getElementById('mockOrderAmount').value=''; document.getElementById('mockOrderPrice').value=''; updateUI(); }
-        }
-        function cancelMockOrder(orderId) { if (account.cancelOrder(orderId)) updateUI(); }
-
-        // ============ 标签页 ============
-        function switchMockTab(tab) {
-            const order=['trade','positions','orders','history','stats'];
-            document.querySelectorAll('.mock-tab').forEach((btn,i)=>btn.classList.toggle('active',i===order.indexOf(tab)));
-            document.getElementById('tradePanel').style.display = tab==='trade'?'block':'none';
-            document.getElementById('positionsPanel').style.display = tab==='positions'?'block':'none';
-            document.getElementById('ordersPanel').style.display = tab==='orders'?'block':'none';
-            document.getElementById('historyPanel').style.display = tab==='history'?'block':'none';
-            document.getElementById('statsPanel').style.display = tab==='stats'?'block':'none';
-            updateUI();
-        }
-
-        // ============ 弹窗 ============
-        function confirmResetAccount(){ document.getElementById('resetModal').classList.add('show'); }
-        function closeResetModal(e){ if(e&&e.target!==e.currentTarget)return; document.getElementById('resetModal').classList.remove('show'); }
-        function resetMockAccount(){ account.reset(); closeResetModal(); updateUI(); alert('✅ 已重置'); }
-        function openSettingsModal(){ alert('设置功能'); }
-
-        // ============ 指标切换 ============
-        function toggleIndicator(indicator) {
-            activeIndicators[indicator] = !activeIndicators[indicator];
-            if (indicator === 'change') {
-                document.getElementById('changeChartContainer').style.display = activeIndicators.change ? 'block' : 'none';
-                if (activeIndicators.change) updateChangeChart();
-            }
-            updateKlineChart();
-            document.querySelectorAll('.indicator-btn').forEach(btn => {
-                const text = btn.textContent;
-                const key = text === '蜡烛图' ? 'candle' : text === 'MA' ? 'ma' : text === 'EMA' ? 'ema' : text === 'BOLL' ? 'boll' : text === '成交量' ? 'volume' : text === '涨跌幅' ? 'change' : '';
-                if (key) btn.classList.toggle('active', activeIndicators[key]);
+            const dates = rawData.map(item => {
+                const d = new Date(parseInt(item[0]) * 1000);
+                return `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:00`;
             });
-        }
 
-        // ============ K线图（行业标准蜡烛图） ============
-        function initKlineChart() {
-            const ctx = document.getElementById('klineChart').getContext('2d');
-            klineChartInstance = new Chart(ctx, {
-                type:'bar',
-                data:{labels:[],datasets:[]},
-                options:{
-                    responsive:true, maintainAspectRatio:false,
-                    interaction:{mode:'index',intersect:false},
-                    plugins:{legend:{display:true,labels:{color:'#8a8a9a',font:{size:9}}}},
-                    scales:{
-                        x:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:9}}},
-                        y:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:9}}}
-                    }
-                }
+            myChart.setOption({
+                xAxis: { data: dates },
+                series: [{ data: kLineData }]
             });
+        } catch (e) {
+            console.error("K线获取失败", e);
         }
-        function updateKlineChart() {
-            if (!klineChartInstance || !marketData.klineCache.length) return;
-            const klines=marketData.klineCache;
-            const labels=klines.map(k=>{
-                const d=new Date(k.timestamp);
-                return (currentTimeframe==='1d'||currentTimeframe==='7d') ? d.toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'}) : d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-            });
-            const closes=klines.map(k=>k.close);
-            const volumes=klines.map(k=>k.volume);
-            const datasets=[];
+    }
 
-            // 行业标准蜡烛图（红涨绿跌）
-            if (activeIndicators.candle) {
-                datasets.push({
-                    label:'影线',
-                    data: klines.map(k => [k.low, k.high]),
-                    type:'bar',
-                    backgroundColor: klines.map(k => k.close >= k.open ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.5)'),
-                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#10b981'),
-                    borderWidth: 0.6,
-                    barPercentage: 0.15,
-                    categoryPercentage: 0.9,
-                    order: 2,
-                    yAxisID: 'y'
-                });
-                datasets.push({
-                    label:'实体',
-                    data: klines.map(k => [k.open, k.close]),
-                    type:'bar',
-                    backgroundColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#10b981'),
-                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#10b981'),
-                    borderWidth: 0,
-                    barPercentage: 0.65,
-                    categoryPercentage: 0.9,
-                    order: 2,
-                    yAxisID: 'y'
-                });
-            } else {
-                datasets.push({
-                    label: currentPairDisplay,
-                    data: closes,
-                    type:'line',
-                    borderColor:'#3b82f6',
-                    backgroundColor:'rgba(59,130,246,0.1)',
-                    borderWidth:1.5,
-                    pointRadius:0,
-                    fill:true,
-                    tension:0.3,
-                    order:1
-                });
-            }
+    // 初始化并定时刷新
+    fetchTicker();
+    fetchKline();
+    setInterval(fetchTicker, 30000); // 每30秒更新行情
+    setInterval(fetchKline, 60000);  // 每60秒更新K线
+</script>
 
-            if (activeIndicators.ma) {
-                datasets.push({label:'MA5',data:TechnicalIndicators.SMA(closes,5),borderColor:'#fbbf24',borderWidth:1,pointRadius:0,type:'line',order:0});
-                datasets.push({label:'MA10',data:TechnicalIndicators.SMA(closes,10),borderColor:'#e879f9',borderWidth:1,pointRadius:0,type:'line',order:0});
-                datasets.push({label:'MA20',data:TechnicalIndicators.SMA(closes,20),borderColor:'#2dd4bf',borderWidth:1,pointRadius:0,type:'line',order:0});
-            }
-            if (activeIndicators.ema) {
-                datasets.push({label:'EMA12',data:TechnicalIndicators.EMA(closes,12),borderColor:'#f97316',borderWidth:1,pointRadius:0,type:'line',order:0});
-                datasets.push({label:'EMA26',data:TechnicalIndicators.EMA(closes,26),borderColor:'#a78bfa',borderWidth:1,pointRadius:0,type:'line',order:0});
-            }
-            if (activeIndicators.boll) {
-                const boll=TechnicalIndicators.BOLL(closes,20,2);
-                datasets.push({label:'上轨',data:boll.upper,borderColor:'rgba(239,68,68,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,type:'line',order:0});
-                datasets.push({label:'中轨',data:boll.middle,borderColor:'rgba(59,130,246,0.5)',borderWidth:0.8,pointRadius:0,type:'line',order:0});
-                datasets.push({label:'下轨',data:boll.lower,borderColor:'rgba(16,185,129,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,type:'line',order:0});
-            }
-            if (activeIndicators.volume) {
-                datasets.push({
-                    label:'成交量',data:volumes,type:'bar',
-                    backgroundColor:volumes.map((v,i)=>closes[i]>=klines[i].open?'rgba(239,68,68,0.4)':'rgba(16,185,129,0.4)'),
-                    borderWidth:0, yAxisID:'volumeAxis', order:3
-                });
-            }
-
-            klineChartInstance.data.labels=labels;
-            klineChartInstance.data.datasets=datasets;
-
-            const yAxes={y:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:9}}}};
-            if (activeIndicators.volume) {
-                yAxes.volumeAxis={position:'right',grid:{display:false},ticks:{color:'#5a5a6a',font:{size:8}},max:Math.max(...volumes)*2};
-            }
-            klineChartInstance.options.scales=yAxes;
-            klineChartInstance.update();
-        }
-
-        // ============ 涨跌幅柱状图 ============
-        function initChangeChart() {
-            const ctx = document.getElementById('changeChart').getContext('2d');
-            changeChartInstance = new Chart(ctx, {
-                type:'bar',
-                data:{labels:[],datasets:[]},
-                options:{
-                    responsive:true, maintainAspectRatio:false,
-                    plugins:{legend:{display:false}},
-                    scales:{
-                        x:{display:false},
-                        y:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:8},callback:v=>v+'%'}}
-                    }
-                }
-            });
-        }
-        function updateChangeChart() {
-            if (!changeChartInstance || !marketData.klineCache.length) return;
-            const klines=marketData.klineCache;
-            const changes = klines.map(k => k.open ? ((k.close - k.open) / k.open) * 100 : 0);
-            const labels = klines.map(k => new Date(k.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
-            const colors = changes.map(c => c >= 0 ? '#ef4444' : '#10b981');
-            changeChartInstance.data.labels = labels;
-            changeChartInstance.data.datasets = [{
-                label:'涨跌幅',
-                data: changes,
-                backgroundColor: colors,
-                borderWidth:0,
-                barPercentage:0.8,
-                categoryPercentage:0.9
-            }];
-            changeChartInstance.update();
-        }
-
-        function goBack(){ window.location.href='index.html'; }
-    </script>
 </body>
 </html>
