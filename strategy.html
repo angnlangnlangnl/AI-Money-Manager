@@ -741,7 +741,7 @@
             });
         }
 
-        // ============ K线图（支持蜡烛图） ============
+        // ============ K线图（行业标准蜡烛图） ============
         function initKlineChart() {
             const ctx = document.getElementById('klineChart').getContext('2d');
             klineChartInstance = new Chart(ctx, {
@@ -769,17 +769,17 @@
             const volumes=klines.map(k=>k.volume);
             const datasets=[];
 
-            // 蜡烛图（影线+实体）
+            // 行业标准蜡烛图（红涨绿跌）
             if (activeIndicators.candle) {
                 // 影线（low-high）
                 datasets.push({
                     label:'影线',
                     data: klines.map(k => [k.low, k.high]),
                     type:'bar',
-                    backgroundColor: klines.map(k => k.close >= k.open ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'),
-                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#3b82f6'),
-                    borderWidth: 0.5,
-                    barPercentage: 0.1,
+                    backgroundColor: klines.map(k => k.close >= k.open ? 'rgba(239,68,68,0.5)' : 'rgba(16,185,129,0.5)'),
+                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#10b981'),
+                    borderWidth: 0.6,
+                    barPercentage: 0.15,
                     categoryPercentage: 0.9,
                     order: 2,
                     yAxisID: 'y'
@@ -789,10 +789,10 @@
                     label:'实体',
                     data: klines.map(k => [k.open, k.close]),
                     type:'bar',
-                    backgroundColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#3b82f6'),
-                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#3b82f6'),
+                    backgroundColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#10b981'),
+                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#10b981'),
                     borderWidth: 0,
-                    barPercentage: 0.6,
+                    barPercentage: 0.65,
                     categoryPercentage: 0.9,
                     order: 2,
                     yAxisID: 'y'
@@ -833,7 +833,7 @@
             if (activeIndicators.volume) {
                 datasets.push({
                     label:'成交量',data:volumes,type:'bar',
-                    backgroundColor:volumes.map((v,i)=>closes[i]>=klines[i].open?'rgba(16,185,129,0.4)':'rgba(239,68,68,0.4)'),
+                    backgroundColor:volumes.map((v,i)=>closes[i]>=klines[i].open?'rgba(239,68,68,0.4)':'rgba(16,185,129,0.4)'),
                     borderWidth:0, yAxisID:'volumeAxis', order:3
                 });
             }
@@ -870,7 +870,7 @@
             const klines=marketData.klineCache;
             const changes = klines.map(k => k.open ? ((k.close - k.open) / k.open) * 100 : 0);
             const labels = klines.map(k => new Date(k.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
-            const colors = changes.map(c => c >= 0 ? '#ef4444' : '#3b82f6');
+            const colors = changes.map(c => c >= 0 ? '#ef4444' : '#10b981');
             changeChartInstance.data.labels = labels;
             changeChartInstance.data.datasets = [{
                 label:'涨跌幅',
