@@ -39,7 +39,6 @@
         .price-display { font-size: 22px; font-weight: 700; color: #4ade80; }
         .price-change { font-size: 12px; }
 
-        /* 24h统计栏 - 新增 */
         .market-stats-bar { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; padding: 6px 12px; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; }
         .market-stat-item { text-align: center; }
         .market-stat-label { font-size: 9px; color: #5a5a6a; }
@@ -47,6 +46,10 @@
 
         .chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 4px; flex-shrink: 0; height: 180px; }
         .chart-container canvas { width: 100% !important; height: 100% !important; }
+
+        /* 涨跌幅柱容器 - 新增 */
+        .change-chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 4px; flex-shrink: 0; height: 60px; display: none; }
+        .change-chart-container canvas { width: 100% !important; height: 100% !important; }
 
         .timeframe-bar { display: flex; gap: 4px; padding: 4px 8px; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; overflow-x: auto; scrollbar-width: none; }
         .timeframe-bar::-webkit-scrollbar { display: none; }
@@ -58,7 +61,6 @@
         .indicator-btn { padding: 3px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; border: 1px solid #1a1a2a; background: #12121f; color: #6a6a7a; white-space: nowrap; }
         .indicator-btn.active { background: #1a2a3a; border-color: #3b82f6; color: #e8e8f0; }
 
-        /* 订单簿和成交记录 - 新增 */
         .depth-section { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 6px 8px; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; flex-shrink: 0; max-height: 150px; overflow: hidden; }
         .depth-panel { background: #12121f; border-radius: 8px; border: 1px solid #1a1a2a; overflow: hidden; display: flex; flex-direction: column; }
         .depth-header { padding: 4px 8px; font-size: 10px; font-weight: 600; color: #8a8a9a; border-bottom: 1px solid #1a1a2a; text-align: center; flex-shrink: 0; }
@@ -155,16 +157,19 @@
             <div class="price-display" id="currentPrice">$0.00</div>
         </div>
 
-        <!-- 24h统计栏 - 新增 -->
+        <!-- 24h统计栏 -->
         <div class="market-stats-bar">
             <div class="market-stat-item"><div class="market-stat-label">24h最高</div><div class="market-stat-value" id="high24h">$0.00</div></div>
             <div class="market-stat-item"><div class="market-stat-label">24h最低</div><div class="market-stat-value" id="low24h">$0.00</div></div>
-            <div class="market-stat-item"><div class="market-stat-label">24h成交量</div><div class="market-stat-value" id="baseVolume">0</div></div>
-            <div class="market-stat-item"><div class="market-stat-label">24h成交额</div><div class="market-stat-value" id="quoteVolume">$0</div></div>
+            <div class="market-stat-item"><div class="market-stat-label">24h量</div><div class="market-stat-value" id="baseVolume">0</div></div>
+            <div class="market-stat-item"><div class="market-stat-label">24h额</div><div class="market-stat-value" id="quoteVolume">$0</div></div>
         </div>
 
         <!-- K线图 -->
         <div class="chart-container"><canvas id="klineChart"></canvas></div>
+
+        <!-- 涨跌幅柱状图 - 新增 -->
+        <div class="change-chart-container" id="changeChartContainer"><canvas id="changeChart"></canvas></div>
 
         <!-- 时间周期 -->
         <div class="timeframe-bar" id="timeframeBar"></div>
@@ -175,16 +180,17 @@
             <button class="indicator-btn active" onclick="toggleIndicator('ema')">EMA</button>
             <button class="indicator-btn" onclick="toggleIndicator('boll')">BOLL</button>
             <button class="indicator-btn" onclick="toggleIndicator('volume')">成交量</button>
+            <button class="indicator-btn" onclick="toggleIndicator('change')">涨跌幅</button>
         </div>
 
-        <!-- 订单簿和成交记录 - 新增 -->
+        <!-- 订单簿 -->
         <div class="depth-section">
             <div class="depth-panel">
-                <div class="depth-header">📖 卖盘 (Ask)</div>
+                <div class="depth-header">📖 卖盘</div>
                 <div class="depth-list" id="askList"><div class="empty-state">加载中...</div></div>
             </div>
             <div class="depth-panel">
-                <div class="depth-header">📖 买盘 (Bid)</div>
+                <div class="depth-header">📖 买盘</div>
                 <div class="depth-list" id="bidList"><div class="empty-state">加载中...</div></div>
             </div>
         </div>
@@ -290,9 +296,7 @@
     </div>
 
     <script>
-        // ============================================================
-        //  Gate.io 行情数据服务（完整版）
-        // ============================================================
+        // ============ Gate.io 行情服务 ============
         class GateMarketDataService {
             constructor() {
                 this.baseUrl = 'https://api.gateio.ws/api/v4';
@@ -308,14 +312,12 @@
                     { symbol: 'DOGE_USDT', display: 'DOGE/USDT', base: 'DOGE', quote: 'USDT' }
                 ];
             }
-
-            // 获取实时行情
             async fetchTickers(pairs) {
                 const pairList = pairs.map(p => p.symbol).join(',');
                 try {
-                    const response = await fetch(`${this.baseUrl}/spot/tickers?currency_pair=${pairList}`);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
+                    const r = await fetch(`${this.baseUrl}/spot/tickers?currency_pair=${pairList}`);
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    const data = await r.json();
                     data.forEach(t => {
                         this.tickers[t.currency_pair] = {
                             last: parseFloat(t.last),
@@ -329,15 +331,13 @@
                         };
                     });
                     return this.tickers;
-                } catch (e) { console.error('获取行情失败:', e); return null; }
+                } catch(e) { console.error(e); return null; }
             }
-
-            // 获取K线
-            async fetchCandlesticks(currencyPair, interval = '1m', limit = 100) {
+            async fetchCandlesticks(pair, interval='1m', limit=100) {
                 try {
-                    const response = await fetch(`${this.baseUrl}/spot/candlesticks?currency_pair=${currencyPair}&interval=${interval}&limit=${limit}`);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
+                    const r = await fetch(`${this.baseUrl}/spot/candlesticks?currency_pair=${pair}&interval=${interval}&limit=${limit}`);
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    const data = await r.json();
                     this.klineCache = data.map(item => ({
                         timestamp: parseInt(item[0]) * 1000,
                         open: parseFloat(item[5]),
@@ -347,251 +347,195 @@
                         volume: parseFloat(item[1])
                     }));
                     return this.klineCache;
-                } catch (e) { console.error('获取K线失败:', e); return []; }
+                } catch(e) { console.error(e); return []; }
             }
-
-            // ★ 获取订单簿（新增）
-            async fetchOrderBook(currencyPair, limit = 20) {
+            async fetchOrderBook(pair, limit=20) {
                 try {
-                    const response = await fetch(`${this.baseUrl}/spot/order_book?currency_pair=${currencyPair}&limit=${limit}`);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
+                    const r = await fetch(`${this.baseUrl}/spot/order_book?currency_pair=${pair}&limit=${limit}`);
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    const d = await r.json();
                     this.orderBook = {
-                        asks: data.asks.map(a => ({ price: parseFloat(a[0]), amount: parseFloat(a[1]) })).sort((a, b) => a.price - b.price),
-                        bids: data.bids.map(b => ({ price: parseFloat(b[0]), amount: parseFloat(b[1]) })).sort((a, b) => b.price - a.price)
+                        asks: d.asks.map(a => ({price:parseFloat(a[0]), amount:parseFloat(a[1])})).sort((a,b)=>a.price-b.price),
+                        bids: d.bids.map(b => ({price:parseFloat(b[0]), amount:parseFloat(b[1])})).sort((a,b)=>b.price-a.price)
                     };
                     return this.orderBook;
-                } catch (e) { console.error('获取订单簿失败:', e); return null; }
+                } catch(e) { console.error(e); return null; }
             }
-
-            // ★ 获取最近成交记录（新增）
-            async fetchRecentTrades(currencyPair, limit = 30) {
+            async fetchRecentTrades(pair, limit=30) {
                 try {
-                    const response = await fetch(`${this.baseUrl}/spot/trades?currency_pair=${currencyPair}&limit=${limit}`);
-                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                    const data = await response.json();
-                    this.recentTrades = data.map(t => ({
-                        id: t.id,
-                        price: parseFloat(t.price),
-                        amount: parseFloat(t.amount),
-                        side: t.side, // 'buy' | 'sell'
-                        timestamp: parseInt(t.create_time) * 1000
-                    }));
+                    const r = await fetch(`${this.baseUrl}/spot/trades?currency_pair=${pair}&limit=${limit}`);
+                    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                    const d = await r.json();
+                    this.recentTrades = d.map(t => ({ id:t.id, price:parseFloat(t.price), amount:parseFloat(t.amount), side:t.side, timestamp:parseInt(t.create_time)*1000 }));
                     return this.recentTrades;
-                } catch (e) { console.error('获取成交记录失败:', e); return []; }
+                } catch(e) { console.error(e); return []; }
             }
-
             getTicker(symbol) { return this.tickers[symbol] || null; }
         }
 
-        // ============================================================
-        //  技术指标
-        // ============================================================
+        // ============ 技术指标 ============
         class TechnicalIndicators {
             static SMA(data, period) {
                 if (data.length < period) return [];
-                const result = [];
-                for (let i = period - 1; i < data.length; i++) {
-                    let sum = 0;
-                    for (let j = i - period + 1; j <= i; j++) sum += data[j];
-                    result.push(sum / period);
+                const res = [];
+                for (let i=period-1; i<data.length; i++) {
+                    let sum=0; for (let j=i-period+1; j<=i; j++) sum+=data[j];
+                    res.push(sum/period);
                 }
-                return [...new Array(period - 1).fill(null), ...result];
+                return [...new Array(period-1).fill(null), ...res];
             }
             static EMA(data, period) {
-                if (data.length === 0) return [];
-                const result = [data[0]];
-                const multiplier = 2 / (period + 1);
-                for (let i = 1; i < data.length; i++) result.push((data[i] - result[i-1]) * multiplier + result[i-1]);
-                return result;
+                if (data.length===0) return [];
+                const res=[data[0]], mul=2/(period+1);
+                for (let i=1; i<data.length; i++) res.push((data[i]-res[i-1])*mul+res[i-1]);
+                return res;
             }
-            static BOLL(data, period = 20, stdDev = 2) {
-                if (data.length < period) return { upper: [], middle: [], lower: [] };
-                const middle = this.SMA(data, period);
-                const upper = new Array(data.length).fill(null);
-                const lower = new Array(data.length).fill(null);
-                for (let i = period - 1; i < data.length; i++) {
-                    let sum = 0;
-                    for (let j = i - period + 1; j <= i; j++) sum += Math.pow(data[j] - middle[i], 2);
-                    const std = Math.sqrt(sum / period);
-                    upper[i] = middle[i] + stdDev * std;
-                    lower[i] = middle[i] - stdDev * std;
+            static BOLL(data, period=20, stdDev=2) {
+                if (data.length < period) return {upper:[], middle:[], lower:[]};
+                const middle=this.SMA(data, period);
+                const upper=new Array(data.length).fill(null), lower=new Array(data.length).fill(null);
+                for (let i=period-1; i<data.length; i++) {
+                    let sum=0; for (let j=i-period+1; j<=i; j++) sum+=Math.pow(data[j]-middle[i],2);
+                    const std=Math.sqrt(sum/period);
+                    upper[i]=middle[i]+stdDev*std; lower[i]=middle[i]-stdDev*std;
                 }
-                return { upper, middle, lower };
+                return {upper, middle, lower};
             }
         }
 
-        // ============================================================
-        //  模拟积分账户
-        // ============================================================
+        // ============ 模拟积分账户 ============
         class MockPointsAccount {
-            constructor(initialUSDT = 100000, initialBTC = 0.1) {
-                this.initialUSDT = initialUSDT;
-                this.initialBTC = initialBTC;
-                this.usdtPoints = initialUSDT;
-                this.btcPoints = initialBTC;
-                this.frozenUSDT = 0;
-                this.frozenBTC = 0;
-                this.totalTrades = 0;
-                this.totalProfit = 0;
-                this.totalCommission = 0;
-                this.tradeHistory = [];
-                this.pendingOrders = [];
-                this.orderIdCounter = 1;
+            constructor(initialUSDT=100000, initialBTC=0.1) {
+                this.initialUSDT=initialUSDT; this.initialBTC=initialBTC;
+                this.usdtPoints=initialUSDT; this.btcPoints=initialBTC;
+                this.frozenUSDT=0; this.frozenBTC=0;
+                this.totalTrades=0; this.totalProfit=0; this.totalCommission=0;
+                this.tradeHistory=[]; this.pendingOrders=[]; this.orderIdCounter=1;
                 this.load();
             }
-
-            getTotalAssets(btcPrice) { return this.usdtPoints + this.btcPoints * btcPrice; }
-
+            getTotalAssets(btcPrice){ return this.usdtPoints + this.btcPoints*btcPrice; }
             buyBTC(btcAmount, btcPrice) {
-                const cost = btcAmount * btcPrice;
-                const commission = cost * 0.001;
-                if (this.usdtPoints < cost + commission) return { success: false, message: 'USDT积分不足' };
-                this.usdtPoints -= (cost + commission);
-                this.btcPoints += btcAmount;
-                this.totalTrades++;
-                this.totalCommission += commission;
-                this.tradeHistory.push({ id: 'T' + Date.now(), type: 'buy', btcAmount, btcPrice, commission, timestamp: new Date(), profit: 0 });
-                this.save();
-                return { success: true, message: '买入成功' };
+                const cost=btcAmount*btcPrice, commission=cost*0.001;
+                if (this.usdtPoints < cost+commission) return {success:false, message:'USDT积分不足'};
+                this.usdtPoints -= (cost+commission); this.btcPoints += btcAmount;
+                this.totalTrades++; this.totalCommission += commission;
+                this.tradeHistory.push({id:'T'+Date.now(), type:'buy', btcAmount, btcPrice, commission, timestamp:new Date(), profit:0});
+                this.save(); return {success:true, message:'买入成功'};
             }
-
             sellBTC(btcAmount, btcPrice) {
-                const revenue = btcAmount * btcPrice;
-                const commission = revenue * 0.001;
-                if (this.btcPoints < btcAmount) return { success: false, message: 'BTC积分不足' };
-                const avgCost = this.getAverageCost();
-                const profit = (btcPrice - avgCost) * btcAmount;
-                this.btcPoints -= btcAmount;
-                this.usdtPoints += (revenue - commission);
-                this.totalTrades++;
-                this.totalProfit += profit;
-                this.totalCommission += commission;
-                this.tradeHistory.push({ id: 'T' + Date.now(), type: 'sell', btcAmount, btcPrice, commission, timestamp: new Date(), profit });
-                this.save();
-                return { success: true, message: '卖出成功', profit };
+                const revenue=btcAmount*btcPrice, commission=revenue*0.001;
+                if (this.btcPoints < btcAmount) return {success:false, message:'BTC积分不足'};
+                const avgCost=this.getAverageCost();
+                const profit=(btcPrice-avgCost)*btcAmount;
+                this.btcPoints -= btcAmount; this.usdtPoints += (revenue-commission);
+                this.totalTrades++; this.totalProfit += profit; this.totalCommission += commission;
+                this.tradeHistory.push({id:'T'+Date.now(), type:'sell', btcAmount, btcPrice, commission, timestamp:new Date(), profit});
+                this.save(); return {success:true, message:'卖出成功', profit};
             }
-
             getAverageCost() {
-                const buys = this.tradeHistory.filter(t => t.type === 'buy');
-                if (buys.length === 0) return 0;
-                const totalCost = buys.reduce((s, t) => s + t.btcAmount * t.btcPrice, 0);
-                const totalAmt = buys.reduce((s, t) => s + t.btcAmount, 0);
-                return totalAmt > 0 ? totalCost / totalAmt : 0;
+                const buys=this.tradeHistory.filter(t=>t.type==='buy');
+                if (buys.length===0) return 0;
+                const totalCost=buys.reduce((s,t)=>s+t.btcAmount*t.btcPrice,0);
+                const totalAmt=buys.reduce((s,t)=>s+t.btcAmount,0);
+                return totalAmt>0?totalCost/totalAmt:0;
             }
-
             placeLimitOrder(side, btcAmount, limitPrice) {
-                const order = { id: 'ORD' + Date.now() + this.orderIdCounter++, side, btcAmount, limitPrice, status: 'pending', createdAt: new Date() };
-                if (side === 'buy') {
-                    if (this.usdtPoints < btcAmount * limitPrice) return { success: false, message: 'USDT积分不足' };
-                    this.frozenUSDT += btcAmount * limitPrice;
+                const order={id:'ORD'+Date.now()+this.orderIdCounter++, side, btcAmount, limitPrice, status:'pending', createdAt:new Date()};
+                if (side==='buy') {
+                    if (this.usdtPoints < btcAmount*limitPrice) return {success:false, message:'USDT积分不足'};
+                    this.frozenUSDT += btcAmount*limitPrice;
                 } else {
-                    if (this.btcPoints < btcAmount) return { success: false, message: 'BTC积分不足' };
+                    if (this.btcPoints < btcAmount) return {success:false, message:'BTC积分不足'};
                     this.frozenBTC += btcAmount;
                 }
-                this.pendingOrders.push(order);
-                this.save();
-                return { success: true, message: '挂单成功' };
+                this.pendingOrders.push(order); this.save(); return {success:true, message:'挂单成功'};
             }
-
             checkLimitOrders(currentPrice) {
-                const toRemove = [];
+                const toRemove=[];
                 for (const order of this.pendingOrders) {
-                    if (order.side === 'buy' && currentPrice <= order.limitPrice) {
-                        this.frozenUSDT -= order.btcAmount * order.limitPrice;
-                        if (this.buyBTC(order.btcAmount, order.limitPrice).success) { order.status = 'filled'; toRemove.push(order); }
-                    } else if (order.side === 'sell' && currentPrice >= order.limitPrice) {
+                    if (order.side==='buy' && currentPrice<=order.limitPrice) {
+                        this.frozenUSDT -= order.btcAmount*order.limitPrice;
+                        if (this.buyBTC(order.btcAmount, order.limitPrice).success) { order.status='filled'; toRemove.push(order); }
+                    } else if (order.side==='sell' && currentPrice>=order.limitPrice) {
                         this.frozenBTC -= order.btcAmount;
-                        if (this.sellBTC(order.btcAmount, order.limitPrice).success) { order.status = 'filled'; toRemove.push(order); }
+                        if (this.sellBTC(order.btcAmount, order.limitPrice).success) { order.status='filled'; toRemove.push(order); }
                     }
                 }
-                this.pendingOrders = this.pendingOrders.filter(o => !toRemove.includes(o));
+                this.pendingOrders = this.pendingOrders.filter(o=>!toRemove.includes(o));
                 this.save();
             }
-
             cancelOrder(orderId) {
-                const order = this.pendingOrders.find(o => o.id === orderId);
+                const order=this.pendingOrders.find(o=>o.id===orderId);
                 if (order) {
-                    if (order.side === 'buy') this.frozenUSDT -= order.btcAmount * order.limitPrice;
+                    if (order.side==='buy') this.frozenUSDT -= order.btcAmount*order.limitPrice;
                     else this.frozenBTC -= order.btcAmount;
-                    this.pendingOrders = this.pendingOrders.filter(o => o.id !== orderId);
-                    this.save();
-                    return true;
+                    this.pendingOrders = this.pendingOrders.filter(o=>o.id!==orderId);
+                    this.save(); return true;
                 }
                 return false;
             }
-
             reset() {
-                this.usdtPoints = this.initialUSDT;
-                this.btcPoints = this.initialBTC;
-                this.frozenUSDT = 0;
-                this.frozenBTC = 0;
-                this.totalTrades = 0;
-                this.totalProfit = 0;
-                this.totalCommission = 0;
-                this.tradeHistory = [];
-                this.pendingOrders = [];
+                this.usdtPoints=this.initialUSDT; this.btcPoints=this.initialBTC;
+                this.frozenUSDT=0; this.frozenBTC=0; this.totalTrades=0;
+                this.totalProfit=0; this.totalCommission=0; this.tradeHistory=[]; this.pendingOrders=[];
                 this.save();
             }
-
             save() {
                 localStorage.setItem('mock_points_account', JSON.stringify({
-                    usdtPoints: this.usdtPoints, btcPoints: this.btcPoints,
-                    frozenUSDT: this.frozenUSDT, frozenBTC: this.frozenBTC,
-                    totalTrades: this.totalTrades, totalProfit: this.totalProfit,
-                    totalCommission: this.totalCommission, tradeHistory: this.tradeHistory,
-                    pendingOrders: this.pendingOrders, orderIdCounter: this.orderIdCounter
+                    usdtPoints:this.usdtPoints, btcPoints:this.btcPoints,
+                    frozenUSDT:this.frozenUSDT, frozenBTC:this.frozenBTC,
+                    totalTrades:this.totalTrades, totalProfit:this.totalProfit,
+                    totalCommission:this.totalCommission, tradeHistory:this.tradeHistory,
+                    pendingOrders:this.pendingOrders, orderIdCounter:this.orderIdCounter
                 }));
             }
-
             load() {
-                const saved = localStorage.getItem('mock_points_account');
-                if (saved) { try { Object.assign(this, JSON.parse(saved)); } catch (e) {} }
+                const s=localStorage.getItem('mock_points_account');
+                if (s) { try { Object.assign(this, JSON.parse(s)); } catch(e){} }
             }
         }
 
-        // ============================================================
-        //  全局变量
-        // ============================================================
+        // ============ 全局变量 ============
         let account = new MockPointsAccount();
         let marketData = new GateMarketDataService();
-        let currentPairSymbol = 'BTC_USDT';
-        let currentPairDisplay = 'BTC/USDT';
-        let currentBaseAsset = 'BTC';
-        let currentPrice = 0;
-        let currentTimeframe = '1m';
-        let orderSide = 'buy';
-        let klineChartInstance = null;
-        let activeIndicators = { ma: true, ema: true, boll: false, volume: false };
+        let currentPairSymbol='BTC_USDT', currentPairDisplay='BTC/USDT', currentBaseAsset='BTC';
+        let currentPrice=0, currentTimeframe='1m', orderSide='buy';
+        let klineChartInstance=null, changeChartInstance=null;
+        let activeIndicators = { ma:true, ema:true, boll:false, volume:false, change:false };
 
         document.addEventListener('DOMContentLoaded', async function() {
             renderExchangeSelector();
             renderPairSelector();
             renderTimeframeBar();
             initKlineChart();
+            initChangeChart();
             await refreshAllData();
             updateUI();
-            setInterval(async () => { await refreshAllData(); account.checkLimitOrders(currentPrice); updateUI(); updateKlineChart(); }, 10000);
+            setInterval(async () => {
+                await refreshAllData();
+                account.checkLimitOrders(currentPrice);
+                updateUI();
+                updateKlineChart();
+                if (activeIndicators.change) updateChangeChart();
+            }, 10000);
             document.getElementById('mockOrderAmount').addEventListener('input', updateEstimatedAmount);
             document.getElementById('mockOrderPrice').addEventListener('input', updateEstimatedAmount);
-            window.selectPair = selectPair;
-            window.selectTimeframe = selectTimeframe;
-            window.setOrderSide = setOrderSide;
-            window.submitMockOrder = submitMockOrder;
-            window.switchMockTab = switchMockTab;
-            window.cancelMockOrder = cancelMockOrder;
-            window.confirmResetAccount = confirmResetAccount;
-            window.resetMockAccount = resetMockAccount;
-            window.closeResetModal = closeResetModal;
-            window.openSettingsModal = openSettingsModal;
-            window.togglePriceInput = togglePriceInput;
-            window.toggleIndicator = toggleIndicator;
-            window.goBack = goBack;
+            window.selectPair=selectPair;
+            window.selectTimeframe=selectTimeframe;
+            window.setOrderSide=setOrderSide;
+            window.submitMockOrder=submitMockOrder;
+            window.switchMockTab=switchMockTab;
+            window.cancelMockOrder=cancelMockOrder;
+            window.confirmResetAccount=confirmResetAccount;
+            window.resetMockAccount=resetMockAccount;
+            window.closeResetModal=closeResetModal;
+            window.openSettingsModal=openSettingsModal;
+            window.togglePriceInput=togglePriceInput;
+            window.toggleIndicator=toggleIndicator;
+            window.goBack=goBack;
         });
 
-        // ============================================================
-        //  统一刷新所有数据（新增订单簿和成交记录）
-        // ============================================================
+        // ============ 刷新所有数据 ============
         async function refreshAllData() {
             await marketData.fetchTickers(marketData.supportedPairs);
             await marketData.fetchCandlesticks(currentPairSymbol, currentTimeframe, 100);
@@ -609,337 +553,292 @@
                 document.getElementById('currentPrice').textContent = '$' + currentPrice.toFixed(2);
                 const change = ticker.changePercent;
                 const el = document.getElementById('priceChange');
-                el.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
-                el.className = 'price-change ' + (change >= 0 ? 'text-emerald-400' : 'text-red-400');
+                el.textContent = (change>=0?'+':'') + change.toFixed(2) + '%';
+                el.className = 'price-change ' + (change>=0?'text-emerald-400':'text-red-400');
             }
         }
 
-        // ★ 更新24h统计栏（新增）
         function updateMarketStats() {
             const ticker = marketData.getTicker(currentPairSymbol);
             if (!ticker) return;
             document.getElementById('high24h').textContent = '$' + ticker.high24h.toFixed(2);
             document.getElementById('low24h').textContent = '$' + ticker.low24h.toFixed(2);
             document.getElementById('baseVolume').textContent = ticker.baseVolume.toFixed(2);
-            document.getElementById('quoteVolume').textContent = '$' + (ticker.quoteVolume / 1000000).toFixed(2) + 'M';
+            document.getElementById('quoteVolume').textContent = '$' + (ticker.quoteVolume/1000000).toFixed(2) + 'M';
         }
 
-        // ★ 渲染订单簿（新增）
         function renderOrderBook() {
             const askList = document.getElementById('askList');
             const bidList = document.getElementById('bidList');
             const { asks, bids } = marketData.orderBook;
-
-            if (asks.length === 0) {
-                askList.innerHTML = '<div class="empty-state">暂无数据</div>';
-            } else {
-                askList.innerHTML = asks.slice(0, 10).map(a => `
-                    <div class="depth-row">
-                        <span class="ask-price">$${a.price.toFixed(2)}</span>
-                        <span class="depth-amount">${a.amount.toFixed(4)}</span>
-                    </div>
-                `).join('');
-            }
-
-            if (bids.length === 0) {
-                bidList.innerHTML = '<div class="empty-state">暂无数据</div>';
-            } else {
-                bidList.innerHTML = bids.slice(0, 10).map(b => `
-                    <div class="depth-row">
-                        <span class="bid-price">$${b.price.toFixed(2)}</span>
-                        <span class="depth-amount">${b.amount.toFixed(4)}</span>
-                    </div>
-                `).join('');
-            }
+            askList.innerHTML = asks.length ? asks.slice(0,10).map(a=>`<div class="depth-row"><span class="ask-price">$${a.price.toFixed(2)}</span><span class="depth-amount">${a.amount.toFixed(4)}</span></div>`).join('') : '<div class="empty-state">暂无</div>';
+            bidList.innerHTML = bids.length ? bids.slice(0,10).map(b=>`<div class="depth-row"><span class="bid-price">$${b.price.toFixed(2)}</span><span class="depth-amount">${b.amount.toFixed(4)}</span></div>`).join('') : '<div class="empty-state">暂无</div>';
         }
 
-        // ============================================================
-        //  渲染函数
-        // ============================================================
+        // ============ 渲染静态元素 ============
         function renderExchangeSelector() {
             const container = document.getElementById('exchangeSelectorList');
             const exchanges = [
-                { id: 'gateio', name: 'Gate.io', icon: 'G', active: true },
-                { id: 'binance', name: 'Binance', icon: 'B', active: false },
-                { id: 'okx', name: 'OKX', icon: 'O', active: false },
-                { id: 'bybit', name: 'Bybit', icon: 'B', active: false },
-                { id: 'mexc', name: 'MEXC', icon: 'M', active: false },
+                { id:'gateio', name:'Gate.io', icon:'G', active:true },
+                { id:'binance', name:'Binance', icon:'B', active:false },
+                { id:'okx', name:'OKX', icon:'O', active:false },
+                { id:'bybit', name:'Bybit', icon:'B', active:false },
+                { id:'mexc', name:'MEXC', icon:'M', active:false },
             ];
-            container.innerHTML = exchanges.map(ex => `
-                <div class="exchange-option ${ex.active ? 'active' : ''}" onclick="${ex.active ? '' : "alert('仅支持Gate.io')"}">
+            container.innerHTML = exchanges.map(ex=>`
+                <div class="exchange-option ${ex.active?'active':''}" onclick="${ex.active?'':"alert('仅支持Gate.io')"}">
                     <div class="exchange-icon">${ex.icon}</div>
                     <span class="exchange-name">${ex.name}</span>
-                    ${ex.active ? '<span class="exchange-check">✓</span>' : ''}
+                    ${ex.active?'<span class="exchange-check">✓</span>':''}
                 </div>
             `).join('');
         }
 
         function renderPairSelector() {
             const container = document.getElementById('pairSelector');
-            container.innerHTML = marketData.supportedPairs.map(pair => `
-                <button class="pair-btn ${pair.symbol === currentPairSymbol ? 'active' : ''}" onclick="selectPair('${pair.symbol}')">${pair.display}</button>
+            container.innerHTML = marketData.supportedPairs.map(pair=>`
+                <button class="pair-btn ${pair.symbol===currentPairSymbol?'active':''}" onclick="selectPair('${pair.symbol}')">${pair.display}</button>
             `).join('');
         }
 
         function renderTimeframeBar() {
             const container = document.getElementById('timeframeBar');
-            const tfs = [
-                { id: '1m', label: '1分' }, { id: '5m', label: '5分' },
-                { id: '15m', label: '15分' }, { id: '30m', label: '30分' },
-                { id: '1h', label: '1时' }, { id: '4h', label: '4时' },
-                { id: '8h', label: '8时' }, { id: '1d', label: '1日' }, { id: '7d', label: '7日' }
-            ];
-            container.innerHTML = tfs.map(tf => `
-                <button class="timeframe-btn ${tf.id === currentTimeframe ? 'active' : ''}" onclick="selectTimeframe('${tf.id}')">${tf.label}</button>
-            `).join('');
+            const tfs = [ {id:'1m',label:'1分'},{id:'5m',label:'5分'},{id:'15m',label:'15分'},{id:'30m',label:'30分'},{id:'1h',label:'1时'},{id:'4h',label:'4时'},{id:'8h',label:'8时'},{id:'1d',label:'1日'},{id:'7d',label:'7日'} ];
+            container.innerHTML = tfs.map(tf=>`<button class="timeframe-btn ${tf.id===currentTimeframe?'active':''}" onclick="selectTimeframe('${tf.id}')">${tf.label}</button>`).join('');
         }
 
         function selectPair(symbol) {
-            currentPairSymbol = symbol;
-            const pair = marketData.supportedPairs.find(p => p.symbol === symbol);
+            currentPairSymbol=symbol;
+            const pair=marketData.supportedPairs.find(p=>p.symbol===symbol);
             if (pair) {
-                currentPairDisplay = pair.display;
-                currentBaseAsset = pair.base;
-                document.getElementById('currentPair').textContent = pair.display;
-                document.getElementById('amountLabel').textContent = `数量 (${currentBaseAsset})`;
+                currentPairDisplay=pair.display; currentBaseAsset=pair.base;
+                document.getElementById('currentPair').textContent=pair.display;
+                document.getElementById('amountLabel').textContent=`数量 (${currentBaseAsset})`;
             }
-            document.querySelectorAll('.pair-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.pair-btn').forEach(btn=>btn.classList.remove('active'));
             event.target.classList.add('active');
-            refreshAllData();
-            updateUI();
+            refreshAllData(); updateUI();
         }
 
         function selectTimeframe(timeframe) {
-            currentTimeframe = timeframe;
-            document.querySelectorAll('.timeframe-btn').forEach(btn => btn.classList.remove('active'));
+            currentTimeframe=timeframe;
+            document.querySelectorAll('.timeframe-btn').forEach(btn=>btn.classList.remove('active'));
             event.target.classList.add('active');
-            marketData.fetchCandlesticks(currentPairSymbol, currentTimeframe, 100).then(() => updateKlineChart());
+            marketData.fetchCandlesticks(currentPairSymbol, currentTimeframe, 100).then(()=>{ updateKlineChart(); if(activeIndicators.change) updateChangeChart(); });
         }
 
-        // ============================================================
-        //  UI更新
-        // ============================================================
+        // ============ UI更新 ============
         function updateUI() {
             document.getElementById('mockUSDT').textContent = account.usdtPoints.toFixed(2);
             document.getElementById('mockBTC').textContent = account.btcPoints.toFixed(8);
             const totalAssets = account.getTotalAssets(currentPrice);
             document.getElementById('mockTotalAssets').textContent = '$' + totalAssets.toFixed(2);
             updateEstimatedAmount();
-            renderPositions();
-            renderPendingOrders();
-            renderTradeHistory();
-            renderStatistics();
+            renderPositions(); renderPendingOrders(); renderTradeHistory(); renderStatistics();
         }
 
         function renderPositions() {
             const container = document.getElementById('mockPositions');
-            if (account.btcPoints > 0 || account.frozenBTC > 0) {
-                const avgCost = account.getAverageCost();
-                const profit = (currentPrice - avgCost) * account.btcPoints;
-                const profitRate = avgCost > 0 ? (profit / (avgCost * account.btcPoints)) * 100 : 0;
+            if (account.btcPoints>0 || account.frozenBTC>0) {
+                const avgCost=account.getAverageCost();
+                const profit=(currentPrice-avgCost)*account.btcPoints;
+                const profitRate=avgCost>0?(profit/(avgCost*account.btcPoints))*100:0;
                 container.innerHTML = `
                     <div class="position-item">
-                        <div class="position-header">
-                            <span class="position-symbol" style="font-weight:600;">BTC/USDT</span>
-                            <span style="font-weight:600;color:${profit >= 0 ? '#4ade80' : '#ef4444'}">
-                                ${profit >= 0 ? '+' : ''}$${profit.toFixed(2)} (${profitRate >= 0 ? '+' : ''}${profitRate.toFixed(2)}%)
-                            </span>
-                        </div>
-                        <div class="position-details" style="display:flex;justify-content:space-between;font-size:11px;color:#6a6a7a;">
-                            <span>可用: ${account.btcPoints.toFixed(8)}</span>
-                            <span>冻结: ${account.frozenBTC.toFixed(8)}</span>
-                            <span>均价: $${avgCost.toFixed(2)}</span>
-                        </div>
-                    </div>
-                `;
-                document.getElementById('positionCount').textContent = '1个';
-            } else {
-                container.innerHTML = '<div class="empty-state">暂无持仓</div>';
-                document.getElementById('positionCount').textContent = '0个';
-            }
+                        <div class="position-header"><span class="position-symbol" style="font-weight:600;">BTC/USDT</span><span style="font-weight:600;color:${profit>=0?'#4ade80':'#ef4444'}">${profit>=0?'+':''}$${profit.toFixed(2)} (${profitRate>=0?'+':''}${profitRate.toFixed(2)}%)</span></div>
+                        <div class="position-details" style="display:flex;justify-content:space-between;font-size:11px;color:#6a6a7a;"><span>可用:${account.btcPoints.toFixed(8)}</span><span>冻结:${account.frozenBTC.toFixed(8)}</span><span>均价:$${avgCost.toFixed(2)}</span></div>
+                    </div>`;
+                document.getElementById('positionCount').textContent='1个';
+            } else { container.innerHTML='<div class="empty-state">暂无持仓</div>'; document.getElementById('positionCount').textContent='0个'; }
         }
 
         function renderPendingOrders() {
-            const container = document.getElementById('mockPendingOrders');
-            if (account.pendingOrders.length > 0) {
-                container.innerHTML = account.pendingOrders.map(o => `
-                    <div class="order-item">
-                        <span style="color:${o.side === 'buy' ? '#4ade80' : '#ef4444'}">${o.side === 'buy' ? '买入' : '卖出'}</span>
-                        <span>$${o.limitPrice.toFixed(2)}</span>
-                        <span>${o.btcAmount} BTC</span>
-                        <button class="cancel-order-btn" onclick="cancelMockOrder('${o.id}')">取消</button>
-                    </div>
-                `).join('');
-                document.getElementById('pendingOrderCount').textContent = account.pendingOrders.length + '个';
-            } else {
-                container.innerHTML = '<div class="empty-state">暂无挂单</div>';
-                document.getElementById('pendingOrderCount').textContent = '0个';
-            }
+            const container=document.getElementById('mockPendingOrders');
+            if (account.pendingOrders.length>0) {
+                container.innerHTML = account.pendingOrders.map(o=>`
+                    <div class="order-item"><span style="color:${o.side==='buy'?'#4ade80':'#ef4444'}">${o.side==='buy'?'买入':'卖出'}</span><span>$${o.limitPrice.toFixed(2)}</span><span>${o.btcAmount} BTC</span><button class="cancel-order-btn" onclick="cancelMockOrder('${o.id}')">取消</button></div>`).join('');
+                document.getElementById('pendingOrderCount').textContent=account.pendingOrders.length+'个';
+            } else { container.innerHTML='<div class="empty-state">暂无挂单</div>'; document.getElementById('pendingOrderCount').textContent='0个'; }
         }
 
         function renderTradeHistory() {
-            const container = document.getElementById('mockTradeHistory');
-            if (account.tradeHistory.length > 0) {
-                container.innerHTML = account.tradeHistory.slice(-20).reverse().map(t => `
-                    <div class="trade-item">
-                        <span style="color:${t.type === 'buy' ? '#4ade80' : '#ef4444'}">${t.type === 'buy' ? '买入' : '卖出'}</span>
-                        <span>${t.btcAmount} BTC</span>
-                        <span>@ $${t.btcPrice.toFixed(2)}</span>
-                        <span>${t.timestamp.toLocaleTimeString()}</span>
-                    </div>
-                `).join('');
-                document.getElementById('tradeHistoryCount').textContent = account.tradeHistory.length + '笔';
-            } else {
-                container.innerHTML = '<div class="empty-state">暂无记录</div>';
-                document.getElementById('tradeHistoryCount').textContent = '0笔';
-            }
+            const container=document.getElementById('mockTradeHistory');
+            if (account.tradeHistory.length>0) {
+                container.innerHTML = account.tradeHistory.slice(-20).reverse().map(t=>`
+                    <div class="trade-item"><span style="color:${t.type==='buy'?'#4ade80':'#ef4444'}">${t.type==='buy'?'买入':'卖出'}</span><span>${t.btcAmount} BTC</span><span>@ $${t.btcPrice.toFixed(2)}</span><span>${t.timestamp.toLocaleTimeString()}</span></div>`).join('');
+                document.getElementById('tradeHistoryCount').textContent=account.tradeHistory.length+'笔';
+            } else { container.innerHTML='<div class="empty-state">暂无记录</div>'; document.getElementById('tradeHistoryCount').textContent='0笔'; }
         }
 
         function renderStatistics() {
-            document.getElementById('statTotalTrades').textContent = account.totalTrades;
-            const sells = account.tradeHistory.filter(t => t.type === 'sell');
-            const wins = sells.filter(t => t.profit > 0);
-            document.getElementById('statWinRate').textContent = (sells.length > 0 ? (wins.length / sells.length * 100).toFixed(1) : '0') + '%';
-            document.getElementById('statTotalProfit').textContent = (account.totalProfit >= 0 ? '+' : '') + '$' + account.totalProfit.toFixed(2);
-            document.getElementById('statTotalCommission').textContent = '$' + account.totalCommission.toFixed(2);
+            document.getElementById('statTotalTrades').textContent=account.totalTrades;
+            const sells=account.tradeHistory.filter(t=>t.type==='sell');
+            const wins=sells.filter(t=>t.profit>0);
+            document.getElementById('statWinRate').textContent=(sells.length>0?(wins.length/sells.length*100).toFixed(1):'0')+'%';
+            document.getElementById('statTotalProfit').textContent=(account.totalProfit>=0?'+':'')+'$'+account.totalProfit.toFixed(2);
+            document.getElementById('statTotalCommission').textContent='$'+account.totalCommission.toFixed(2);
         }
 
-        // ============================================================
-        //  下单功能
-        // ============================================================
+        // ============ 下单 ============
         function setOrderSide(side) {
-            orderSide = side;
-            document.getElementById('buySideBtn').classList.toggle('active', side === 'buy');
-            document.getElementById('sellSideBtn').classList.toggle('active', side === 'sell');
-            document.getElementById('submitOrderBtn').textContent = side === 'buy' ? '买入' : '卖出';
-            document.getElementById('submitOrderBtn').className = 'mock-submit-btn ' + side;
+            orderSide=side;
+            document.getElementById('buySideBtn').classList.toggle('active', side==='buy');
+            document.getElementById('sellSideBtn').classList.toggle('active', side==='sell');
+            document.getElementById('submitOrderBtn').textContent = side==='buy'?'买入':'卖出';
+            document.getElementById('submitOrderBtn').className = 'mock-submit-btn '+side;
         }
-
-        function togglePriceInput() {
-            document.getElementById('priceInputGroup').style.display = document.getElementById('mockOrderType').value === 'limit' ? 'block' : 'none';
-        }
-
+        function togglePriceInput() { document.getElementById('priceInputGroup').style.display = document.getElementById('mockOrderType').value==='limit'?'block':'none'; }
         function updateEstimatedAmount() {
             const price = document.getElementById('mockOrderPrice').value ? parseFloat(document.getElementById('mockOrderPrice').value) : currentPrice;
             const amount = document.getElementById('mockOrderAmount').value ? parseFloat(document.getElementById('mockOrderAmount').value) : 0;
-            document.getElementById('estimatedAmount').textContent = '$' + (price * amount).toFixed(2);
+            document.getElementById('estimatedAmount').textContent = '$' + (price*amount).toFixed(2);
         }
-
         function submitMockOrder() {
-            const type = document.getElementById('mockOrderType').value;
-            const amount = parseFloat(document.getElementById('mockOrderAmount').value);
-            const price = parseFloat(document.getElementById('mockOrderPrice').value) || null;
-            if (!amount || amount <= 0) { alert('请输入有效的数量'); return; }
-            if (type === 'limit' && (!price || price <= 0)) { alert('请输入有效的限价价格'); return; }
-            if (currentPrice <= 0) { alert('行情数据未就绪'); return; }
+            const type=document.getElementById('mockOrderType').value;
+            const amount=parseFloat(document.getElementById('mockOrderAmount').value);
+            const price=parseFloat(document.getElementById('mockOrderPrice').value)||null;
+            if (!amount||amount<=0) { alert('请输入有效的数量'); return; }
+            if (type==='limit'&&(!price||price<=0)) { alert('请输入有效的限价价格'); return; }
+            if (currentPrice<=0) { alert('行情未就绪'); return; }
             let result;
-            if (type === 'market') {
-                result = orderSide === 'buy' ? account.buyBTC(amount, currentPrice) : account.sellBTC(amount, currentPrice);
-            } else {
-                result = account.placeLimitOrder(orderSide, amount, price);
-            }
-            alert(result.success ? '✅ ' + result.message : '❌ ' + result.message);
-            if (result.success) {
-                document.getElementById('mockOrderAmount').value = '';
-                document.getElementById('mockOrderPrice').value = '';
-                updateUI();
-            }
+            if (type==='market') result = orderSide==='buy' ? account.buyBTC(amount,currentPrice) : account.sellBTC(amount,currentPrice);
+            else result = account.placeLimitOrder(orderSide,amount,price);
+            alert(result.success?'✅ '+result.message:'❌ '+result.message);
+            if (result.success) { document.getElementById('mockOrderAmount').value=''; document.getElementById('mockOrderPrice').value=''; updateUI(); }
         }
-
         function cancelMockOrder(orderId) { if (account.cancelOrder(orderId)) updateUI(); }
 
-        // ============================================================
-        //  标签页
-        // ============================================================
+        // ============ 标签页 ============
         function switchMockTab(tab) {
-            const order = ['trade','positions','orders','history','stats'];
-            document.querySelectorAll('.mock-tab').forEach((btn, i) => btn.classList.toggle('active', i === order.indexOf(tab)));
-            document.getElementById('tradePanel').style.display = tab === 'trade' ? 'block' : 'none';
-            document.getElementById('positionsPanel').style.display = tab === 'positions' ? 'block' : 'none';
-            document.getElementById('ordersPanel').style.display = tab === 'orders' ? 'block' : 'none';
-            document.getElementById('historyPanel').style.display = tab === 'history' ? 'block' : 'none';
-            document.getElementById('statsPanel').style.display = tab === 'stats' ? 'block' : 'none';
+            const order=['trade','positions','orders','history','stats'];
+            document.querySelectorAll('.mock-tab').forEach((btn,i)=>btn.classList.toggle('active',i===order.indexOf(tab)));
+            document.getElementById('tradePanel').style.display = tab==='trade'?'block':'none';
+            document.getElementById('positionsPanel').style.display = tab==='positions'?'block':'none';
+            document.getElementById('ordersPanel').style.display = tab==='orders'?'block':'none';
+            document.getElementById('historyPanel').style.display = tab==='history'?'block':'none';
+            document.getElementById('statsPanel').style.display = tab==='stats'?'block':'none';
             updateUI();
         }
 
-        // ============================================================
-        //  弹窗
-        // ============================================================
-        function confirmResetAccount() { document.getElementById('resetModal').classList.add('show'); }
-        function closeResetModal(e) { if (e && e.target !== e.currentTarget) return; document.getElementById('resetModal').classList.remove('show'); }
-        function resetMockAccount() { account.reset(); closeResetModal(); updateUI(); alert('✅ 已重置'); }
-        function openSettingsModal() { alert('设置功能'); }
+        // ============ 弹窗 ============
+        function confirmResetAccount(){ document.getElementById('resetModal').classList.add('show'); }
+        function closeResetModal(e){ if(e&&e.target!==e.currentTarget)return; document.getElementById('resetModal').classList.remove('show'); }
+        function resetMockAccount(){ account.reset(); closeResetModal(); updateUI(); alert('✅ 已重置'); }
+        function openSettingsModal(){ alert('设置功能'); }
 
-        // ============================================================
-        //  指标和K线
-        // ============================================================
-        function toggleIndicator(indicator) { activeIndicators[indicator] = !activeIndicators[indicator]; updateKlineChart(); }
+        // ============ 指标切换 ============
+        function toggleIndicator(indicator) {
+            activeIndicators[indicator] = !activeIndicators[indicator];
+            // 特殊处理涨跌幅容器显示
+            if (indicator === 'change') {
+                document.getElementById('changeChartContainer').style.display = activeIndicators.change ? 'block' : 'none';
+                if (activeIndicators.change) updateChangeChart();
+            }
+            updateKlineChart();
+            // 更新按钮样式
+            document.querySelectorAll('.indicator-btn').forEach(btn => {
+                const text = btn.textContent;
+                const key = text === 'MA' ? 'ma' : text === 'EMA' ? 'ema' : text === 'BOLL' ? 'boll' : text === '成交量' ? 'volume' : text === '涨跌幅' ? 'change' : '';
+                if (key) btn.classList.toggle('active', activeIndicators[key]);
+            });
+        }
 
+        // ============ K线图 ============
         function initKlineChart() {
             const ctx = document.getElementById('klineChart').getContext('2d');
             klineChartInstance = new Chart(ctx, {
-                type: 'line',
-                data: { labels: [], datasets: [] },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: { legend: { display: true, labels: { color: '#8a8a9a', font: { size: 9 } } } },
-                    scales: {
-                        x: { grid: { color: '#0d0d18' }, ticks: { color: '#5a5a6a', font: { size: 9 } } },
-                        y: { grid: { color: '#0d0d18' }, ticks: { color: '#5a5a6a', font: { size: 9 } } }
+                type:'line',
+                data:{labels:[],datasets:[]},
+                options:{
+                    responsive:true, maintainAspectRatio:false,
+                    interaction:{mode:'index',intersect:false},
+                    plugins:{legend:{display:true,labels:{color:'#8a8a9a',font:{size:9}}}},
+                    scales:{
+                        x:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:9}}},
+                        y:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:9}}}
                     }
                 }
             });
         }
-
         function updateKlineChart() {
             if (!klineChartInstance || !marketData.klineCache.length) return;
-            const klines = marketData.klineCache;
-            const labels = klines.map(k => {
-                const d = new Date(k.timestamp);
-                return currentTimeframe === '1d' || currentTimeframe === '7d'
-                    ? d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' })
-                    : d.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+            const klines=marketData.klineCache;
+            const labels=klines.map(k=>{
+                const d=new Date(k.timestamp);
+                return (currentTimeframe==='1d'||currentTimeframe==='7d') ? d.toLocaleDateString('zh-CN',{month:'2-digit',day:'2-digit'}) : d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
             });
-            const closes = klines.map(k => k.close);
-            const volumes = klines.map(k => k.volume);
-            const datasets = [{
-                label: currentPairDisplay, data: closes, borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.3, order: 1
+            const closes=klines.map(k=>k.close);
+            const volumes=klines.map(k=>k.volume);
+            const datasets=[{
+                label:currentPairDisplay, data:closes, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.1)', borderWidth:1.5, pointRadius:0, fill:true, tension:0.3, order:1
             }];
             if (activeIndicators.ma) {
-                datasets.push({ label: 'MA5', data: TechnicalIndicators.SMA(closes, 5), borderColor: '#fbbf24', borderWidth: 1, pointRadius: 0, order: 0 });
-                datasets.push({ label: 'MA10', data: TechnicalIndicators.SMA(closes, 10), borderColor: '#e879f9', borderWidth: 1, pointRadius: 0, order: 0 });
-                datasets.push({ label: 'MA20', data: TechnicalIndicators.SMA(closes, 20), borderColor: '#2dd4bf', borderWidth: 1, pointRadius: 0, order: 0 });
+                datasets.push({label:'MA5',data:TechnicalIndicators.SMA(closes,5),borderColor:'#fbbf24',borderWidth:1,pointRadius:0,order:0});
+                datasets.push({label:'MA10',data:TechnicalIndicators.SMA(closes,10),borderColor:'#e879f9',borderWidth:1,pointRadius:0,order:0});
+                datasets.push({label:'MA20',data:TechnicalIndicators.SMA(closes,20),borderColor:'#2dd4bf',borderWidth:1,pointRadius:0,order:0});
             }
             if (activeIndicators.ema) {
-                datasets.push({ label: 'EMA12', data: TechnicalIndicators.EMA(closes, 12), borderColor: '#f97316', borderWidth: 1, pointRadius: 0, order: 0 });
-                datasets.push({ label: 'EMA26', data: TechnicalIndicators.EMA(closes, 26), borderColor: '#a78bfa', borderWidth: 1, pointRadius: 0, order: 0 });
+                datasets.push({label:'EMA12',data:TechnicalIndicators.EMA(closes,12),borderColor:'#f97316',borderWidth:1,pointRadius:0,order:0});
+                datasets.push({label:'EMA26',data:TechnicalIndicators.EMA(closes,26),borderColor:'#a78bfa',borderWidth:1,pointRadius:0,order:0});
             }
             if (activeIndicators.boll) {
-                const boll = TechnicalIndicators.BOLL(closes, 20, 2);
-                datasets.push({ label: '上轨', data: boll.upper, borderColor: 'rgba(239,68,68,0.5)', borderWidth: 0.8, borderDash: [4,4], pointRadius: 0, order: 0 });
-                datasets.push({ label: '中轨', data: boll.middle, borderColor: 'rgba(59,130,246,0.5)', borderWidth: 0.8, pointRadius: 0, order: 0 });
-                datasets.push({ label: '下轨', data: boll.lower, borderColor: 'rgba(16,185,129,0.5)', borderWidth: 0.8, borderDash: [4,4], pointRadius: 0, order: 0 });
+                const boll=TechnicalIndicators.BOLL(closes,20,2);
+                datasets.push({label:'上轨',data:boll.upper,borderColor:'rgba(239,68,68,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,order:0});
+                datasets.push({label:'中轨',data:boll.middle,borderColor:'rgba(59,130,246,0.5)',borderWidth:0.8,pointRadius:0,order:0});
+                datasets.push({label:'下轨',data:boll.lower,borderColor:'rgba(16,185,129,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,order:0});
             }
             if (activeIndicators.volume) {
                 datasets.push({
-                    label: '成交量', data: volumes, type: 'bar',
-                    backgroundColor: volumes.map((v, i) => closes[i] >= klines[i].open ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.4)'),
-                    borderWidth: 0, yAxisID: 'volumeAxis', order: 2
+                    label:'成交量',data:volumes,type:'bar',
+                    backgroundColor:volumes.map((v,i)=>closes[i]>=klines[i].open?'rgba(16,185,129,0.4)':'rgba(239,68,68,0.4)'),
+                    borderWidth:0, yAxisID:'volumeAxis', order:2
                 });
             }
-            klineChartInstance.data.labels = labels;
-            klineChartInstance.data.datasets = datasets;
-            const yAxes = { y: { grid: { color: '#0d0d18' }, ticks: { color: '#5a5a6a', font: { size: 9 } } } };
+            klineChartInstance.data.labels=labels;
+            klineChartInstance.data.datasets=datasets;
+            const yAxes={y:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:9}}}};
             if (activeIndicators.volume) {
-                yAxes.volumeAxis = { position: 'right', grid: { display: false }, ticks: { color: '#5a5a6a', font: { size: 8 } }, max: Math.max(...volumes) * 2 };
+                yAxes.volumeAxis={position:'right',grid:{display:false},ticks:{color:'#5a5a6a',font:{size:8}},max:Math.max(...volumes)*2};
             }
-            klineChartInstance.options.scales = yAxes;
+            klineChartInstance.options.scales=yAxes;
             klineChartInstance.update();
         }
 
-        function goBack() { window.location.href = 'index.html'; }
+        // ============ 涨跌幅柱状图（新增） ============
+        function initChangeChart() {
+            const ctx = document.getElementById('changeChart').getContext('2d');
+            changeChartInstance = new Chart(ctx, {
+                type:'bar',
+                data:{labels:[],datasets:[]},
+                options:{
+                    responsive:true, maintainAspectRatio:false,
+                    plugins:{legend:{display:false}},
+                    scales:{
+                        x:{display:false},
+                        y:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:8},callback:v=>v+'%'}}
+                    }
+                }
+            });
+        }
+        function updateChangeChart() {
+            if (!changeChartInstance || !marketData.klineCache.length) return;
+            const klines=marketData.klineCache;
+            const changes = klines.map(k => k.open ? ((k.close - k.open) / k.open) * 100 : 0);
+            const labels = klines.map(k => new Date(k.timestamp).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}));
+            const colors = changes.map(c => c >= 0 ? '#ef4444' : '#3b82f6'); // 红涨蓝跌
+            changeChartInstance.data.labels = labels;
+            changeChartInstance.data.datasets = [{
+                label:'涨跌幅',
+                data: changes,
+                backgroundColor: colors,
+                borderWidth:0,
+                barPercentage:0.8,
+                categoryPercentage:0.9
+            }];
+            changeChartInstance.update();
+        }
+
+        function goBack(){ window.location.href='index.html'; }
     </script>
 </body>
 </html>
