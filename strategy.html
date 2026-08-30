@@ -35,7 +35,20 @@
         .chart-container { flex: 1; position: relative; background: #181a20; }
         #kline { width: 100%; height: 100%; }
 
-        .indicators { display: flex; gap: 15px; padding: 10px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; }
+        /* 指标按钮行：隐藏水平滚动条 */
+        .indicators {
+            display: flex;
+            gap: 15px;
+            padding: 10px 15px;
+            font-size: 12px;
+            color: #848e9c;
+            overflow-x: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE/Edge */
+        }
+        .indicators::-webkit-scrollbar {
+            display: none; /* Chrome/Safari */
+        }
         .indicators span { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; white-space: nowrap; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
         .indicators span:hover { color: #eaecef; }
@@ -277,7 +290,6 @@
             if (!data || data.length === 0) throw new Error('空数据');
             cache.ticker = data[0];
             updateTickerUI(data[0]);
-            // 更新图表中的价格标签
             if (chartData.klines.length) updateChart();
         } catch (e) { console.error('Ticker失败:', e); if (cache.ticker) updateTickerUI(cache.ticker); }
     }
@@ -382,7 +394,7 @@
         } catch (e) {}
     }
 
-    // =================== 图表更新（含价格标签 markLine） ===================
+    // =================== 图表更新（含内部价格标签） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -400,11 +412,24 @@
         let mainHeight = showVolume && showMacd ? 55 : showVolume || showMacd ? 68 : 100;
         let currentTop = 5;
 
+        // 主图 grid
         grids.push({ left: 0, right: 0, top: currentTop + '%', height: mainHeight + '%' });
         xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
-        yAxes.push({ scale: true, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10 } });
+        yAxes.push({
+            scale: true,
+            position: 'right',
+            gridIndex: 0,
+            splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } },
+            axisLabel: {
+                color: '#848e9c',
+                fontSize: 10,
+                inside: true,
+                margin: 4,
+                formatter: function(value) { return formatNum(value, 1); }
+            }
+        });
 
-        // K线 series 添加 markLine 价格标签
+        // K线
         const klineSeries = {
             type: 'candlestick',
             data: klines,
@@ -419,7 +444,6 @@
             }
         };
 
-        // 动态添加三条价格水平线（当前价、24h高、24h低）
         if (cache.ticker) {
             const t = cache.ticker;
             klineSeries.markLine.data.push(
@@ -430,7 +454,7 @@
         }
         series.push(klineSeries);
 
-        // 其余指标（MA、EMA等）不变...
+        // 指标
         if (indicatorState.MA) {
             const ma5 = Indicators.SMA(closes, 5);
             const ma10 = Indicators.SMA(closes, 10);
