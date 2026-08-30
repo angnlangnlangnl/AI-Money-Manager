@@ -44,7 +44,7 @@
         .market-stat-label { font-size: 9px; color: #5a5a6a; }
         .market-stat-value { font-size: 11px; color: #c8c8d8; font-weight: 600; }
 
-        .chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 4px; flex-shrink: 0; height: 180px; }
+        .chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 4px; flex-shrink: 0; height: 220px; }
         .chart-container canvas { width: 100% !important; height: 100% !important; }
 
         .change-chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 4px; flex-shrink: 0; height: 60px; display: none; }
@@ -164,7 +164,7 @@
             <div class="market-stat-item"><div class="market-stat-label">24h额</div><div class="market-stat-value" id="quoteVolume">$0</div></div>
         </div>
 
-        <!-- K线图 -->
+        <!-- K线图（蜡烛图） -->
         <div class="chart-container"><canvas id="klineChart"></canvas></div>
 
         <!-- 涨跌幅柱状图 -->
@@ -175,6 +175,7 @@
 
         <!-- 指标 -->
         <div class="indicator-bar">
+            <button class="indicator-btn active" onclick="toggleIndicator('candle')">蜡烛图</button>
             <button class="indicator-btn active" onclick="toggleIndicator('ma')">MA</button>
             <button class="indicator-btn active" onclick="toggleIndicator('ema')">EMA</button>
             <button class="indicator-btn" onclick="toggleIndicator('boll')">BOLL</button>
@@ -500,7 +501,7 @@
         let currentPairSymbol='BTC_USDT', currentPairDisplay='BTC/USDT', currentBaseAsset='BTC';
         let currentPrice=0, currentTimeframe='1m', orderSide='buy';
         let klineChartInstance=null, changeChartInstance=null;
-        let activeIndicators = { ma:true, ema:true, boll:false, volume:false, change:false };
+        let activeIndicators = { candle:true, ma:true, ema:true, boll:false, volume:false, change:false };
 
         document.addEventListener('DOMContentLoaded', async function() {
             renderExchangeSelector();
@@ -735,16 +736,16 @@
             updateKlineChart();
             document.querySelectorAll('.indicator-btn').forEach(btn => {
                 const text = btn.textContent;
-                const key = text === 'MA' ? 'ma' : text === 'EMA' ? 'ema' : text === 'BOLL' ? 'boll' : text === '成交量' ? 'volume' : text === '涨跌幅' ? 'change' : '';
+                const key = text === '蜡烛图' ? 'candle' : text === 'MA' ? 'ma' : text === 'EMA' ? 'ema' : text === 'BOLL' ? 'boll' : text === '成交量' ? 'volume' : text === '涨跌幅' ? 'change' : '';
                 if (key) btn.classList.toggle('active', activeIndicators[key]);
             });
         }
 
-        // ============ K线图 ============
+        // ============ K线图（支持蜡烛图） ============
         function initKlineChart() {
             const ctx = document.getElementById('klineChart').getContext('2d');
             klineChartInstance = new Chart(ctx, {
-                type:'line',
+                type:'bar',
                 data:{labels:[],datasets:[]},
                 options:{
                     responsive:true, maintainAspectRatio:false,
@@ -766,33 +767,80 @@
             });
             const closes=klines.map(k=>k.close);
             const volumes=klines.map(k=>k.volume);
-            const datasets=[{
-                label:currentPairDisplay, data:closes, borderColor:'#3b82f6', backgroundColor:'rgba(59,130,246,0.1)', borderWidth:1.5, pointRadius:0, fill:true, tension:0.3, order:1
-            }];
+            const datasets=[];
+
+            // 蜡烛图（影线+实体）
+            if (activeIndicators.candle) {
+                // 影线（low-high）
+                datasets.push({
+                    label:'影线',
+                    data: klines.map(k => [k.low, k.high]),
+                    type:'bar',
+                    backgroundColor: klines.map(k => k.close >= k.open ? 'rgba(239,68,68,0.3)' : 'rgba(59,130,246,0.3)'),
+                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#3b82f6'),
+                    borderWidth: 0.5,
+                    barPercentage: 0.1,
+                    categoryPercentage: 0.9,
+                    order: 2,
+                    yAxisID: 'y'
+                });
+                // 实体（open-close）
+                datasets.push({
+                    label:'实体',
+                    data: klines.map(k => [k.open, k.close]),
+                    type:'bar',
+                    backgroundColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#3b82f6'),
+                    borderColor: klines.map(k => k.close >= k.open ? '#ef4444' : '#3b82f6'),
+                    borderWidth: 0,
+                    barPercentage: 0.6,
+                    categoryPercentage: 0.9,
+                    order: 2,
+                    yAxisID: 'y'
+                });
+            } else {
+                // 折线图
+                datasets.push({
+                    label: currentPairDisplay,
+                    data: closes,
+                    type:'line',
+                    borderColor:'#3b82f6',
+                    backgroundColor:'rgba(59,130,246,0.1)',
+                    borderWidth:1.5,
+                    pointRadius:0,
+                    fill:true,
+                    tension:0.3,
+                    order:1
+                });
+            }
+
+            // 指标线
             if (activeIndicators.ma) {
-                datasets.push({label:'MA5',data:TechnicalIndicators.SMA(closes,5),borderColor:'#fbbf24',borderWidth:1,pointRadius:0,order:0});
-                datasets.push({label:'MA10',data:TechnicalIndicators.SMA(closes,10),borderColor:'#e879f9',borderWidth:1,pointRadius:0,order:0});
-                datasets.push({label:'MA20',data:TechnicalIndicators.SMA(closes,20),borderColor:'#2dd4bf',borderWidth:1,pointRadius:0,order:0});
+                datasets.push({label:'MA5',data:TechnicalIndicators.SMA(closes,5),borderColor:'#fbbf24',borderWidth:1,pointRadius:0,type:'line',order:0});
+                datasets.push({label:'MA10',data:TechnicalIndicators.SMA(closes,10),borderColor:'#e879f9',borderWidth:1,pointRadius:0,type:'line',order:0});
+                datasets.push({label:'MA20',data:TechnicalIndicators.SMA(closes,20),borderColor:'#2dd4bf',borderWidth:1,pointRadius:0,type:'line',order:0});
             }
             if (activeIndicators.ema) {
-                datasets.push({label:'EMA12',data:TechnicalIndicators.EMA(closes,12),borderColor:'#f97316',borderWidth:1,pointRadius:0,order:0});
-                datasets.push({label:'EMA26',data:TechnicalIndicators.EMA(closes,26),borderColor:'#a78bfa',borderWidth:1,pointRadius:0,order:0});
+                datasets.push({label:'EMA12',data:TechnicalIndicators.EMA(closes,12),borderColor:'#f97316',borderWidth:1,pointRadius:0,type:'line',order:0});
+                datasets.push({label:'EMA26',data:TechnicalIndicators.EMA(closes,26),borderColor:'#a78bfa',borderWidth:1,pointRadius:0,type:'line',order:0});
             }
             if (activeIndicators.boll) {
                 const boll=TechnicalIndicators.BOLL(closes,20,2);
-                datasets.push({label:'上轨',data:boll.upper,borderColor:'rgba(239,68,68,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,order:0});
-                datasets.push({label:'中轨',data:boll.middle,borderColor:'rgba(59,130,246,0.5)',borderWidth:0.8,pointRadius:0,order:0});
-                datasets.push({label:'下轨',data:boll.lower,borderColor:'rgba(16,185,129,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,order:0});
+                datasets.push({label:'上轨',data:boll.upper,borderColor:'rgba(239,68,68,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,type:'line',order:0});
+                datasets.push({label:'中轨',data:boll.middle,borderColor:'rgba(59,130,246,0.5)',borderWidth:0.8,pointRadius:0,type:'line',order:0});
+                datasets.push({label:'下轨',data:boll.lower,borderColor:'rgba(16,185,129,0.5)',borderWidth:0.8,borderDash:[4,4],pointRadius:0,type:'line',order:0});
             }
+            // 成交量
             if (activeIndicators.volume) {
                 datasets.push({
                     label:'成交量',data:volumes,type:'bar',
                     backgroundColor:volumes.map((v,i)=>closes[i]>=klines[i].open?'rgba(16,185,129,0.4)':'rgba(239,68,68,0.4)'),
-                    borderWidth:0, yAxisID:'volumeAxis', order:2
+                    borderWidth:0, yAxisID:'volumeAxis', order:3
                 });
             }
+
             klineChartInstance.data.labels=labels;
             klineChartInstance.data.datasets=datasets;
+
             const yAxes={y:{grid:{color:'#0d0d18'},ticks:{color:'#5a5a6a',font:{size:9}}}};
             if (activeIndicators.volume) {
                 yAxes.volumeAxis={position:'right',grid:{display:false},ticks:{color:'#5a5a6a',font:{size:8}},max:Math.max(...volumes)*2};
