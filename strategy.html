@@ -4,23 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>BTC/USDT 交易界面（真实行情）</title>
-    <!-- 引入 ECharts -->
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
-
         .app { width: 390px; height: 844px; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; border-radius: 20px; box-shadow: 0 0 20px rgba(255,255,255,0.1); }
-
         .header { display: flex; justify-content: space-between; align-items: center; padding: 15px; height: 60px; }
         .header-left { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
         .header-icons { display: flex; gap: 15px; font-size: 18px; }
-
         .tabs { display: flex; justify-content: space-around; padding: 10px 15px; border-bottom: 1px solid #2b3139; }
         .tab { color: #848e9c; font-size: 14px; }
         .tab.active { color: #f0b90b; position: relative; }
         .tab.active::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
-
         .quote-section { display: flex; justify-content: space-between; padding: 15px; }
         .price-main { font-size: 32px; font-weight: bold; }
         .price-sub { font-size: 13px; color: #848e9c; margin-top: 5px; }
@@ -28,27 +23,21 @@
         .price-sub span.red { color: #f6465d; }
         .quote-details { font-size: 12px; color: #848e9c; text-align: right; line-height: 1.6; }
         .quote-details b { color: #eaecef; font-weight: normal; }
-
         .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 10px; font-size: 12px; color: #848e9c; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
-
         .chart-container { flex: 1; position: relative; background: #181a20; }
         #kline { width: 100%; height: 100%; }
-
         .indicators { display: flex; gap: 15px; padding: 10px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; }
         .indicators span.active { color: #eaecef; }
         .indicators span:hover { color: #eaecef; cursor: pointer; }
-
         .performance { display: flex; justify-content: space-between; padding: 10px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
         .perf-item span:last-child { margin-left: 5px; }
         .green { color: #0ecb81; }
         .red { color: #f6465d; }
-
         .order-book-bar { display: flex; align-items: center; padding: 10px 15px; font-size: 12px; font-weight: bold; }
         .sell-bar { width: 50%; background: #0ecb81; color: #181a20; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
         .buy-bar { width: 50%; background: #f6465d; color: #181a20; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
         .order-labels { display: flex; justify-content: space-around; font-size: 12px; color: #848e9c; padding: 5px 0; border-bottom: 1px solid #2b3139; }
-
         .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 15px; background: #181a20; border-top: 1px solid #2b3139; }
         .tools { display: flex; gap: 20px; font-size: 12px; color: #848e9c; text-align: center; }
         .tools div { display: flex; flex-direction: column; align-items: center; gap: 5px; }
@@ -56,12 +45,11 @@
         .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 12px 0; border-radius: 4px; font-size: 16px; font-weight: bold; color: #fff; }
         .buy-btn { background: #0ecb81; margin-right: 10px; }
         .sell-btn { background: #f6465d; }
-
         .icon { font-style: normal; }
+        .error-msg { color: #f6465d; font-size: 12px; text-align: center; padding: 5px; display: none; }
     </style>
 </head>
 <body>
-
 <div class="app">
     <!-- 顶部导航 -->
     <div class="header">
@@ -114,6 +102,7 @@
     <!-- K线图 -->
     <div class="chart-container">
         <div id="kline"></div>
+        <div class="error-msg" id="kline-error">K线数据加载失败，请检查网络</div>
     </div>
 
     <!-- MA 指标 -->
@@ -185,8 +174,8 @@
             type: 'candlestick',
             data: [],
             itemStyle: {
-                color: '#0ecb81',        // 阳线（涨）
-                color0: '#f6465d',       // 阴线（跌）
+                color: '#0ecb81',
+                color0: '#f6465d',
                 borderColor: '#0ecb81',
                 borderColor0: '#f6465d'
             }
@@ -195,13 +184,13 @@
     };
     myChart.setOption(option);
 
-    // =================== 常量配置 ===================
+    // =================== 常量 ===================
     const BASE_URL = 'https://api.gateio.ws/api/v4';
     const PAIR = 'BTC_USDT';
     const INTERVAL = '1h';
-    const CNY_RATE = 7.2; // 可替换为实时汇率 API
+    const CNY_RATE = 7.2;
 
-    // =================== 工具函数 ===================
+    // =================== 工具 ===================
     function formatNum(num, decimals = 2) {
         const n = parseFloat(num);
         if (isNaN(n)) return '--';
@@ -211,10 +200,10 @@
         });
     }
 
-    // =================== 获取 Ticker 数据 ===================
+    // =================== 获取 Ticker ===================
     async function fetchTicker() {
         try {
-            const res = await fetch(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`);
+            const res = await fetch(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`, { cache: 'no-store' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const data = await res.json();
             if (!data || data.length === 0) throw new Error('空数据');
@@ -222,64 +211,55 @@
 
             const last = parseFloat(t.last);
             const change = parseFloat(t.change_percentage);
-
-            // 更新主价格
             document.getElementById('last-price').innerText = formatNum(last);
 
-            // 更新人民币价格及涨跌幅
             const changeClass = change >= 0 ? 'green' : 'red';
             document.getElementById('cn-price').innerHTML =
                 `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
 
-            // 更新24小时数据
             document.getElementById('high-24').innerText = formatNum(t.high_24h);
             document.getElementById('low-24').innerText = formatNum(t.low_24h);
             document.getElementById('vol-24').innerText = formatNum(t.base_volume, 2);
             document.getElementById('amount-24').innerText = formatNum(t.quote_volume / 100000000, 2) + '亿';
 
-            // 更新“今日”涨跌幅
             const perfToday = document.getElementById('perf-today');
             perfToday.innerText = `${change >= 0 ? '+' : ''}${change.toFixed(2)}%`;
             perfToday.className = changeClass;
 
-            // 模拟买卖盘比例（根据当前价在24h高低区间的位置估算）
+            // 模拟买卖盘比例
             const high = parseFloat(t.high_24h);
             const low = parseFloat(t.low_24h);
             let buyPct = 50;
             if (high > low) {
                 buyPct = ((last - low) / (high - low)) * 100;
-                // 限制在10~90之间，避免极端值
                 buyPct = Math.max(10, Math.min(90, buyPct));
             }
             const sellPct = 100 - buyPct;
-
-            const sellBar = document.getElementById('sell-bar');
-            const buyBar = document.getElementById('buy-bar');
-            sellBar.style.width = sellPct + '%';
-            buyBar.style.width = buyPct + '%';
-            sellBar.innerText = sellPct.toFixed(2) + '%';
-            buyBar.innerText = buyPct.toFixed(2) + '%';
+            document.getElementById('sell-bar').style.width = sellPct + '%';
+            document.getElementById('buy-bar').style.width = buyPct + '%';
+            document.getElementById('sell-bar').innerText = sellPct.toFixed(2) + '%';
+            document.getElementById('buy-bar').innerText = buyPct.toFixed(2) + '%';
 
         } catch (e) {
             console.error("行情获取失败:", e);
-            // 可显示错误提示，此处保持原有占位符
+            // 可显示错误信息
+            document.getElementById('last-price').innerText = '--';
         }
     }
 
-    // =================== 获取真实 K 线数据 ===================
+    // =================== 获取 K线 ===================
     async function fetchKline() {
         try {
-            const res = await fetch(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=${INTERVAL}&limit=100`);
+            const res = await fetch(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=${INTERVAL}&limit=100`, { cache: 'no-store' });
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const rawData = await res.json();
             if (!rawData || rawData.length === 0) throw new Error('空K线数据');
 
-            // Gate 返回格式: [时间戳, 成交量额, 收盘, 最高, 最低, 开盘, 成交量]
             const kLineData = rawData.map(item => [
-                parseFloat(item[5]), // Open
-                parseFloat(item[2]), // Close
-                parseFloat(item[4]), // Low
-                parseFloat(item[3])  // High
+                parseFloat(item[5]),
+                parseFloat(item[2]),
+                parseFloat(item[4]),
+                parseFloat(item[3])
             ]);
 
             const dates = rawData.map(item => {
@@ -291,23 +271,25 @@
                 xAxis: { data: dates },
                 series: [{ data: kLineData }]
             });
+            document.getElementById('kline-error').style.display = 'none';
 
-            // 响应容器大小变化
-            myChart.resize();
         } catch (e) {
             console.error("K线获取失败:", e);
+            document.getElementById('kline-error').style.display = 'block';
         }
     }
 
-    // =================== 启动与定时刷新 ===================
-    window.addEventListener('load', () => {
+    // =================== 启动 ===================
+    function startFetch() {
         fetchTicker();
         fetchKline();
-    });
+    }
 
-    // 每30秒刷新行情
+    // DOM加载完成后立即执行
+    document.addEventListener('DOMContentLoaded', startFetch);
+
+    // 定时刷新
     setInterval(fetchTicker, 30000);
-    // 每60秒刷新K线
     setInterval(fetchKline, 60000);
 
     // 窗口大小改变时自适应
@@ -315,6 +297,5 @@
         myChart.resize();
     });
 </script>
-
 </body>
 </html>
