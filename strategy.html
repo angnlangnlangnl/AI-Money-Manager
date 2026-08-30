@@ -53,7 +53,7 @@
         .chart-container { background: #0a0a12; border-bottom: 1px solid #1a1a2a; padding: 8px; flex-shrink: 0; height: 200px; position: relative; }
         .chart-container canvas { width: 100% !important; height: 100% !important; }
 
-        /* 交易对选择（仅 BTC/USDT）*/
+        /* 交易对选择 */
         .pair-selector { display: flex; gap: 4px; overflow-x: auto; padding: 6px 12px; flex-shrink: 0; scrollbar-width: none; background: #0a0a0f; border-bottom: 1px solid #1a1a2a; }
         .pair-selector::-webkit-scrollbar { display: none; }
         .pair-btn { padding: 4px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid #1a1a2a; background: #12121f; color: #8a8a9a; white-space: nowrap; transition: all 0.2s; }
@@ -174,7 +174,7 @@
         <div class="market-bar">
             <div class="flex items-center justify-between">
                 <div>
-                    <span class="text-sm text-[#8a8a9a]" id="currentPair">BTC/USDT</span>
+                    <span class="text-sm text-[#8a8a9a]" id="currentPair">BTC_USDT</span>
                     <span class="text-xs text-[#5a5a6a] ml-2">Gate.io</span>
                 </div>
                 <div class="price-change text-emerald-400" id="priceChange">+0.00%</div>
@@ -323,47 +323,57 @@
     <script>
         // ============================================================
         //  Gate.io 行情数据服务（公共API，无需鉴权）
+        //  修复：支持多交易对，一次拉取，正确解析字段
         // ============================================================
         class GateMarketDataService {
             constructor() {
                 this.baseUrl = 'https://api.gateio.ws/api/v4';
-                this.priceCache = {};
-                this.klineCache = [];
-                this.lastUpdate = 0;
+                this.tickers = {};  // 缓存所有交易对ticker
+                this.klineCache = []; // 当前K线数据
+                this.supportedPairs = [
+                    { symbol: 'BTC_USDT', display: 'BTC/USDT', base: 'BTC', quote: 'USDT' },
+                    { symbol: 'ETH_USDT', display: 'ETH/USDT', base: 'ETH', quote: 'USDT' },
+                    { symbol: 'SOL_USDT', display: 'SOL/USDT', base: 'SOL', quote: 'USDT' },
+                    { symbol: 'ARB_USDT', display: 'ARB/USDT', base: 'ARB', quote: 'USDT' },
+                    { symbol: 'DOGE_USDT', display: 'DOGE/USDT', base: 'DOGE', quote: 'USDT' }
+                ];
             }
 
-            // 获取BTC/USDT实时行情（/spot/tickers）
-            async fetchTicker(currencyPair = 'BTC_USDT') {
+            // 批量获取多个交易对的实时行情
+            async fetchTickers(pairs) {
+                const pairList = pairs.map(p => p.symbol).join(',');
                 try {
-                    const response = await fetch(`${this.baseUrl}/spot/tickers?currency_pair=${currencyPair}`);
+                    const response = await fetch(`${this.baseUrl}/spot/tickers?currency_pair=${pairList}`);
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const data = await response.json();
-                    if (data && data.length > 0) {
-                        const ticker = data[0];
-                        this.priceCache[currencyPair] = {
+                    data.forEach(ticker => {
+                        this.tickers[ticker.currency_pair] = {
                             last: parseFloat(ticker.last),
                             changePercent: parseFloat(ticker.change_percentage),
                             high24h: parseFloat(ticker.high_24h),
                             low24h: parseFloat(ticker.low_24h),
                             baseVolume: parseFloat(ticker.base_volume),
-                            quoteVolume: parseFloat(ticker.quote_volume)
+                            quoteVolume: parseFloat(ticker.quote_volume),
+                            lowestAsk: parseFloat(ticker.lowest_ask),
+                            highestBid: parseFloat(ticker.highest_bid)
                         };
-                        return this.priceCache[currencyPair];
-                    }
-                    return null;
+                    });
+                    return this.tickers;
                 } catch (error) {
                     console.error('获取Gate.io行情失败:', error);
                     return null;
                 }
             }
 
-            // 获取K线数据（/spot/candlesticks）
-            async fetchCandlesticks(currencyPair = 'BTC_USDT', interval = '1m', limit = 50) {
+            // 获取单个交易对的K线数据
+            async fetchCandlesticks(currencyPair, interval = '1m', limit = 50) {
                 try {
-                    const response = await fetch(`${this.baseUrl}/spot/candlesticks?currency_pair=${currencyPair}&interval=${interval}&limit=${limit}`);
+                    const response = await fetch(
+                        `${this.baseUrl}/spot/candlesticks?currency_pair=${currencyPair}&interval=${interval}&limit=${limit}`
+                    );
                     if (!response.ok) throw new Error(`HTTP ${response.status}`);
                     const data = await response.json();
-                    // Gate.io返回格式：[timestamp, quote_volume, close, high, low, open, ...]
+                    // Gate.io K线格式: [timestamp, quote_volume, close, high, low, open, ...]
                     this.klineCache = data.map(item => ({
                         timestamp: parseInt(item[0]) * 1000,
                         open: parseFloat(item[5]),
@@ -379,9 +389,8 @@
                 }
             }
 
-            // 获取24h统计（已包含在ticker中，此方法仅作兼容）
-            get24hStats(currencyPair = 'BTC_USDT') {
-                return this.priceCache[currencyPair] || null;
+            getTicker(symbol) {
+                return this.tickers[symbol] || null;
             }
         }
 
@@ -415,7 +424,6 @@
                 return ((totalAssets - initialValue) / initialValue) * 100;
             }
 
-            // 买入BTC积分
             buyBTC(btcAmount, btcPrice) {
                 const cost = btcAmount * btcPrice;
                 const commission = cost * 0.001;
@@ -432,7 +440,6 @@
                 return { success: true, message: '买入成功', trade };
             }
 
-            // 卖出BTC积分
             sellBTC(btcAmount, btcPrice) {
                 const revenue = btcAmount * btcPrice;
                 const commission = revenue * 0.001;
@@ -453,7 +460,6 @@
             }
 
             getAverageCost() {
-                if (this.tradeHistory.length === 0) return 0;
                 const buyTrades = this.tradeHistory.filter(t => t.type === 'buy');
                 if (buyTrades.length === 0) return 0;
                 const totalBuyCost = buyTrades.reduce((sum, t) => sum + t.usdtCost, 0);
@@ -461,7 +467,6 @@
                 return totalBuyAmount > 0 ? totalBuyCost / totalBuyAmount : 0;
             }
 
-            // 挂限价单
             placeLimitOrder(side, btcAmount, limitPrice) {
                 const order = { id: 'ORD' + Date.now() + this.orderIdCounter++, side, btcAmount, limitPrice, status: 'pending', createdAt: new Date() };
                 if (side === 'buy') {
@@ -477,7 +482,6 @@
                 return { success: true, message: '挂单成功', order };
             }
 
-            // 检查限价单成交
             checkLimitOrders(currentPrice) {
                 const toRemove = [];
                 for (const order of this.pendingOrders) {
@@ -495,7 +499,6 @@
                 this.save();
             }
 
-            // 取消挂单
             cancelOrder(orderId) {
                 const order = this.pendingOrders.find(o => o.id === orderId);
                 if (order) {
@@ -539,7 +542,9 @@
         // ============================================================
         let account = new MockPointsAccount();
         let marketData = new GateMarketDataService();
-        let currentPair = 'BTC_USDT'; // Gate.io格式
+        let currentPairSymbol = 'BTC_USDT'; // Gate.io格式，默认BTC
+        let currentPairDisplay = 'BTC/USDT';
+        let currentBaseAsset = 'BTC';
         let currentPrice = 0;
         let orderSide = 'buy';
         let currentTab = 'trade';
@@ -547,18 +552,20 @@
         let priceUpdateInterval = null;
 
         document.addEventListener('DOMContentLoaded', async function() {
-            // 渲染静态元素
             renderExchangeSelector();
             renderPairSelector();
             initKlineChart();
 
-            // 首次获取真实数据
-            await refreshMarketData();
+            // 首次获取所有交易对行情
+            await refreshAllTickers();
+            // 获取当前交易对K线
+            await refreshCurrentKline();
             updateUI();
 
             // 定时刷新（5秒）
             priceUpdateInterval = setInterval(async () => {
-                await refreshMarketData();
+                await refreshAllTickers();
+                await refreshCurrentKline();
                 account.checkLimitOrders(currentPrice);
                 updateUI();
                 updateKlineChart();
@@ -587,8 +594,18 @@
         // ============================================================
         //  数据获取和UI更新
         // ============================================================
-        async function refreshMarketData() {
-            const ticker = await marketData.fetchTicker(currentPair);
+        async function refreshAllTickers() {
+            await marketData.fetchTickers(marketData.supportedPairs);
+            updateCurrentPriceFromCache();
+        }
+
+        async function refreshCurrentKline() {
+            await marketData.fetchCandlesticks(currentPairSymbol);
+            updateKlineChart();
+        }
+
+        function updateCurrentPriceFromCache() {
+            const ticker = marketData.getTicker(currentPairSymbol);
             if (ticker) {
                 currentPrice = ticker.last;
                 document.getElementById('currentPrice').textContent = '$' + currentPrice.toFixed(2);
@@ -597,21 +614,14 @@
                 changeEl.textContent = (change >= 0 ? '+' : '') + change.toFixed(2) + '%';
                 changeEl.className = 'price-change ' + (change >= 0 ? 'text-emerald-400' : 'text-red-400');
             }
-            await marketData.fetchCandlesticks(currentPair);
-            updateKlineChart();
         }
 
         function updateUI() {
-            // 更新积分显示
+            // 更新积分显示（只涉及BTC，即使切换交易对，模拟账户仍以BTC和USDT计价）
             document.getElementById('mockUSDT').textContent = account.usdtPoints.toFixed(2);
             document.getElementById('mockBTC').textContent = account.btcPoints.toFixed(8);
             const totalAssets = account.getTotalAssets(currentPrice);
             document.getElementById('mockTotalAssets').textContent = '$' + totalAssets.toFixed(2);
-            const totalReturn = account.getTotalReturn(currentPrice);
-            const returnEl = document.getElementById('mockTotalReturn');
-            // 注意：总收益率显示在第三个统计项，但上面HTML中第三个是总资产，我们需要调整
-            // 实际上我们的HTML第三个是总资产，没有总收益率显示，这里简化处理，仅更新总资产
-            // 若需要总收益率，可以在统计面板显示
 
             // 更新预估金额
             updateEstimatedAmount();
@@ -690,7 +700,9 @@
 
         function renderStatistics() {
             document.getElementById('statTotalTrades').textContent = account.totalTrades;
-            const winRate = account.totalTrades > 0 ? (account.tradeHistory.filter(t => t.type === 'sell' && t.profit > 0).length / account.tradeHistory.filter(t => t.type === 'sell').length) * 100 : 0;
+            const sellTrades = account.tradeHistory.filter(t => t.type === 'sell');
+            const winTrades = sellTrades.filter(t => t.profit > 0);
+            const winRate = sellTrades.length > 0 ? (winTrades.length / sellTrades.length) * 100 : 0;
             document.getElementById('statWinRate').textContent = winRate.toFixed(1) + '%';
             document.getElementById('statTotalProfit').textContent = (account.totalProfit >= 0 ? '+' : '') + '$' + account.totalProfit.toFixed(2);
             document.getElementById('statTotalCommission').textContent = '$' + account.totalCommission.toFixed(2);
@@ -705,6 +717,8 @@
             document.getElementById('sellSideBtn').classList.toggle('active', side === 'sell');
             document.getElementById('submitOrderBtn').textContent = side === 'buy' ? '买入' : '卖出';
             document.getElementById('submitOrderBtn').className = 'mock-submit-btn ' + side;
+            // 更新数量单位标签
+            document.querySelector('.mock-input-group label[for="mockOrderAmount"]').textContent = `数量 (${currentBaseAsset})`;
         }
 
         function togglePriceInput() {
@@ -768,8 +782,10 @@
         // ============================================================
         function switchMockTab(tab) {
             currentTab = tab;
+            const tabOrder = ['trade','positions','orders','history','stats'];
+            const tabIndex = tabOrder.indexOf(tab);
             document.querySelectorAll('.mock-tab').forEach((btn, idx) => {
-                btn.classList.toggle('active', idx === ['trade','positions','orders','history','stats'].indexOf(tab));
+                btn.classList.toggle('active', idx === tabIndex);
             });
             document.getElementById('tradePanel').style.display = tab === 'trade' ? 'block' : 'none';
             document.getElementById('positionsPanel').style.display = tab === 'positions' ? 'block' : 'none';
@@ -804,7 +820,7 @@
         }
 
         // ============================================================
-        //  交易所选择器（仅展示Gate.io，其他不可选）
+        //  交易所选择器（仅Gate.io可用，其他仅展示）
         // ============================================================
         function renderExchangeSelector() {
             const container = document.getElementById('exchangeSelectorList');
@@ -826,18 +842,31 @@
 
         function renderPairSelector() {
             const container = document.getElementById('pairSelector');
-            container.innerHTML = `<button class="pair-btn active" onclick="selectPair('BTC_USDT')">BTC/USDT</button>`;
+            container.innerHTML = marketData.supportedPairs.map(pair => `
+                <button class="pair-btn ${pair.symbol === currentPairSymbol ? 'active' : ''}" onclick="selectPair('${pair.symbol}')">${pair.display}</button>
+            `).join('');
         }
 
         function selectExchange(id) {
             // 仅用于展示，不改变数据源
         }
 
-        function selectPair(pair) {
-            currentPair = pair;
+        function selectPair(symbol) {
+            currentPairSymbol = symbol;
+            const pair = marketData.supportedPairs.find(p => p.symbol === symbol);
+            if (pair) {
+                currentPairDisplay = pair.display;
+                currentBaseAsset = pair.base;
+                document.getElementById('currentPair').textContent = pair.display;
+                // 更新数量标签
+                document.querySelector('.mock-input-group label[for="mockOrderAmount"]').textContent = `数量 (${currentBaseAsset})`;
+            }
+            // 更新按钮状态
             document.querySelectorAll('.pair-btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-            refreshMarketData();
+            // 立即获取该交易对行情
+            refreshCurrentKline();
+            updateCurrentPriceFromCache();
             updateUI();
         }
 
@@ -849,7 +878,7 @@
             const ctx = canvas.getContext('2d');
             klineChartInstance = new Chart(ctx, {
                 type: 'line',
-                data: { labels: [], datasets: [{ label: 'BTC/USDT', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4 }] },
+                data: { labels: [], datasets: [{ label: currentPairDisplay, data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.4 }] },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
@@ -868,6 +897,7 @@
             const data = marketData.klineCache.map(k => k.close);
             klineChartInstance.data.labels = labels;
             klineChartInstance.data.datasets[0].data = data;
+            klineChartInstance.data.datasets[0].label = currentPairDisplay;
             klineChartInstance.update();
         }
 
