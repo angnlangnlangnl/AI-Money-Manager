@@ -22,45 +22,57 @@
             box-shadow: 0 0 20px rgba(255,255,255,0.1);
             margin: 0 auto;
         }
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; height: 50px; }
+        /* 顶部区域整体高度缩小 10% */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 9px 15px; height: 45px; }
         .header-left { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
         .header-left .pair-selector { cursor: pointer; }
         .header-icons { display: flex; gap: 15px; font-size: 18px; }
-        .tabs { display: flex; justify-content: space-around; padding: 8px 15px; border-bottom: 1px solid #2b3139; }
+        .tabs { display: flex; justify-content: space-around; padding: 7px 15px; border-bottom: 1px solid #2b3139; }
         .tab { color: #848e9c; font-size: 14px; position: relative; cursor: pointer; }
         .tab.active { color: #f0b90b; }
-        .tab.active::after { content: ''; position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
-        .quote-section { display: flex; justify-content: space-between; padding: 10px 15px; }
+        .tab.active::after { content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
+        .quote-section { display: flex; justify-content: space-between; padding: 9px 15px; }
         .price-main { font-size: 28px; font-weight: bold; }
         .price-sub { font-size: 12px; color: #848e9c; margin-top: 3px; }
         .price-sub span.green { color: #0ecb81; }
         .price-sub span.red { color: #f6465d; }
         .quote-details { font-size: 11px; color: #848e9c; text-align: right; line-height: 1.5; }
         .quote-details b { color: #eaecef; font-weight: normal; }
-        .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 8px; font-size: 12px; color: #848e9c; }
+        .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 7px; font-size: 12px; color: #848e9c; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
         .timeframes span { cursor: pointer; }
         .timeframes span:hover { color: #eaecef; }
-        .chart-container { flex: 0 0 40.5vh; position: relative; background: #181a20; margin-top: -5px; }
+        .chart-container { flex: 0 0 40.5vh; position: relative; background: #181a20; margin-top: -4px; }
         #kline { width: 100%; height: 100%; }
         .indicators { display: flex; gap: 15px; padding: 5px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; margin-top: 0; }
         .indicators::-webkit-scrollbar { display: none; }
         .indicators span { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; white-space: nowrap; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
         .indicators span:hover { color: #eaecef; }
-        .performance { display: flex; justify-content: space-between; padding: 8px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
+        .performance { display: flex; justify-content: space-between; padding: 7px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
         .perf-item span:last-child { margin-left: 5px; }
         .green { color: #0ecb81; }
         .red { color: #f6465d; }
-        .order-book-bar { display: flex; align-items: center; padding: 8px 15px; font-size: 12px; font-weight: bold; }
+        .order-book-bar { display: flex; align-items: center; padding: 7px 15px; font-size: 12px; font-weight: bold; }
         .sell-bar { width: 50%; background: #0ecb81; color: #181a20; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
         .buy-bar { width: 50%; background: #f6465d; color: #181a20; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
         .order-labels { display: flex; justify-content: space-around; font-size: 12px; color: #848e9c; padding: 5px 0; border-bottom: 1px solid #2b3139; }
-        .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: #181a20; border-top: 1px solid #2b3139; }
+        /* 新增委托订单入口 */
+        .order-entry {
+            text-align: center;
+            padding: 6px 15px;
+            font-size: 13px;
+            color: #f0b90b;
+            border-bottom: 1px solid #2b3139;
+            cursor: pointer;
+            background: #181a20;
+        }
+        .order-entry:hover { background: #1f2029; }
+        .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 11px 15px; background: #181a20; border-top: 1px solid #2b3139; }
         .tools { display: flex; gap: 15px; font-size: 12px; color: #848e9c; text-align: center; }
         .tools div { display: flex; flex-direction: column; align-items: center; gap: 5px; }
         .tools i { font-size: 16px; }
-        .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 10px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; }
+        .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 9px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; }
         .buy-btn { background: #0ecb81; margin-right: 8px; }
         .sell-btn { background: #f6465d; }
         .icon { font-style: normal; }
@@ -77,16 +89,52 @@
         .pair-modal-item .symbol { font-weight: bold; }
         .pair-modal-close { text-align: center; padding: 12px 0; color: #848e9c; cursor: pointer; border-top: 1px solid #2a2a3a; margin-top: 5px; }
 
+        /* 新增交易弹窗样式 */
+        .trade-modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 60; display: none; justify-content: center; align-items: center; }
+        .trade-modal-overlay.show { display: flex; }
+        .trade-modal {
+            background: #1a1a2a;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 340px;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .trade-modal-title { text-align: center; font-size: 16px; font-weight: bold; margin-bottom: 15px; color: #fff; }
+        .trade-modal-form { display: flex; flex-direction: column; gap: 8px; }
+        .trade-modal-row { display: flex; align-items: center; gap: 10px; }
+        .trade-modal-row label { width: 60px; font-size: 12px; color: #848e9c; }
+        .trade-modal-row input, .trade-modal-row select {
+            flex: 1;
+            background: #0a0a12;
+            border: 1px solid #2a2a3a;
+            border-radius: 6px;
+            padding: 8px 10px;
+            color: #eaecef;
+            font-size: 13px;
+            outline: none;
+        }
+        .trade-modal-row input:focus, .trade-modal-row select:focus { border-color: #f0b90b; }
+        .trade-modal-buttons { display: flex; gap: 10px; margin-top: 15px; }
+        .trade-confirm-btn, .trade-cancel-btn { flex: 1; padding: 10px 0; border-radius: 6px; font-size: 14px; font-weight: bold; cursor: pointer; border: none; }
+        .trade-confirm-btn { background: #f0b90b; color: #181a20; }
+        .trade-cancel-btn { background: #2a2a3a; color: #eaecef; }
+        .trade-confirm-btn:active, .trade-cancel-btn:active { opacity: 0.8; }
+
         @media (min-width: 769px) {
             .app { max-width: 100%; border-radius: 0; box-shadow: none; width: 100%; }
             .chart-container { flex: 1; height: auto; min-height: 300px; }
             .bottom-action { position: static; margin-top: auto; width: 100%; }
-            .quote-section, .timeframes, .indicators, .performance, .order-book-bar, .order-labels { padding-left: 30px; padding-right: 30px; }
+            .quote-section, .timeframes, .indicators, .performance, .order-book-bar, .order-labels, .order-entry { padding-left: 30px; padding-right: 30px; }
         }
     </style>
 </head>
 <body>
 <div class="app">
+    <!-- 顶部导航 -->
     <div class="header">
         <div class="header-left">
             <i class="icon">‹</i>
@@ -100,6 +148,7 @@
     <div class="tabs">
         <div class="tab">报价</div><div class="tab">信息</div><div class="tab">数据</div><div class="tab">广场</div><div class="tab active">交易</div>
     </div>
+    <!-- 价格区 -->
     <div class="quote-section">
         <div>
             <div class="price-main" id="last-price">--</div>
@@ -113,16 +162,20 @@
             <div>24h成交额(USDT) <b id="amount-24">--</b></div>
         </div>
     </div>
+    <!-- 时间轴 -->
     <div class="timeframes" id="timeframes">
         <span data-interval="1m">分时</span><span data-interval="15m">15分</span><span data-interval="1h" class="active">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">日线</span><span>更多 ▾</span>
     </div>
+    <!-- K线图 -->
     <div class="chart-container">
         <div id="kline"></div>
         <div class="error-msg" id="kline-error">K线数据加载失败，请检查网络</div>
     </div>
+    <!-- 指标按钮 -->
     <div class="indicators" id="indicator-buttons">
         <span class="active" data-indicator="MA">MA</span><span data-indicator="EMA">EMA</span><span data-indicator="BOLL">BOLL</span><span data-indicator="SAR">SAR</span><span data-indicator="AVL">AVL</span><span data-indicator="VOL">VOL</span><span data-indicator="MACD">MACD</span>
     </div>
+    <!-- 周期涨跌 -->
     <div class="performance" id="performance">
         <div class="perf-item">今日 <span id="perf-today">--</span></div>
         <div class="perf-item">7天 <span id="perf-7d">--</span></div>
@@ -131,28 +184,71 @@
         <div class="perf-item">180天 <span id="perf-180d">--</span></div>
         <div class="perf-item">1年 <span id="perf-365d">--</span></div>
     </div>
+    <!-- 委托订单标签 -->
     <div class="order-labels">
         <span>委托订单</span><span>深度</span><span>最新成交</span><span>网络</span>
     </div>
+    <!-- 买卖盘比例条 -->
     <div class="order-book-bar">
         <div class="sell-bar" id="sell-bar">--</div>
         <div class="buy-bar" id="buy-bar">--</div>
     </div>
+    <!-- 新增委托订单入口 -->
+    <div class="order-entry" onclick="openOrderEntry()">📋 委托订单</div>
+
+    <!-- 底部操作栏 -->
     <div class="bottom-action">
         <div class="tools">
             <div><i class="icon">⋯</i>更多</div><div><i class="icon">◧</i>工具</div><div><i class="icon">⚖</i>杠杆</div>
         </div>
         <div style="display:flex;flex:1;margin-left:15px;">
-            <button class="buy-btn">买入</button>
-            <button class="sell-btn">卖出</button>
+            <button class="buy-btn" onclick="openTradeModal('buy')">买入</button>
+            <button class="sell-btn" onclick="openTradeModal('sell')">卖出</button>
         </div>
     </div>
 
+    <!-- 交易对选择弹窗 -->
     <div class="pair-modal-overlay" id="pairModalOverlay">
         <div class="pair-modal">
             <input type="text" class="pair-modal-search" id="pairSearchInput" placeholder="搜索交易对..." oninput="filterPairList()">
             <div class="pair-modal-list" id="pairModalList"></div>
             <div class="pair-modal-close" onclick="closePairModal()">取消</div>
+        </div>
+    </div>
+
+    <!-- 买卖交易弹窗 -->
+    <div class="trade-modal-overlay" id="tradeModalOverlay">
+        <div class="trade-modal">
+            <div class="trade-modal-title" id="tradeModalTitle">买入 BTC/USDT</div>
+            <div class="trade-modal-form">
+                <div class="trade-modal-row">
+                    <label>订单类型</label>
+                    <select id="tradeOrderType" onchange="toggleTradePriceInput()">
+                        <option value="market">市价单</option>
+                        <option value="limit">限价单</option>
+                    </select>
+                </div>
+                <div class="trade-modal-row" id="tradePriceRow">
+                    <label>价格</label>
+                    <input type="number" id="tradePrice" placeholder="限价单价格" step="0.01">
+                </div>
+                <div class="trade-modal-row">
+                    <label>数量</label>
+                    <input type="number" id="tradeAmount" placeholder="数量" step="0.0001" min="0">
+                </div>
+                <div class="trade-modal-row">
+                    <label>止盈价</label>
+                    <input type="number" id="takeProfit" placeholder="止盈价格(可选)" step="0.01">
+                </div>
+                <div class="trade-modal-row">
+                    <label>止损价</label>
+                    <input type="number" id="stopLoss" placeholder="止损价格(可选)" step="0.01">
+                </div>
+            </div>
+            <div class="trade-modal-buttons">
+                <button class="trade-cancel-btn" onclick="closeTradeModal()">取消</button>
+                <button class="trade-confirm-btn" onclick="confirmTrade()">确认下单</button>
+            </div>
         </div>
     </div>
 </div>
@@ -163,6 +259,7 @@
     const CNY_RATE = 7.2;
     let currentInterval = '1h';
     let currentPair = 'BTC_USDT';
+    let currentSide = 'buy';
     const indicatorState = { MA: true, EMA: false, BOLL: false, SAR: false, AVL: false, VOL: false, MACD: false };
     let cache = { ticker: null, klines: null, orderBook: null };
     let allPairs = [];
@@ -206,7 +303,38 @@
     document.getElementById('pairSelectorBtn').addEventListener('click', openPairModal);
     document.getElementById('pairModalOverlay').addEventListener('click', function(e) { if (e.target === this) closePairModal(); });
 
-    // =================== 图表更新（核心修改） ===================
+    // =================== 新增买卖弹窗逻辑 ===================
+    function openTradeModal(side) {
+        currentSide = side;
+        document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' ' + currentPair.replace('_', '/');
+        document.getElementById('tradeOrderType').value = 'market';
+        document.getElementById('tradePrice').value = '';
+        document.getElementById('tradeAmount').value = '';
+        document.getElementById('takeProfit').value = '';
+        document.getElementById('stopLoss').value = '';
+        toggleTradePriceInput();
+        document.getElementById('tradeModalOverlay').classList.add('show');
+    }
+    function closeTradeModal() { document.getElementById('tradeModalOverlay').classList.remove('show'); }
+    function toggleTradePriceInput() {
+        const type = document.getElementById('tradeOrderType').value;
+        document.getElementById('tradePriceRow').style.display = type === 'limit' ? 'flex' : 'none';
+    }
+    function confirmTrade() {
+        const type = document.getElementById('tradeOrderType').value;
+        const price = parseFloat(document.getElementById('tradePrice').value);
+        const amount = parseFloat(document.getElementById('tradeAmount').value);
+        const takeProfit = parseFloat(document.getElementById('takeProfit').value);
+        const stopLoss = parseFloat(document.getElementById('stopLoss').value);
+        if (!amount || amount <= 0) { alert('请输入有效数量'); return; }
+        if (type === 'limit' && (!price || price <= 0)) { alert('请输入有效限价价格'); return; }
+        // 模拟下单
+        alert(`模拟${currentSide === 'buy' ? '买入' : '卖出'}订单：\n交易对：${currentPair}\n类型：${type === 'market' ? '市价' : '限价'}\n数量：${amount}\n${type === 'limit' ? '价格：' + price : ''}\n止盈：${takeProfit || '未设置'}\n止损：${stopLoss || '未设置'}`);
+        closeTradeModal();
+    }
+    function openOrderEntry() { alert('委托订单功能开发中'); }
+
+    // =================== 图表更新 ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -265,7 +393,7 @@
         klineSeries.markLine.data = klineSeries.markLine.data.concat(verticalMarks);
         series.push(klineSeries);
 
-        // 指标系列（保持不变，略）
+        // 指标系列（保持与之前相同，省略重复，实际保留完整）
         if (indicatorState.MA) {
             const ma5 = Indicators.SMA(closes,5), ma10 = Indicators.SMA(closes,10), ma20 = Indicators.SMA(closes,20);
             series.push({ type:'line', data:ma5, xAxisIndex:1, yAxisIndex:1, name:'MA5', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
@@ -420,9 +548,15 @@
     setInterval(fetchPeriodChanges, 60000);
     window.addEventListener('resize', () => myChart.resize());
 
+    // 暴露全局函数
     window.selectPair = selectPair;
     window.closePairModal = closePairModal;
     window.filterPairList = filterPairList;
+    window.openTradeModal = openTradeModal;
+    window.closeTradeModal = closeTradeModal;
+    window.toggleTradePriceInput = toggleTradePriceInput;
+    window.confirmTrade = confirmTrade;
+    window.openOrderEntry = openOrderEntry;
 </script>
 </body>
 </html>
