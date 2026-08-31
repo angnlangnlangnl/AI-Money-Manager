@@ -77,7 +77,35 @@
         .pair-modal-item .symbol { font-weight: bold; }
         .pair-modal-close { text-align: center; padding: 12px 0; color: #848e9c; cursor: pointer; border-top: 1px solid #2a2a3a; margin-top: 5px; }
 
-        @media (min-width: 421px) { .app { max-width: 390px; border-radius: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.5); } }
+        /* ========== PC 宽屏满屏适配 ========== */
+        @media (min-width: 769px) {
+            .app {
+                max-width: 100%;
+                border-radius: 0;
+                box-shadow: none;
+                width: 100%;
+            }
+            .chart-container {
+                flex: 1;                 /* 自动占据剩余空间，不再固定高度 */
+                height: auto;
+                min-height: 300px;       /* 最小高度保证图表可见 */
+            }
+            .bottom-action {
+                position: static;        /* 取消绝对定位 */
+                margin-top: auto;        /* 推到底部 */
+                width: 100%;
+            }
+            .quote-section,
+            .timeframes,
+            .indicators,
+            .performance,
+            .order-book-bar,
+            .order-labels {
+                /* 适当增加水平 padding，使宽屏下不拥挤 */
+                padding-left: 30px;
+                padding-right: 30px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -241,11 +269,9 @@
         xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
-        // 垂直参考线（背景网格）
         const verticalMarks = [];
         for (let i = 0; i <= 2; i++) { const idx = startIndex + i * 10; if (idx <= endIndex) { verticalMarks.push({ xAxis: dates[idx], lineStyle: { color: '#2b3139', type: 'dashed', width: 1 }, label: { show: true, position: 'insideStart', distance: -12, formatter: dates[idx], color: '#848e9c', fontSize: 10, rotate: 0, backgroundColor: 'transparent', padding: 0 } }); } }
 
-        // K线系列（z: 10，保持）
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
@@ -285,7 +311,6 @@
             series.push({ type:'line', data:sar, xAxisIndex:1, yAxisIndex:1, name:'SAR', lineStyle:{color:'#ff6b6b',width:0}, itemStyle:{color:'#ff6b6b'}, symbol:'circle', symbolSize:3, z:20 });
         }
 
-        // 副图 VOL/AVL
         if (showVolume) {
             currentTop += mainHeight;
             const volHeight = showMacd ? 18 : 25;
@@ -302,7 +327,6 @@
             }
             currentTop += volHeight;
         }
-        // 副图 MACD
         if (showMacd) {
             const macdHeight = showVolume ? 18 : 25;
             grids.push({ left:0, right:'20%', top:currentTop+'%', height:macdHeight+'%' });
@@ -318,7 +342,6 @@
 
         const dataZoom = [{ type:'inside', xAxisIndex:[1,2,3], start:(startIndex/totalLen)*100, end:100, zoomOnMouseWheel:true, moveOnMouseMove:true, minValueSpan:Math.floor(visibleCount*100/totalLen), maxValueSpan:100 }];
 
-        // ========== 恢复十字准线 ==========
         myChart.setOption({
             animation: false,
             grid: grids,
