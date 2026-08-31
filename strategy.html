@@ -7,17 +7,10 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
-        body {
-            background-color: #000;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;               /* 防止PC端出现滚动条 */
-        }
+        body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app {
             width: 100%;
-            max-width: 390px;               /* 模拟手机宽度，PC上居中显示 */
+            max-width: 390px;
             height: 100vh;
             background-color: #181a20;
             color: #eaecef;
@@ -27,18 +20,15 @@
             flex-direction: column;
             border-radius: 20px;
             box-shadow: 0 0 20px rgba(255,255,255,0.1);
-            margin: 0 auto;                 /* 水平居中（配合flex） */
+            margin: 0 auto;
         }
-
         .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; height: 50px; }
         .header-left { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
         .header-icons { display: flex; gap: 15px; font-size: 18px; }
-
         .tabs { display: flex; justify-content: space-around; padding: 8px 15px; border-bottom: 1px solid #2b3139; }
         .tab { color: #848e9c; font-size: 14px; }
         .tab.active { color: #f0b90b; position: relative; }
         .tab.active::after { content: ''; position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%); width: 30px; height: 3px; background: #f0b90b; border-radius: 2px; }
-
         .quote-section { display: flex; justify-content: space-between; padding: 10px 15px; }
         .price-main { font-size: 28px; font-weight: bold; }
         .price-sub { font-size: 12px; color: #848e9c; margin-top: 3px; }
@@ -46,46 +36,25 @@
         .price-sub span.red { color: #f6465d; }
         .quote-details { font-size: 11px; color: #848e9c; text-align: right; line-height: 1.5; }
         .quote-details b { color: #eaecef; font-weight: normal; }
-
         .timeframes { display: flex; justify-content: space-between; align-items: center; padding: 0 15px 8px; font-size: 12px; color: #848e9c; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
         .timeframes span { cursor: pointer; }
         .timeframes span:hover { color: #eaecef; }
-
-        .chart-container {
-            flex: 0 0 40.5vh;               /* 保持原有比例，配合PC高度 */
-            position: relative;
-            background: #181a20;
-            margin-top: -5px;
-        }
+        .chart-container { flex: 0 0 40.5vh; position: relative; background: #181a20; margin-top: -5px; }
         #kline { width: 100%; height: 100%; }
-
-        .indicators {
-            display: flex;
-            gap: 15px;
-            padding: 5px 15px;
-            font-size: 12px;
-            color: #848e9c;
-            overflow-x: auto;
-            scrollbar-width: none;
-            -ms-overflow-style: none;
-            margin-top: 0;
-        }
+        .indicators { display: flex; gap: 15px; padding: 5px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; margin-top: 0; }
         .indicators::-webkit-scrollbar { display: none; }
         .indicators span { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; white-space: nowrap; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
         .indicators span:hover { color: #eaecef; }
-
         .performance { display: flex; justify-content: space-between; padding: 8px 15px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; }
         .perf-item span:last-child { margin-left: 5px; }
         .green { color: #0ecb81; }
         .red { color: #f6465d; }
-
         .order-book-bar { display: flex; align-items: center; padding: 8px 15px; font-size: 12px; font-weight: bold; }
         .sell-bar { width: 50%; background: #0ecb81; color: #181a20; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
         .buy-bar { width: 50%; background: #f6465d; color: #181a20; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
         .order-labels { display: flex; justify-content: space-around; font-size: 12px; color: #848e9c; padding: 5px 0; border-bottom: 1px solid #2b3139; }
-
         .bottom-action { position: absolute; bottom: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 12px 15px; background: #181a20; border-top: 1px solid #2b3139; }
         .tools { display: flex; gap: 15px; font-size: 12px; color: #848e9c; text-align: center; }
         .tools div { display: flex; flex-direction: column; align-items: center; gap: 5px; }
@@ -95,20 +64,13 @@
         .sell-btn { background: #f6465d; }
         .icon { font-style: normal; }
         .error-msg { color: #f6465d; font-size: 11px; text-align: center; padding: 3px; display: none; }
-
-        /* PC 端额外优化：当视口宽度大于 420px 时保持手机比例 */
         @media (min-width: 421px) {
-            .app {
-                max-width: 390px;
-                border-radius: 20px;
-                box-shadow: 0 0 40px rgba(0,0,0,0.5);
-            }
+            .app { max-width: 390px; border-radius: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
         }
     </style>
 </head>
 <body>
 <div class="app">
-    <!-- 顶部导航 -->
     <div class="header">
         <div class="header-left">
             <i class="icon">‹</i>
@@ -119,13 +81,9 @@
             <i class="icon">✨</i><i class="icon">★</i><i class="icon">🔔</i>
         </div>
     </div>
-
-    <!-- 导航标签 -->
     <div class="tabs">
         <div class="tab">报价</div><div class="tab">信息</div><div class="tab">数据</div><div class="tab">广场</div><div class="tab active">交易</div>
     </div>
-
-    <!-- 价格区 -->
     <div class="quote-section">
         <div>
             <div class="price-main" id="last-price">--</div>
@@ -139,24 +97,16 @@
             <div>24h成交额(USDT) <b id="amount-24">--</b></div>
         </div>
     </div>
-
-    <!-- 时间轴 -->
     <div class="timeframes" id="timeframes">
         <span data-interval="1m">分时</span><span data-interval="15m">15分</span><span data-interval="1h" class="active">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">日线</span><span>更多 ▾</span>
     </div>
-
-    <!-- K线图 -->
     <div class="chart-container">
         <div id="kline"></div>
         <div class="error-msg" id="kline-error">K线数据加载失败，请检查网络</div>
     </div>
-
-    <!-- 指标按钮 -->
     <div class="indicators" id="indicator-buttons">
         <span class="active" data-indicator="MA">MA</span><span data-indicator="EMA">EMA</span><span data-indicator="BOLL">BOLL</span><span data-indicator="SAR">SAR</span><span data-indicator="AVL">AVL</span><span data-indicator="VOL">VOL</span><span data-indicator="MACD">MACD</span>
     </div>
-
-    <!-- 周期涨跌 -->
     <div class="performance" id="performance">
         <div class="perf-item">今日 <span id="perf-today">--</span></div>
         <div class="perf-item">7天 <span id="perf-7d">--</span></div>
@@ -165,8 +115,6 @@
         <div class="perf-item">180天 <span id="perf-180d">--</span></div>
         <div class="perf-item">1年 <span id="perf-365d">--</span></div>
     </div>
-
-    <!-- 买卖盘比例 -->
     <div class="order-labels">
         <span>委托订单</span><span>深度</span><span>最新成交</span><span>网络</span>
     </div>
@@ -174,8 +122,6 @@
         <div class="sell-bar" id="sell-bar">--</div>
         <div class="buy-bar" id="buy-bar">--</div>
     </div>
-
-    <!-- 底部操作按钮 -->
     <div class="bottom-action">
         <div class="tools">
             <div><i class="icon">⋯</i>更多</div><div><i class="icon">◧</i>工具</div><div><i class="icon">⚖</i>杠杆</div>
@@ -235,10 +181,10 @@
         const lows = klines.map(k => k[2]);
 
         const totalLen = dates.length;
-        const visibleCount = 40;
-        const rightGap = 10;
-        const startIndex = Math.max(0, totalLen - visibleCount - rightGap);
-        const endIndex = Math.min(totalLen - 1, totalLen - rightGap - 1);
+        const visibleCount = 30;                     // ✅ 修改：显示最新的30根K线
+        const rightGap = 0;                          // ✅ 修改：右侧不留空，使最新30根靠左充满绘图区
+        const startIndex = Math.max(0, totalLen - visibleCount);
+        const endIndex = totalLen - 1;
         visibleStart = startIndex;
         visibleEnd = endIndex;
 
@@ -283,7 +229,7 @@
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
         const verticalMarks = [];
-        for (let i = 0; i <= 3; i++) {
+        for (let i = 0; i <= 2; i++) {              // ✅ 修改：30根内3条垂直参考线，间隔10根
             const idx = startIndex + i * 10;
             if (idx <= endIndex) {
                 verticalMarks.push({
@@ -379,7 +325,7 @@
             type: 'inside',
             xAxisIndex: [1, 2, 3],
             start: (startIndex / totalLen) * 100,
-            end: (endIndex / totalLen) * 100,
+            end: 100,                             // ✅ 结束位置为100%，确保显示到最新
             zoomOnMouseWheel: true,
             moveOnMouseMove: true,
             minValueSpan: Math.floor(visibleCount * 100 / totalLen),
@@ -434,7 +380,7 @@
             const newYMax = maxHigh2 + pad2;
 
             const newVerticalMarks = [];
-            for (let i = 0; i <= 3; i++) {
+            for (let i = 0; i <= 2; i++) {
                 const idx = startIdx + i * 10;
                 if (idx <= endIdx) {
                     newVerticalMarks.push({
