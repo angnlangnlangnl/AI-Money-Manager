@@ -77,34 +77,11 @@
         .pair-modal-item .symbol { font-weight: bold; }
         .pair-modal-close { text-align: center; padding: 12px 0; color: #848e9c; cursor: pointer; border-top: 1px solid #2a2a3a; margin-top: 5px; }
 
-        /* ========== PC 宽屏满屏适配 ========== */
         @media (min-width: 769px) {
-            .app {
-                max-width: 100%;
-                border-radius: 0;
-                box-shadow: none;
-                width: 100%;
-            }
-            .chart-container {
-                flex: 1;                 /* 自动占据剩余空间，不再固定高度 */
-                height: auto;
-                min-height: 300px;       /* 最小高度保证图表可见 */
-            }
-            .bottom-action {
-                position: static;        /* 取消绝对定位 */
-                margin-top: auto;        /* 推到底部 */
-                width: 100%;
-            }
-            .quote-section,
-            .timeframes,
-            .indicators,
-            .performance,
-            .order-book-bar,
-            .order-labels {
-                /* 适当增加水平 padding，使宽屏下不拥挤 */
-                padding-left: 30px;
-                padding-right: 30px;
-            }
+            .app { max-width: 100%; border-radius: 0; box-shadow: none; width: 100%; }
+            .chart-container { flex: 1; height: auto; min-height: 300px; }
+            .bottom-action { position: static; margin-top: auto; width: 100%; }
+            .quote-section, .timeframes, .indicators, .performance, .order-book-bar, .order-labels { padding-left: 30px; padding-right: 30px; }
         }
     </style>
 </head>
@@ -275,20 +252,20 @@
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
-            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'insideEnd', distance: 10, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
+            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
         if (cache.ticker) {
             const t = cache.ticker;
             klineSeries.markLine.data.push(
-                { yAxis: parseFloat(t.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(t.last), color: '#f0b90b', distance: 20 } },
-                { yAxis: parseFloat(t.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(t.high_24h), color: '#f6465d', distance: 10 } },
-                { yAxis: parseFloat(t.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(t.low_24h), color: '#0ecb81', distance: 10 } }
+                { yAxis: parseFloat(t.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(t.last), color: '#f0b90b', distance: 0 } },
+                { yAxis: parseFloat(t.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(t.high_24h), color: '#f6465d', distance: 0 } },
+                { yAxis: parseFloat(t.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(t.low_24h), color: '#0ecb81', distance: 0 } }
             );
         }
         klineSeries.markLine.data = klineSeries.markLine.data.concat(verticalMarks);
         series.push(klineSeries);
 
-        // ========== 所有指标线添加 z: 20，置于最顶层 ==========
+        // 指标系列（保持不变，略）
         if (indicatorState.MA) {
             const ma5 = Indicators.SMA(closes,5), ma10 = Indicators.SMA(closes,10), ma20 = Indicators.SMA(closes,20);
             series.push({ type:'line', data:ma5, xAxisIndex:1, yAxisIndex:1, name:'MA5', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
@@ -317,14 +294,8 @@
             grids.push({ left:0, right:'20%', top:currentTop+'%', height:volHeight+'%' });
             xAxes.push({ type:'category', data:dates, gridIndex:2, axisLine:{show:false}, axisTick:{show:false}, axisLabel:{show:false} });
             yAxes.push({ gridIndex:2, splitLine:{show:false}, axisLabel:{show:false} });
-            if (indicatorState.VOL) {
-                const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
-                series.push({ type:'bar', data:volumes.map((v,i)=>({value:v,itemStyle:{color:volColors[i]}})), xAxisIndex:2, yAxisIndex:2, name:'VOL', z:20 });
-            }
-            if (indicatorState.AVL) {
-                const avl = Indicators.SMA(volumes,10);
-                series.push({ type:'line', data:avl, xAxisIndex:2, yAxisIndex:2, name:'AVL', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
-            }
+            if (indicatorState.VOL) { const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d'); series.push({ type:'bar', data:volumes.map((v,i)=>({value:v,itemStyle:{color:volColors[i]}})), xAxisIndex:2, yAxisIndex:2, name:'VOL', z:20 }); }
+            if (indicatorState.AVL) { const avl = Indicators.SMA(volumes,10); series.push({ type:'line', data:avl, xAxisIndex:2, yAxisIndex:2, name:'AVL', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 }); }
             currentTop += volHeight;
         }
         if (showMacd) {
@@ -411,9 +382,9 @@
             myChart.setOption({
                 yAxis: [{ min: newYMin, max: newYMax }, { min: newYMin, max: newYMax }],
                 series: [{ id: 'klineMain', markLine: { data: [...(cache.ticker ? [
-                    { yAxis: parseFloat(cache.ticker.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(cache.ticker.last), color: '#f0b90b', distance: 20 } },
-                    { yAxis: parseFloat(cache.ticker.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(cache.ticker.high_24h), color: '#f6465d', distance: 10 } },
-                    { yAxis: parseFloat(cache.ticker.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(cache.ticker.low_24h), color: '#0ecb81', distance: 10 } }
+                    { yAxis: parseFloat(cache.ticker.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(cache.ticker.last), color: '#f0b90b', distance: 0 } },
+                    { yAxis: parseFloat(cache.ticker.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(cache.ticker.high_24h), color: '#f6465d', distance: 0 } },
+                    { yAxis: parseFloat(cache.ticker.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(cache.ticker.low_24h), color: '#0ecb81', distance: 0 } }
                 ] : []), ...newVerticalMarks] } }]
             });
         });
@@ -449,7 +420,6 @@
     setInterval(fetchPeriodChanges, 60000);
     window.addEventListener('resize', () => myChart.resize());
 
-    // 暴露全局函数
     window.selectPair = selectPair;
     window.closePairModal = closePairModal;
     window.filterPairList = filterPairList;
