@@ -163,7 +163,7 @@
     function formatPercent(value) { return (value >= 0 ? '+' : '') + value.toFixed(2) + '%'; }
     async function fetchWithTimeout(url, timeout = 8000) { const controller = new AbortController(); const timer = setTimeout(() => controller.abort(), timeout); try { const res = await fetch(url, { signal: controller.signal, cache: 'no-store' }); if (!res.ok) throw new Error(`HTTP ${res.status}`); return await res.json(); } finally { clearTimeout(timer); } }
 
-    // =================== 数据获取 ===================
+    // =================== 获取数据 ===================
     async function fetchTicker() { try { const data = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`); if (!data || data.length === 0) throw new Error('空数据'); cache.ticker = data[0]; updateTickerUI(data[0]); if (chartData.klines.length) updateChart(); } catch (e) { console.error('Ticker失败:', e); if (cache.ticker) updateTickerUI(cache.ticker); } }
     function updateTickerUI(t) { const last = parseFloat(t.last); const change = parseFloat(t.change_percentage); document.getElementById('last-price').innerText = formatNum(last); const changeClass = change >= 0 ? 'green' : 'red'; document.getElementById('cn-price').innerHTML = `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${formatPercent(change)}</span>`; document.getElementById('high-24').innerText = formatNum(t.high_24h); document.getElementById('low-24').innerText = formatNum(t.low_24h); document.getElementById('vol-24').innerText = formatNum(t.base_volume, 2); document.getElementById('amount-24').innerText = formatNum(t.quote_volume / 100000000, 2) + '亿'; const perfToday = document.getElementById('perf-today'); perfToday.innerText = formatPercent(change); setColor(perfToday, change); }
     async function fetchKline() { try { const data = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=${currentInterval}&limit=120`); if (!data || data.length === 0) throw new Error('空K线'); cache.klines = data; processKlineData(data); document.getElementById('kline-error').style.display = 'none'; } catch (e) { console.error('K线失败:', e); document.getElementById('kline-error').style.display = 'block'; } }
@@ -172,7 +172,7 @@
     function updateOrderBookUI(data) { let askVol = 0, bidVol = 0; for (const a of (data.asks || [])) askVol += parseFloat(a[1]); for (const b of (data.bids || [])) bidVol += parseFloat(b[1]); const total = askVol + bidVol; if (total === 0) return; const bidPct = (bidVol / total) * 100; const askPct = 100 - bidPct; document.getElementById('sell-bar').style.width = askPct + '%'; document.getElementById('buy-bar').style.width = bidPct + '%'; document.getElementById('sell-bar').innerText = '卖 ' + askPct.toFixed(1) + '%'; document.getElementById('buy-bar').innerText = '买 ' + bidPct.toFixed(1) + '%'; }
     async function fetchPeriodChanges() { const periods = [{ id: 'perf-today', days: 1 }, { id: 'perf-7d', days: 7 }, { id: 'perf-30d', days: 30 }, { id: 'perf-90d', days: 90 }, { id: 'perf-180d', days: 180 }, { id: 'perf-365d', days: 365 }]; try { let currentPrice; if (cache.ticker) currentPrice = parseFloat(cache.ticker.last); else { const td = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${PAIR}`); currentPrice = parseFloat(td[0].last); } for (const p of periods) { try { const now = Math.floor(Date.now() / 1000); const from = now - p.days * 86400; const resp = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${PAIR}&interval=1d&from=${from}&to=${now}&limit=1`); if (resp && resp.length > 0) { const oldClose = parseFloat(resp[0][2]); const change = ((currentPrice - oldClose) / oldClose) * 100; const el = document.getElementById(p.id); el.innerText = formatPercent(change); setColor(el, change); } } catch (err) {} } } catch (e) {} }
 
-    // =================== 图表更新（弹窗定制） ===================
+    // =================== 图表更新 ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -348,16 +348,16 @@
             z: 20
         }];
 
-        // ✅ 定制弹窗
+        // ✅ 定制弹窗（宽度调整为30%）
         const tooltipConfig = {
             trigger: 'axis',
-            triggerOn: 'click',               // 点击触发，拖动不触发
-            backgroundColor: '#000',          // 黑色背景
+            triggerOn: 'click',
+            backgroundColor: '#000',
             borderColor: '#333',
             borderWidth: 1,
-            textStyle: { color: '#fff', fontSize: 10 },   // 小字体
+            textStyle: { color: '#fff', fontSize: 10 },
             padding: [8, 10],
-            extraCssText: 'width:25%; min-width:80px; max-width:120px; box-shadow:0 0 8px rgba(0,0,0,0.6); border-radius:4px;',
+            extraCssText: 'width:30%; min-width:80px; max-width:120px; box-shadow:0 0 8px rgba(0,0,0,0.6); border-radius:4px;',
             formatter: function(params) {
                 if (!params || params.length === 0) return '';
                 const dataIndex = params[0].dataIndex;
@@ -395,7 +395,7 @@
             yAxis: yAxes,
             series: series,
             dataZoom: dataZoom,
-            tooltip: tooltipConfig,      // 使用定制弹窗
+            tooltip: tooltipConfig,
             graphic: graphic
         }, true);
 
