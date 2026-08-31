@@ -66,65 +66,18 @@
         .icon { font-style: normal; }
         .error-msg { color: #f6465d; font-size: 11px; text-align: center; padding: 3px; display: none; }
 
-        /* 底部交易对选择弹窗 */
-        .pair-modal-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.6);
-            z-index: 50;
-            display: none;
-            justify-content: flex-end;
-            flex-direction: column;
-        }
+        .pair-modal-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; justify-content: flex-end; flex-direction: column; }
         .pair-modal-overlay.show { display: flex; }
-        .pair-modal {
-            background: #1a1a2a;
-            border-radius: 16px 16px 0 0;
-            max-height: 50vh;
-            display: flex;
-            flex-direction: column;
-            padding: 15px 15px 0;
-            animation: slideUp 0.3s ease;
-        }
+        .pair-modal { background: #1a1a2a; border-radius: 16px 16px 0 0; max-height: 50vh; display: flex; flex-direction: column; padding: 15px 15px 0; animation: slideUp 0.3s ease; }
         @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .pair-modal-search {
-            background: #0a0a12;
-            border: 1px solid #2a2a3a;
-            border-radius: 8px;
-            padding: 10px 12px;
-            color: #eaecef;
-            font-size: 13px;
-            outline: none;
-            margin-bottom: 10px;
-        }
-        .pair-modal-list {
-            overflow-y: auto;
-            flex: 1;
-        }
-        .pair-modal-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 5px;
-            border-bottom: 1px solid #2a2a3a;
-            cursor: pointer;
-            font-size: 14px;
-        }
+        .pair-modal-search { background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 8px; padding: 10px 12px; color: #eaecef; font-size: 13px; outline: none; margin-bottom: 10px; }
+        .pair-modal-list { overflow-y: auto; flex: 1; }
+        .pair-modal-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; border-bottom: 1px solid #2a2a3a; cursor: pointer; font-size: 14px; }
         .pair-modal-item:hover { background: #252535; }
         .pair-modal-item .symbol { font-weight: bold; }
-        .pair-modal-item .price { color: #848e9c; font-size: 12px; }
-        .pair-modal-close {
-            text-align: center;
-            padding: 12px 0;
-            color: #848e9c;
-            cursor: pointer;
-            border-top: 1px solid #2a2a3a;
-            margin-top: 5px;
-        }
+        .pair-modal-close { text-align: center; padding: 12px 0; color: #848e9c; cursor: pointer; border-top: 1px solid #2a2a3a; margin-top: 5px; }
 
-        @media (min-width: 421px) {
-            .app { max-width: 390px; border-radius: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.5); }
-        }
+        @media (min-width: 421px) { .app { max-width: 390px; border-radius: 20px; box-shadow: 0 0 40px rgba(0,0,0,0.5); } }
     </style>
 </head>
 <body>
@@ -190,7 +143,6 @@
         </div>
     </div>
 
-    <!-- 交易对选择弹窗 -->
     <div class="pair-modal-overlay" id="pairModalOverlay">
         <div class="pair-modal">
             <input type="text" class="pair-modal-search" id="pairSearchInput" placeholder="搜索交易对..." oninput="filterPairList()">
@@ -201,14 +153,14 @@
 </div>
 
 <script>
-    // =================== 变量 ===================
+    // =================== 常量 ===================
     const BASE_URL = 'https://api.gateio.ws/api/v4';
     const CNY_RATE = 7.2;
     let currentInterval = '1h';
-    let currentPair = 'BTC_USDT';               // 动态交易对
+    let currentPair = 'BTC_USDT';
     const indicatorState = { MA: true, EMA: false, BOLL: false, SAR: false, AVL: false, VOL: false, MACD: false };
     let cache = { ticker: null, klines: null, orderBook: null };
-    let allPairs = [];                          // 交易对列表缓存
+    let allPairs = [];
 
     // =================== 技术指标计算库 ===================
     class Indicators {
@@ -241,57 +193,15 @@
     async function fetchPeriodChanges() { const periods = [{ id: 'perf-today', days: 1 }, { id: 'perf-7d', days: 7 }, { id: 'perf-30d', days: 30 }, { id: 'perf-90d', days: 90 }, { id: 'perf-180d', days: 180 }, { id: 'perf-365d', days: 365 }]; try { let currentPrice; if (cache.ticker) currentPrice = parseFloat(cache.ticker.last); else { const td = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${currentPair}`); currentPrice = parseFloat(td[0].last); } for (const p of periods) { try { const now = Math.floor(Date.now() / 1000); const from = now - p.days * 86400; const resp = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${currentPair}&interval=1d&from=${from}&to=${now}&limit=1`); if (resp && resp.length > 0) { const oldClose = parseFloat(resp[0][2]); const change = ((currentPrice - oldClose) / oldClose) * 100; const el = document.getElementById(p.id); el.innerText = formatPercent(change); setColor(el, change); } } catch (err) {} } } catch (e) {} }
 
     // =================== 交易对弹窗 ===================
-    async function openPairModal() {
-        document.getElementById('pairModalOverlay').classList.add('show');
-        if (allPairs.length === 0) {
-            try {
-                const data = await fetchWithTimeout(`${BASE_URL}/spot/currency_pairs`);
-                allPairs = data.map(p => p.id);
-            } catch (e) {
-                allPairs = ['BTC_USDT','ETH_USDT','SOL_USDT','ARB_USDT','DOGE_USDT','BNB_USDT','XRP_USDT','LTC_USDT'];
-            }
-        }
-        renderPairList('');
-    }
+    async function openPairModal() { document.getElementById('pairModalOverlay').classList.add('show'); if (allPairs.length === 0) { try { const data = await fetchWithTimeout(`${BASE_URL}/spot/currency_pairs`); allPairs = data.map(p => p.id); } catch (e) { allPairs = ['BTC_USDT','ETH_USDT','SOL_USDT','ARB_USDT','DOGE_USDT','BNB_USDT','XRP_USDT','LTC_USDT']; } } renderPairList(''); }
     function closePairModal() { document.getElementById('pairModalOverlay').classList.remove('show'); }
-    function filterPairList() {
-        const search = document.getElementById('pairSearchInput').value.trim().toUpperCase();
-        renderPairList(search);
-    }
-    function renderPairList(search) {
-        const list = document.getElementById('pairModalList');
-        let filtered = allPairs;
-        if (search) filtered = allPairs.filter(p => p.includes(search));
-        // 只展示USDT交易对，最多100个
-        filtered = filtered.filter(p => p.endsWith('_USDT')).slice(0, 100);
-        if (filtered.length === 0) {
-            list.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">无匹配交易对</div>';
-            return;
-        }
-        list.innerHTML = filtered.map(pair => {
-            const display = pair.replace('_', '/');
-            return `<div class="pair-modal-item" onclick="selectPair('${pair}')">
-                        <span class="symbol">${display}</span>
-                    </div>`;
-        }).join('');
-    }
-    async function selectPair(pair) {
-        currentPair = pair;
-        closePairModal();
-        // 更新头部显示
-        document.getElementById('pairSelectorBtn').innerText = pair.replace('_', '/') + ' ▾';
-        // 更新基础资产名称（简化处理，可调用接口）
-        const base = pair.split('_')[0];
-        document.getElementById('pairBaseAsset').innerText = base;
-        // 重新获取所有数据
-        await refreshAll();
-    }
+    function filterPairList() { const search = document.getElementById('pairSearchInput').value.trim().toUpperCase(); renderPairList(search); }
+    function renderPairList(search) { const list = document.getElementById('pairModalList'); let filtered = allPairs; if (search) filtered = allPairs.filter(p => p.includes(search)); filtered = filtered.filter(p => p.endsWith('_USDT')).slice(0, 100); if (filtered.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">无匹配交易对</div>'; return; } list.innerHTML = filtered.map(pair => { const display = pair.replace('_', '/'); return `<div class="pair-modal-item" onclick="selectPair('${pair}')"><span class="symbol">${display}</span></div>`; }).join(''); }
+    async function selectPair(pair) { currentPair = pair; closePairModal(); document.getElementById('pairSelectorBtn').innerText = pair.replace('_', '/') + ' ▾'; document.getElementById('pairBaseAsset').innerText = pair.split('_')[0]; await refreshAll(); }
     document.getElementById('pairSelectorBtn').addEventListener('click', openPairModal);
-    document.getElementById('pairModalOverlay').addEventListener('click', function(e) {
-        if (e.target === this) closePairModal();
-    });
+    document.getElementById('pairModalOverlay').addEventListener('click', function(e) { if (e.target === this) closePairModal(); });
 
-    // =================== 图表更新 ===================
+    // =================== 图表更新（核心修改） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -308,10 +218,7 @@
         visibleEnd = endIndex;
 
         let minLow = Infinity, maxHigh = -Infinity;
-        for (let i = startIndex; i <= endIndex; i++) {
-            minLow = Math.min(minLow, lows[i]);
-            maxHigh = Math.max(maxHigh, highs[i]);
-        }
+        for (let i = startIndex; i <= endIndex; i++) { minLow = Math.min(minLow, lows[i]); maxHigh = Math.max(maxHigh, highs[i]); }
         const padding = (maxHigh - minLow) * 0.1;
         const yMin = minLow - padding;
         const yMax = maxHigh + padding;
@@ -327,58 +234,27 @@
         let currentTop = 5;
 
         grids.push({ left: 0, right: 0, top: currentTop + '%', height: mainHeight + '%' });
-        xAxes.push({
-            type: 'category', data: dates, gridIndex: 0,
-            axisLine: { show: false }, axisTick: { show: false },
-            splitLine: { show: false }, axisLabel: { show: false }
-        });
-        yAxes.push({
-            scale: false, min: yMin, max: yMax, splitNumber: 6,
-            position: 'right', gridIndex: 0,
-            splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } },
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 4, formatter: value => formatNum(value, 1), z: 1 }
-        });
+        xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
+        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 4, formatter: value => formatNum(value, 1), z: 1 } });
 
         grids.push({ left: 0, right: '20%', top: currentTop + '%', height: mainHeight + '%' });
-        xAxes.push({
-            type: 'category', data: dates, gridIndex: 1,
-            axisLine: { show: false }, axisTick: { show: false },
-            splitLine: { show: false }, axisLabel: { show: false }
-        });
+        xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
+        // 垂直参考线（背景网格）
         const verticalMarks = [];
-        for (let i = 0; i <= 2; i++) {
-            const idx = startIndex + i * 10;
-            if (idx <= endIndex) {
-                verticalMarks.push({
-                    xAxis: dates[idx],
-                    lineStyle: { color: '#2b3139', type: 'dashed', width: 1 },
-                    label: { show: true, position: 'insideStart', distance: -12, formatter: dates[idx], color: '#848e9c', fontSize: 10, rotate: 0, backgroundColor: 'transparent', padding: 0 }
-                });
-            }
-        }
+        for (let i = 0; i <= 2; i++) { const idx = startIndex + i * 10; if (idx <= endIndex) { verticalMarks.push({ xAxis: dates[idx], lineStyle: { color: '#2b3139', type: 'dashed', width: 1 }, label: { show: true, position: 'insideStart', distance: -12, formatter: dates[idx], color: '#848e9c', fontSize: 10, rotate: 0, backgroundColor: 'transparent', padding: 0 } }); } }
 
+        // K线系列（z: 10，保持）
         const klineSeries = {
-            id: 'klineMain',
-            type: 'candlestick',
-            data: klines,
-            xAxisIndex: 1,
-            yAxisIndex: 1,
-            z: 10,
+            id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
-            markLine: {
-                symbol: 'none',
-                animation: false,
-                lineStyle: { type: 'dashed', width: 1 },
-                label: { position: 'insideEnd', distance: 10, color: '#848e9c', fontSize: 10, formatter: '{c}' },
-                data: []
-            }
+            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'insideEnd', distance: 10, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
         if (cache.ticker) {
             const t = cache.ticker;
             klineSeries.markLine.data.push(
-                { yAxis: parseFloat(t.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { show: false } }, // 移除标签，仅保留线
+                { yAxis: parseFloat(t.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(t.last), color: '#f0b90b', distance: 20 } },
                 { yAxis: parseFloat(t.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(t.high_24h), color: '#f6465d', distance: 10 } },
                 { yAxis: parseFloat(t.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(t.low_24h), color: '#0ecb81', distance: 10 } }
             );
@@ -386,21 +262,63 @@
         klineSeries.markLine.data = klineSeries.markLine.data.concat(verticalMarks);
         series.push(klineSeries);
 
-        // 指标系列略（保持与之前相同）
-        // ...（不展开，保持原有指标添加逻辑）
+        // ========== 所有指标线添加 z: 20，置于最顶层 ==========
+        if (indicatorState.MA) {
+            const ma5 = Indicators.SMA(closes,5), ma10 = Indicators.SMA(closes,10), ma20 = Indicators.SMA(closes,20);
+            series.push({ type:'line', data:ma5, xAxisIndex:1, yAxisIndex:1, name:'MA5', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
+            series.push({ type:'line', data:ma10, xAxisIndex:1, yAxisIndex:1, name:'MA10', lineStyle:{color:'#f7931a',width:1}, symbol:'none', smooth:true, z:20 });
+            series.push({ type:'line', data:ma20, xAxisIndex:1, yAxisIndex:1, name:'MA20', lineStyle:{color:'#00d4aa',width:1}, symbol:'none', smooth:true, z:20 });
+        }
+        if (indicatorState.EMA) {
+            const ema12 = Indicators.EMA(closes,12), ema26 = Indicators.EMA(closes,26);
+            series.push({ type:'line', data:ema12, xAxisIndex:1, yAxisIndex:1, name:'EMA12', lineStyle:{color:'#e879f9',width:1}, symbol:'none', smooth:true, z:20 });
+            series.push({ type:'line', data:ema26, xAxisIndex:1, yAxisIndex:1, name:'EMA26', lineStyle:{color:'#a78bfa',width:1}, symbol:'none', smooth:true, z:20 });
+        }
+        if (indicatorState.BOLL) {
+            const boll = Indicators.BOLL(closes,20,2);
+            series.push({ type:'line', data:boll.upper, xAxisIndex:1, yAxisIndex:1, name:'BOLL上', lineStyle:{color:'#f6465d',width:0.8,type:'dashed'}, symbol:'none', z:20 });
+            series.push({ type:'line', data:boll.middle, xAxisIndex:1, yAxisIndex:1, name:'BOLL中', lineStyle:{color:'#f0b90b',width:0.8}, symbol:'none', z:20 });
+            series.push({ type:'line', data:boll.lower, xAxisIndex:1, yAxisIndex:1, name:'BOLL下', lineStyle:{color:'#0ecb81',width:0.8,type:'dashed'}, symbol:'none', z:20 });
+        }
+        if (indicatorState.SAR) {
+            const sar = Indicators.SAR(highs,lows);
+            series.push({ type:'line', data:sar, xAxisIndex:1, yAxisIndex:1, name:'SAR', lineStyle:{color:'#ff6b6b',width:0}, itemStyle:{color:'#ff6b6b'}, symbol:'circle', symbolSize:3, z:20 });
+        }
 
-        const dataZoom = [{
-            type: 'inside',
-            xAxisIndex: [1, 2, 3],
-            start: (startIndex / totalLen) * 100,
-            end: 100,
-            zoomOnMouseWheel: true,
-            moveOnMouseMove: true,
-            minValueSpan: Math.floor(visibleCount * 100 / totalLen),
-            maxValueSpan: 100
-        }];
+        // 副图 VOL/AVL
+        if (showVolume) {
+            currentTop += mainHeight;
+            const volHeight = showMacd ? 18 : 25;
+            grids.push({ left:0, right:'20%', top:currentTop+'%', height:volHeight+'%' });
+            xAxes.push({ type:'category', data:dates, gridIndex:2, axisLine:{show:false}, axisTick:{show:false}, axisLabel:{show:false} });
+            yAxes.push({ gridIndex:2, splitLine:{show:false}, axisLabel:{show:false} });
+            if (indicatorState.VOL) {
+                const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
+                series.push({ type:'bar', data:volumes.map((v,i)=>({value:v,itemStyle:{color:volColors[i]}})), xAxisIndex:2, yAxisIndex:2, name:'VOL', z:20 });
+            }
+            if (indicatorState.AVL) {
+                const avl = Indicators.SMA(volumes,10);
+                series.push({ type:'line', data:avl, xAxisIndex:2, yAxisIndex:2, name:'AVL', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
+            }
+            currentTop += volHeight;
+        }
+        // 副图 MACD
+        if (showMacd) {
+            const macdHeight = showVolume ? 18 : 25;
+            grids.push({ left:0, right:'20%', top:currentTop+'%', height:macdHeight+'%' });
+            const macdGridIndex = showVolume ? 3 : 2;
+            xAxes.push({ type:'category', data:dates, gridIndex:macdGridIndex, axisLine:{show:false}, axisTick:{show:false}, axisLabel:{show:false} });
+            yAxes.push({ gridIndex:macdGridIndex, splitLine:{show:false}, axisLabel:{show:false} });
+            const macdResult = Indicators.MACD(closes);
+            const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
+            series.push({ type:'bar', data:macdResult.macd.map((v,i)=>({value:v,itemStyle:{color:macdColors[i]}})), xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'MACD', z:20 });
+            series.push({ type:'line', data:macdResult.dif, xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'DIF', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
+            series.push({ type:'line', data:macdResult.dea, xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'DEA', lineStyle:{color:'#e879f9',width:1}, symbol:'none', smooth:true, z:20 });
+        }
 
-        // 移除graphic（黄色最新价标签）
+        const dataZoom = [{ type:'inside', xAxisIndex:[1,2,3], start:(startIndex/totalLen)*100, end:100, zoomOnMouseWheel:true, moveOnMouseMove:true, minValueSpan:Math.floor(visibleCount*100/totalLen), maxValueSpan:100 }];
+
+        // ========== 恢复十字准线 ==========
         myChart.setOption({
             animation: false,
             grid: grids,
@@ -411,15 +329,19 @@
             tooltip: {
                 trigger: 'axis',
                 triggerOn: 'click',
+                confine: true,
+                appendToBody: true,
                 backgroundColor: '#000',
                 borderColor: '#333',
                 borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 },
                 padding: [8, 10],
+                axisPointer: { type: 'cross', lineStyle: { color: '#555', type: 'dashed', width: 1 }, crossStyle: { color: '#555', type: 'dashed', width: 1 } },
                 extraCssText: 'width:30%; min-width:80px; max-width:120px; box-shadow:0 0 8px rgba(0,0,0,0.6); border-radius:4px;',
                 formatter: function(params) {
                     if (!params || params.length === 0) return '';
                     const dataIndex = params[0].dataIndex;
+                    if (dataIndex == null || dataIndex >= chartData.dates.length) return '';
                     const date = chartData.dates[dataIndex];
                     const open = chartData.klines[dataIndex][0];
                     const close = chartData.klines[dataIndex][1];
@@ -447,8 +369,30 @@
 
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
-            // 保持原有 dataZoom 处理逻辑
-            // ...
+            if (!params.batch) return;
+            const dz = params.batch[0];
+            const startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
+            const endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
+            visibleStart = startIdx;
+            visibleEnd = endIdx;
+
+            let minLow2 = Infinity, maxHigh2 = -Infinity;
+            for (let i = startIdx; i <= endIdx; i++) { minLow2 = Math.min(minLow2, lows[i]); maxHigh2 = Math.max(maxHigh2, highs[i]); }
+            const pad2 = (maxHigh2 - minLow2) * 0.1;
+            const newYMin = minLow2 - pad2;
+            const newYMax = maxHigh2 + pad2;
+
+            const newVerticalMarks = [];
+            for (let i = 0; i <= 2; i++) { const idx = startIdx + i * 10; if (idx <= endIdx) { newVerticalMarks.push({ xAxis: dates[idx], lineStyle: { color: '#2b3139', type: 'dashed', width: 1 }, label: { show: true, position: 'insideStart', distance: -12, formatter: dates[idx], color: '#848e9c', fontSize: 10, rotate: 0, backgroundColor: 'transparent', padding: 0 } }); } }
+
+            myChart.setOption({
+                yAxis: [{ min: newYMin, max: newYMax }, { min: newYMin, max: newYMax }],
+                series: [{ id: 'klineMain', markLine: { data: [...(cache.ticker ? [
+                    { yAxis: parseFloat(cache.ticker.last), name: '当前', lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(cache.ticker.last), color: '#f0b90b', distance: 20 } },
+                    { yAxis: parseFloat(cache.ticker.high_24h), name: '24h高', lineStyle: { color: '#f6465d' }, label: { formatter: formatNum(cache.ticker.high_24h), color: '#f6465d', distance: 10 } },
+                    { yAxis: parseFloat(cache.ticker.low_24h), name: '24h低', lineStyle: { color: '#0ecb81' }, label: { formatter: formatNum(cache.ticker.low_24h), color: '#0ecb81', distance: 10 } }
+                ] : []), ...newVerticalMarks] } }]
+            });
         });
     }
 
@@ -481,6 +425,11 @@
     setInterval(() => { fetchTicker(); fetchKline(); fetchOrderBook(); }, 10000);
     setInterval(fetchPeriodChanges, 60000);
     window.addEventListener('resize', () => myChart.resize());
+
+    // 暴露全局函数
+    window.selectPair = selectPair;
+    window.closePairModal = closePairModal;
+    window.filterPairList = filterPairList;
 </script>
 </body>
 </html>
