@@ -47,20 +47,20 @@
             flex: 0 0 40.5vh;
             position: relative;
             background: #181a20;
-            margin-top: -5px;  /* 向上移动一点 */
+            margin-top: -5px;
         }
         #kline { width: 100%; height: 100%; }
 
         .indicators {
             display: flex;
             gap: 15px;
-            padding: 8px 15px;
+            padding: 5px 15px;
             font-size: 12px;
             color: #848e9c;
             overflow-x: auto;
             scrollbar-width: none;
             -ms-overflow-style: none;
-            margin-top: 10px;   /* 新增：指标容器整体下移10px，远离K线容器边框 */
+            margin-top: 0;
         }
         .indicators::-webkit-scrollbar { display: none; }
         .indicators span { cursor: pointer; padding: 4px 8px; border-radius: 4px; transition: all 0.2s; white-space: nowrap; }
@@ -408,7 +408,7 @@
         } catch (e) {}
     }
 
-    // =================== 图表更新（垂直参考线标签水平显示在左侧，带dataZoom） ===================
+    // =================== 图表更新（修改点集中在此） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -432,12 +432,11 @@
         let mainHeight = showVolume && showMacd ? 55 : showVolume || showMacd ? 68 : 100;
         let currentTop = 5;
 
-        const labelIndices = [
-            Math.floor(dates.length * 0.2),
-            Math.floor(dates.length * 0.4),
-            Math.floor(dates.length * 0.6),
-            Math.floor(dates.length * 0.8)
-        ];
+        // 修改点 1：固定间隔 10 根 K 线，从右侧最新数据开始取 4 条线
+        let base = Math.max(0, dates.length - 30);
+        let labelIndices = [base, base + 10, base + 20, base + 30].filter(i => i >= 0 && i < dates.length);
+        // 若不足 4 个，补充为 0,10,20,30 等
+        if (labelIndices.length === 0) labelIndices = [0];
 
         // ---------- 背景网格 (满屏，无标签) ----------
         grids.push({ left: 0, right: 0, top: currentTop + '%', height: mainHeight + '%' });
@@ -461,7 +460,7 @@
             axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 4, formatter: value => formatNum(value, 1) }
         });
 
-        // 垂直参考线：标签水平显示在线条左侧
+        // 垂直参考线：标签水平显示在线条左侧（使用新的 labelIndices）
         const verticalMarks = labelIndices.map(i => ({
             xAxis: dates[i],
             lineStyle: { color: '#2b3139', type: 'dashed', width: 1 },
@@ -490,8 +489,8 @@
             }
         });
 
-        // ---------- 主图 K线区域 (右侧留空20%) ----------
-        grids.push({ left: 0, right: '20%', top: currentTop + '%', height: mainHeight + '%' });
+        // 修改点 2：K 线 grid 右侧不留空白，可拖至右边缘
+        grids.push({ left: 0, right: 0, top: currentTop + '%', height: mainHeight + '%' });
         xAxes.push({
             type: 'category',
             data: dates,
@@ -508,6 +507,7 @@
             data: klines,
             xAxisIndex: 1,
             yAxisIndex: 1,
+            z: 10,   // 修改点 3：提升 K 线层级，浮于网格线上方
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: {
                 symbol: 'none',
@@ -527,37 +527,38 @@
         }
         series.push(klineSeries);
 
-        // 指标（使用 xAxisIndex:1, yAxisIndex:1）
+        // 指标（使用 xAxisIndex:1, yAxisIndex:1，并设置较低 z 值避免遮挡 K 线）
+        const indicatorZ = 5; // 低于 K 线
         if (indicatorState.MA) {
             const ma5 = Indicators.SMA(closes, 5);
             const ma10 = Indicators.SMA(closes, 10);
             const ma20 = Indicators.SMA(closes, 20);
-            series.push({ type: 'line', data: ma5, xAxisIndex: 1, yAxisIndex: 1, name: 'MA5', lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
-            series.push({ type: 'line', data: ma10, xAxisIndex: 1, yAxisIndex: 1, name: 'MA10', lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true });
-            series.push({ type: 'line', data: ma20, xAxisIndex: 1, yAxisIndex: 1, name: 'MA20', lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma5, xAxisIndex: 1, yAxisIndex: 1, name: 'MA5', z: indicatorZ, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma10, xAxisIndex: 1, yAxisIndex: 1, name: 'MA10', z: indicatorZ, lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ma20, xAxisIndex: 1, yAxisIndex: 1, name: 'MA20', z: indicatorZ, lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true });
         }
         if (indicatorState.EMA) {
             const ema12 = Indicators.EMA(closes, 12);
             const ema26 = Indicators.EMA(closes, 26);
-            series.push({ type: 'line', data: ema12, xAxisIndex: 1, yAxisIndex: 1, name: 'EMA12', lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
-            series.push({ type: 'line', data: ema26, xAxisIndex: 1, yAxisIndex: 1, name: 'EMA26', lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ema12, xAxisIndex: 1, yAxisIndex: 1, name: 'EMA12', z: indicatorZ, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true });
+            series.push({ type: 'line', data: ema26, xAxisIndex: 1, yAxisIndex: 1, name: 'EMA26', z: indicatorZ, lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true });
         }
         if (indicatorState.BOLL) {
             const boll = Indicators.BOLL(closes, 20, 2);
-            series.push({ type: 'line', data: boll.upper, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL上', lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none' });
-            series.push({ type: 'line', data: boll.middle, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL中', lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none' });
-            series.push({ type: 'line', data: boll.lower, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL下', lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.upper, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL上', z: indicatorZ, lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.middle, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL中', z: indicatorZ, lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none' });
+            series.push({ type: 'line', data: boll.lower, xAxisIndex: 1, yAxisIndex: 1, name: 'BOLL下', z: indicatorZ, lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none' });
         }
         if (indicatorState.SAR) {
             const sar = Indicators.SAR(highs, lows);
-            series.push({ type: 'line', data: sar, xAxisIndex: 1, yAxisIndex: 1, name: 'SAR', lineStyle: { color: '#ff6b6b', width: 0 }, itemStyle: { color: '#ff6b6b' }, symbol: 'circle', symbolSize: 3 });
+            series.push({ type: 'line', data: sar, xAxisIndex: 1, yAxisIndex: 1, name: 'SAR', z: indicatorZ, lineStyle: { color: '#ff6b6b', width: 0 }, itemStyle: { color: '#ff6b6b' }, symbol: 'circle', symbolSize: 3 });
         }
 
-        // 副图 VOL/AVL
+        // 副图 VOL/AVL（右侧同样不留白）
         if (showVolume) {
             currentTop += mainHeight;
             const volHeight = showMacd ? 18 : 25;
-            grids.push({ left: 0, right: '20%', top: currentTop + '%', height: volHeight + '%' });
+            grids.push({ left: 0, right: 0, top: currentTop + '%', height: volHeight + '%' });
             xAxes.push({ type: 'category', data: dates, gridIndex: 2, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: 2, splitLine: { show: false }, axisLabel: { show: false } });
             if (indicatorState.VOL) {
@@ -571,10 +572,10 @@
             currentTop += volHeight;
         }
 
-        // 副图 MACD
+        // 副图 MACD（右侧同样不留白）
         if (showMacd) {
             const macdHeight = showVolume ? 18 : 25;
-            grids.push({ left: 0, right: '20%', top: currentTop + '%', height: macdHeight + '%' });
+            grids.push({ left: 0, right: 0, top: currentTop + '%', height: macdHeight + '%' });
             const macdGridIndex = showVolume ? 3 : 2;
             xAxes.push({ type: 'category', data: dates, gridIndex: macdGridIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: macdGridIndex, splitLine: { show: false }, axisLabel: { show: false } });
