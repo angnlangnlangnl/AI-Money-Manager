@@ -17,6 +17,7 @@
             position: relative;
             overflow-y: auto;      /* 允许垂直滚动 */
             overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
             display: flex;
             flex-direction: column;
             border-radius: 20px;
@@ -328,7 +329,7 @@
         }
     }
 
-    // =================== 图表更新（含 MACD 位置修复） ===================
+    // =================== 图表更新（含 MACD 位置修复和 Z 值调整） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -375,6 +376,7 @@
         xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
+        // 垂直参考线（z: 5）
         const verticalMarks = [];
         for (let i = 0; i <= 2; i++) {
             const idx = startIndex + i * 10;
@@ -386,11 +388,26 @@
                 });
             }
         }
+        series.push({
+            type: 'line',
+            data: [],
+            xAxisIndex: 0,
+            yAxisIndex: 0,
+            silent: true,
+            z: 5,
+            markLine: { symbol: 'none', animation: false, data: verticalMarks }
+        });
 
+        // K线系列（z:10，markLine z:15）
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
-            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
+            markLine: {
+                symbol: 'none', animation: false, z: 15,
+                lineStyle: { type: 'dashed', width: 1 },
+                label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' },
+                data: []
+            }
         };
         if (cache.ticker) {
             const t = cache.ticker;
@@ -403,27 +420,27 @@
         klineSeries.markLine.data = klineSeries.markLine.data.concat(verticalMarks);
         series.push(klineSeries);
 
-        // 指标系列 z:20
+        // 指标系列 z:30
         if (indicatorState.MA) {
             const ma5 = Indicators.SMA(closes,5), ma10 = Indicators.SMA(closes,10), ma20 = Indicators.SMA(closes,20);
-            series.push({ type:'line', data:ma5, xAxisIndex:1, yAxisIndex:1, name:'MA5', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
-            series.push({ type:'line', data:ma10, xAxisIndex:1, yAxisIndex:1, name:'MA10', lineStyle:{color:'#f7931a',width:1}, symbol:'none', smooth:true, z:20 });
-            series.push({ type:'line', data:ma20, xAxisIndex:1, yAxisIndex:1, name:'MA20', lineStyle:{color:'#00d4aa',width:1}, symbol:'none', smooth:true, z:20 });
+            series.push({ type:'line', data:ma5, xAxisIndex:1, yAxisIndex:1, name:'MA5', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:30 });
+            series.push({ type:'line', data:ma10, xAxisIndex:1, yAxisIndex:1, name:'MA10', lineStyle:{color:'#f7931a',width:1}, symbol:'none', smooth:true, z:30 });
+            series.push({ type:'line', data:ma20, xAxisIndex:1, yAxisIndex:1, name:'MA20', lineStyle:{color:'#00d4aa',width:1}, symbol:'none', smooth:true, z:30 });
         }
         if (indicatorState.EMA) {
             const ema12 = Indicators.EMA(closes,12), ema26 = Indicators.EMA(closes,26);
-            series.push({ type:'line', data:ema12, xAxisIndex:1, yAxisIndex:1, name:'EMA12', lineStyle:{color:'#e879f9',width:1}, symbol:'none', smooth:true, z:20 });
-            series.push({ type:'line', data:ema26, xAxisIndex:1, yAxisIndex:1, name:'EMA26', lineStyle:{color:'#a78bfa',width:1}, symbol:'none', smooth:true, z:20 });
+            series.push({ type:'line', data:ema12, xAxisIndex:1, yAxisIndex:1, name:'EMA12', lineStyle:{color:'#e879f9',width:1}, symbol:'none', smooth:true, z:30 });
+            series.push({ type:'line', data:ema26, xAxisIndex:1, yAxisIndex:1, name:'EMA26', lineStyle:{color:'#a78bfa',width:1}, symbol:'none', smooth:true, z:30 });
         }
         if (indicatorState.BOLL) {
             const boll = Indicators.BOLL(closes,20,2);
-            series.push({ type:'line', data:boll.upper, xAxisIndex:1, yAxisIndex:1, name:'BOLL上', lineStyle:{color:'#f6465d',width:0.8,type:'dashed'}, symbol:'none', z:20 });
-            series.push({ type:'line', data:boll.middle, xAxisIndex:1, yAxisIndex:1, name:'BOLL中', lineStyle:{color:'#f0b90b',width:0.8}, symbol:'none', z:20 });
-            series.push({ type:'line', data:boll.lower, xAxisIndex:1, yAxisIndex:1, name:'BOLL下', lineStyle:{color:'#0ecb81',width:0.8,type:'dashed'}, symbol:'none', z:20 });
+            series.push({ type:'line', data:boll.upper, xAxisIndex:1, yAxisIndex:1, name:'BOLL上', lineStyle:{color:'#f6465d',width:0.8,type:'dashed'}, symbol:'none', z:30 });
+            series.push({ type:'line', data:boll.middle, xAxisIndex:1, yAxisIndex:1, name:'BOLL中', lineStyle:{color:'#f0b90b',width:0.8}, symbol:'none', z:30 });
+            series.push({ type:'line', data:boll.lower, xAxisIndex:1, yAxisIndex:1, name:'BOLL下', lineStyle:{color:'#0ecb81',width:0.8,type:'dashed'}, symbol:'none', z:30 });
         }
         if (indicatorState.SAR) {
             const sar = Indicators.SAR(highs,lows);
-            series.push({ type:'line', data:sar, xAxisIndex:1, yAxisIndex:1, name:'SAR', lineStyle:{color:'#ff6b6b',width:0}, itemStyle:{color:'#ff6b6b'}, symbol:'circle', symbolSize:3, z:20 });
+            series.push({ type:'line', data:sar, xAxisIndex:1, yAxisIndex:1, name:'SAR', lineStyle:{color:'#ff6b6b',width:0}, itemStyle:{color:'#ff6b6b'}, symbol:'circle', symbolSize:3, z:30 });
         }
 
         // 副图 VOL/AVL
@@ -432,8 +449,8 @@
             grids.push({ left:0, right:'20%', top:currentTop+'%', height:volHeight+'%' });
             xAxes.push({ type:'category', data:dates, gridIndex:2, axisLine:{show:false}, axisTick:{show:false}, axisLabel:{show:false} });
             yAxes.push({ gridIndex:2, splitLine:{show:false}, axisLabel:{show:false} });
-            if (indicatorState.VOL) { const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d'); series.push({ type:'bar', data:volumes.map((v,i)=>({value:v,itemStyle:{color:volColors[i]}})), xAxisIndex:2, yAxisIndex:2, name:'VOL', z:20 }); }
-            if (indicatorState.AVL) { const avl = Indicators.SMA(volumes,10); series.push({ type:'line', data:avl, xAxisIndex:2, yAxisIndex:2, name:'AVL', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 }); }
+            if (indicatorState.VOL) { const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d'); series.push({ type:'bar', data:volumes.map((v,i)=>({value:v,itemStyle:{color:volColors[i]}})), xAxisIndex:2, yAxisIndex:2, name:'VOL', z:30 }); }
+            if (indicatorState.AVL) { const avl = Indicators.SMA(volumes,10); series.push({ type:'line', data:avl, xAxisIndex:2, yAxisIndex:2, name:'AVL', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:30 }); }
             currentTop += volHeight;
         }
         // 副图 MACD
@@ -444,9 +461,9 @@
             yAxes.push({ gridIndex:macdGridIndex, splitLine:{show:false}, axisLabel:{show:false} });
             const macdResult = Indicators.MACD(closes);
             const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
-            series.push({ type:'bar', data:macdResult.macd.map((v,i)=>({value:v,itemStyle:{color:macdColors[i]}})), xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'MACD', z:20 });
-            series.push({ type:'line', data:macdResult.dif, xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'DIF', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
-            series.push({ type:'line', data:macdResult.dea, xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'DEA', lineStyle:{color:'#e879f9',width:1}, symbol:'none', smooth:true, z:20 });
+            series.push({ type:'bar', data:macdResult.macd.map((v,i)=>({value:v,itemStyle:{color:macdColors[i]}})), xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'MACD', z:30 });
+            series.push({ type:'line', data:macdResult.dif, xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'DIF', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:30 });
+            series.push({ type:'line', data:macdResult.dea, xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'DEA', lineStyle:{color:'#e879f9',width:1}, symbol:'none', smooth:true, z:30 });
         }
 
         const dataZoom = [{ type:'inside', xAxisIndex:[1,2,3], start:(startIndex/totalLen)*100, end:100, zoomOnMouseWheel:true, moveOnMouseMove:true, minValueSpan:Math.floor(visibleCount*100/totalLen), maxValueSpan:100 }];
