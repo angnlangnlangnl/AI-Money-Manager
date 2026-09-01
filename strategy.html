@@ -8,22 +8,7 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
-        .app {
-            width: 100%;
-            max-width: 390px;
-            height: 100vh;
-            background-color: #181a20;
-            color: #eaecef;
-            position: relative;
-            overflow-y: auto;
-            overflow-x: hidden;
-            display: flex;
-            flex-direction: column;
-            border-radius: 20px;
-            box-shadow: 0 0 20px rgba(255,255,255,0.1);
-            margin: 0 auto;
-            padding-bottom: 70px;
-        }
+        .app { width: 100%; max-width: 390px; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column; border-radius: 20px; box-shadow: 0 0 20px rgba(255,255,255,0.1); margin: 0 auto; padding-bottom: 70px; }
         .header { display: flex; justify-content: space-between; align-items: center; padding: 9px 15px; height: 45px; flex-shrink: 0; }
         .header-left { display: flex; align-items: center; gap: 10px; font-size: 18px; font-weight: bold; }
         .header-left .pair-selector { cursor: pointer; }
@@ -43,13 +28,7 @@
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
         .timeframes span { cursor: pointer; }
         .timeframes span:hover { color: #eaecef; }
-        .chart-container {
-            flex: 0 0 40.5vh;
-            position: relative;
-            background: #181a20;
-            margin-top: -4px;
-            flex-shrink: 0;
-        }
+        .chart-container { flex: 0 0 40.5vh; position: relative; background: #181a20; margin-top: -4px; flex-shrink: 0; }
         #kline { width: 100%; height: 100%; }
         .indicators { display: flex; gap: 15px; padding: 5px 15px; font-size: 12px; color: #848e9c; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; margin-top: 0; flex-shrink: 0; }
         .indicators::-webkit-scrollbar { display: none; }
@@ -63,72 +42,25 @@
         .order-book-bar { display: flex; align-items: center; padding: 7px 15px; font-size: 12px; font-weight: bold; flex-shrink: 0; }
         .sell-bar { width: 50%; background: #0ecb81; color: #181a20; text-align: center; padding: 4px 0; border-radius: 4px 0 0 4px; transition: width 0.5s; }
         .buy-bar { width: 50%; background: #f6465d; color: #181a20; text-align: center; padding: 4px 0; border-radius: 0 4px 4px 0; transition: width 0.5s; }
-
-        /* 订单切换按钮行 */
-        .order-tabs {
-            display: flex;
-            justify-content: space-around;
-            font-size: 12px;
-            color: #848e9c;
-            padding: 5px 15px;
-            border-bottom: 1px solid #2b3139;
-            flex-shrink: 0;
-        }
-        .order-tabs span {
-            cursor: pointer;
-            padding: 5px 10px;
-            border-radius: 4px;
-            flex: 1;
-            text-align: center;
-            transition: all 0.2s;
-        }
+        .order-tabs { display: flex; justify-content: space-around; font-size: 12px; color: #848e9c; padding: 5px 15px; border-bottom: 1px solid #2b3139; flex-shrink: 0; }
+        .order-tabs span { cursor: pointer; padding: 5px 10px; border-radius: 4px; flex: 1; text-align: center; transition: all 0.2s; }
         .order-tabs span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
         .order-tabs span:hover { background: #252535; color: #eaecef; }
-
-        /* 订单数据容器（切换显示） */
-        .order-data-container {
-            padding: 10px 15px;
-            background: #181a20;
-            border-bottom: 1px solid #2b3139;
-            flex-shrink: 0;
-            min-height: 120px;
-        }
-        .order-data-content {
-            font-size: 11px;
-            color: #aaa;
-        }
+        .order-data-container { padding: 10px 15px; background: #181a20; border-bottom: 1px solid #2b3139; flex-shrink: 0; min-height: 120px; }
+        .order-data-content { font-size: 11px; color: #aaa; }
         .order-list-item { display: flex; justify-content: space-between; padding: 4px 0; border-bottom: 1px solid #2a2a3a; }
         .ask-text { color: #f6465d; }
         .bid-text { color: #0ecb81; }
         .depth-cols { display: flex; gap: 10px; }
         .depth-cols > div { flex: 1; }
         .depth-header { font-size: 11px; font-weight: bold; color: #848e9c; margin-bottom: 4px; }
-
-        /* 底部固定操作栏（sticky） */
-        .bottom-action {
-            position: sticky;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 12px;
-            background: rgba(24,26,32,0.98);
-            border-top: 1px solid #2b3139;
-            box-shadow: 0 -2px 15px rgba(0,0,0,0.5);
-            z-index: 40;
-            flex-shrink: 0;
-            margin-top: auto;
-        }
+        .bottom-action { position: sticky; bottom: 0; left: 0; right: 0; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: rgba(24,26,32,0.98); border-top: 1px solid #2b3139; box-shadow: 0 -2px 15px rgba(0,0,0,0.5); z-index: 40; flex-shrink: 0; margin-top: auto; }
         .tools { display: flex; gap: 15px; font-size: 12px; color: #848e9c; text-align: center; }
         .tools div { display: flex; flex-direction: column; align-items: center; gap: 5px; cursor: pointer; }
         .tools i { font-size: 16px; }
         .buy-btn, .sell-btn { flex: 1; text-align: center; padding: 9px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; }
         .buy-btn { background: #0ecb81; margin-right: 8px; }
         .sell-btn { background: #f6465d; }
-
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; justify-content: flex-end; flex-direction: column; }
         .modal-overlay.show { display: flex; }
         .modal-content { background: #1a1a2a; border-radius: 16px 16px 0 0; width: 90%; margin: 0 auto; padding: 15px; animation: slideUp 0.3s ease; max-height: 70vh; display: flex; flex-direction: column; }
@@ -137,16 +69,13 @@
         .modal-title { font-size: 16px; font-weight: bold; color: #fff; }
         .modal-close { cursor: pointer; color: #848e9c; font-size: 18px; }
         .modal-body { overflow-y: auto; flex: 1; }
-
         .pair-search { background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 8px; padding: 10px 12px; color: #eaecef; font-size: 13px; outline: none; margin-bottom: 10px; }
         .pair-list { overflow-y: auto; flex: 1; }
         .pair-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 5px; border-bottom: 1px solid #2a2a3a; cursor: pointer; font-size: 14px; }
         .pair-item:hover { background: #252535; }
-
         .trade-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
         .trade-row label { width: 60px; font-size: 12px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 6px; padding: 8px 10px; color: #eaecef; font-size: 13px; outline: none; }
-
         @media (min-width: 769px) {
             .app { max-width: 100%; border-radius: 0; box-shadow: none; width: 100%; }
             .chart-container { flex: 1; height: auto; min-height: 300px; }
@@ -157,7 +86,6 @@
 </head>
 <body>
 <div class="app">
-    <!-- 头部 -->
     <div class="header">
         <div class="header-left">
             <i class="icon">‹</i>
@@ -166,11 +94,7 @@
         </div>
         <div class="header-icons"><i class="icon">✨</i><i class="icon">★</i><i class="icon">🔔</i></div>
     </div>
-
-    <!-- 标签页 -->
     <div class="tabs"><div class="tab">报价</div><div class="tab">信息</div><div class="tab">数据</div><div class="tab">广场</div><div class="tab active">交易</div></div>
-
-    <!-- 价格区 -->
     <div class="quote-section">
         <div>
             <div class="price-main" id="last-price">--</div>
@@ -184,21 +108,13 @@
             <div>24h成交额(USDT) <b id="amount-24">--</b></div>
         </div>
     </div>
-
-    <!-- 时间周期 -->
     <div class="timeframes" id="timeframes">
         <span data-interval="1m">分时</span><span data-interval="15m">15分</span><span data-interval="1h" class="active">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">日线</span><span>更多 ▾</span>
     </div>
-
-    <!-- K线图 -->
     <div class="chart-container"><div id="kline"></div><div class="error-msg" id="kline-error">K线数据加载失败，请检查网络</div></div>
-
-    <!-- 指标按钮 -->
     <div class="indicators" id="indicator-buttons">
         <span class="active" data-indicator="MA">MA</span><span data-indicator="EMA">EMA</span><span data-indicator="BOLL">BOLL</span><span data-indicator="SAR">SAR</span><span data-indicator="AVL">AVL</span><span data-indicator="VOL">VOL</span><span data-indicator="MACD">MACD</span>
     </div>
-
-    <!-- 周期涨跌 -->
     <div class="performance" id="performance">
         <div class="perf-item">今日 <span id="perf-today">--</span></div>
         <div class="perf-item">7天 <span id="perf-7d">--</span></div>
@@ -207,27 +123,20 @@
         <div class="perf-item">180天 <span id="perf-180d">--</span></div>
         <div class="perf-item">1年 <span id="perf-365d">--</span></div>
     </div>
-
-    <!-- 买卖盘比例条 -->
     <div class="order-book-bar">
         <div class="sell-bar" id="sell-bar">--</div>
         <div class="buy-bar" id="buy-bar">--</div>
     </div>
-
-    <!-- 订单切换按钮 -->
     <div class="order-tabs" id="orderTabs">
         <span class="active" data-tab="delegate" onclick="switchOrderTab('delegate')">委托订单</span>
         <span data-tab="depth" onclick="switchOrderTab('depth')">深度</span>
         <span data-tab="trades" onclick="switchOrderTab('trades')">最新成交</span>
         <span data-tab="network" onclick="switchOrderTab('network')">网络</span>
     </div>
-
-    <!-- 订单数据展示区域 -->
     <div class="order-data-container">
         <div class="order-data-content" id="orderDataContent">加载中...</div>
     </div>
 
-    <!-- 底部固定操作栏 -->
     <div class="bottom-action">
         <div class="tools">
             <div><i class="icon">⋯</i>更多</div>
@@ -240,7 +149,6 @@
         </div>
     </div>
 
-    <!-- 交易对选择弹窗 -->
     <div class="modal-overlay" id="pairModalOverlay">
         <div class="modal-content">
             <div class="modal-header"><span class="modal-title">选择交易对</span><span class="modal-close" onclick="closePairModal()">✕</span></div>
@@ -249,7 +157,6 @@
         </div>
     </div>
 
-    <!-- 交易设置弹窗 -->
     <div class="modal-overlay" id="tradeModalOverlay">
         <div class="modal-content">
             <div class="modal-header"><span class="modal-title" id="tradeModalTitle">买入 BTC/USDT</span><span class="modal-close" onclick="closeTradeModal()">✕</span></div>
@@ -273,7 +180,7 @@
     let currentInterval = '1h';
     let currentPair = 'BTC_USDT';
     let currentSide = 'buy';
-    let currentOrderTab = 'delegate'; // 当前订单Tab
+    let currentOrderTab = 'delegate';
     const indicatorState = { MA: true, EMA: false, BOLL: false, SAR: false, AVL: false, VOL: false, MACD: false };
     let cache = { ticker: null, klines: null, orderBook: null };
     let allPairs = [];
@@ -287,13 +194,11 @@
         static MACD(data, fast = 12, slow = 26, signal = 9) { const emaFast = this.EMA(data, fast); const emaSlow = this.EMA(data, slow); const dif = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i]; const validDif = dif.filter(v => v !== null); const deaValid = this.EMA(validDif, signal); const dea = new Array(data.length).fill(null); const offset = dif.length - deaValid.length; for (let i = 0; i < deaValid.length; i++) dea[offset + i] = deaValid[i]; const macd = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2; return { dif, dea, macd }; }
     }
 
-    // =================== ECharts 初始化 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
     let chartData = { dates: [], klines: [], volumes: [] };
     let visibleStart = 0, visibleEnd = 0;
 
-    // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
     function setColor(el, value) { el.className = value >= 0 ? 'green' : 'red'; }
     function formatPercent(value) { return (value >= 0 ? '+' : '') + value.toFixed(2) + '%'; }
@@ -314,231 +219,31 @@
         }
     }
 
-    // =================== 数据获取 ===================
-    async function fetchTicker() {
-        try {
-            const data = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${currentPair}`);
-            if (!data || data.length === 0) throw new Error('空数据');
-            cache.ticker = data[0];
-            updateTickerUI(data[0]);
-            if (chartData.klines.length) updateChart();
-        } catch (e) {
-            console.error('Ticker失败:', e);
-            if (cache.ticker) updateTickerUI(cache.ticker);
-        }
-    }
-    function updateTickerUI(t) {
-        const last = parseFloat(t.last);
-        const change = parseFloat(t.change_percentage);
-        document.getElementById('last-price').innerText = formatNum(last);
-        const changeClass = change >= 0 ? 'green' : 'red';
-        document.getElementById('cn-price').innerHTML = `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${formatPercent(change)}</span>`;
-        document.getElementById('high-24').innerText = formatNum(t.high_24h);
-        document.getElementById('low-24').innerText = formatNum(t.low_24h);
-        document.getElementById('vol-24').innerText = formatNum(t.base_volume, 2);
-        document.getElementById('amount-24').innerText = formatNum(t.quote_volume / 100000000, 2) + '亿';
-        const perfToday = document.getElementById('perf-today');
-        perfToday.innerText = formatPercent(change);
-        setColor(perfToday, change);
-    }
-    async function fetchKline() {
-        try {
-            const data = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${currentPair}&interval=${currentInterval}&limit=120`);
-            if (!data || data.length === 0) throw new Error('空K线');
-            cache.klines = data;
-            processKlineData(data);
-            document.getElementById('kline-error').style.display = 'none';
-        } catch (e) {
-            console.error('K线失败:', e);
-            document.getElementById('kline-error').style.display = 'block';
-            if (cache.klines) processKlineData(cache.klines);
-        }
-    }
-    function processKlineData(rawData) {
-        const dates = [], klines = [], volumes = [];
-        for (const item of rawData) {
-            const open = parseFloat(item[5]);
-            const close = parseFloat(item[2]);
-            const low = parseFloat(item[4]);
-            const high = parseFloat(item[3]);
-            const vol = parseFloat(item[6]) || parseFloat(item[1]);
-            klines.push([open, close, low, high]);
-            volumes.push(vol);
-            const d = new Date(parseInt(item[0]) * 1000);
-            dates.push(currentInterval === '1d' ? `${d.getMonth() + 1}-${d.getDate()}` : `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:00`);
-        }
-        chartData = { dates, klines, volumes };
-        updateChart();
-    }
-    async function fetchOrderBook() {
-        try {
-            const data = await fetchWithTimeout(`${BASE_URL}/spot/order_book?currency_pair=${currentPair}&limit=20`);
-            if (!data) throw new Error('空订单簿');
-            cache.orderBook = data;
-            updateOrderBookUI(data);
-        } catch (e) {
-            console.error('订单簿失败:', e);
-            if (cache.orderBook) updateOrderBookUI(cache.orderBook);
-        }
-    }
-    function updateOrderBookUI(data) {
-        let askVol = 0, bidVol = 0;
-        for (const a of (data.asks || [])) askVol += parseFloat(a[1]);
-        for (const b of (data.bids || [])) bidVol += parseFloat(b[1]);
-        const total = askVol + bidVol;
-        if (total === 0) return;
-        const bidPct = (bidVol / total) * 100;
-        const askPct = 100 - bidPct;
-        document.getElementById('sell-bar').style.width = askPct + '%';
-        document.getElementById('buy-bar').style.width = bidPct + '%';
-        document.getElementById('sell-bar').innerText = '卖 ' + askPct.toFixed(1) + '%';
-        document.getElementById('buy-bar').innerText = '买 ' + bidPct.toFixed(1) + '%';
-    }
-    async function fetchPeriodChanges() {
-        const periods = [{ id: 'perf-today', days: 1 }, { id: 'perf-7d', days: 7 }, { id: 'perf-30d', days: 30 }, { id: 'perf-90d', days: 90 }, { id: 'perf-180d', days: 180 }, { id: 'perf-365d', days: 365 }];
-        try {
-            let currentPrice;
-            if (cache.ticker) currentPrice = parseFloat(cache.ticker.last);
-            else {
-                const td = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${currentPair}`);
-                currentPrice = parseFloat(td[0].last);
-            }
-            for (const p of periods) {
-                try {
-                    const now = Math.floor(Date.now() / 1000);
-                    const from = now - p.days * 86400;
-                    const resp = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${currentPair}&interval=1d&from=${from}&to=${now}&limit=1`);
-                    if (resp && resp.length > 0) {
-                        const oldClose = parseFloat(resp[0][2]);
-                        const change = ((currentPrice - oldClose) / oldClose) * 100;
-                        const el = document.getElementById(p.id);
-                        el.innerText = formatPercent(change);
-                        setColor(el, change);
-                    }
-                } catch (err) { console.warn(`${p.id} 获取失败:`, err); }
-            }
-        } catch (e) { console.error('周期涨跌幅获取失败:', e); }
-    }
+    async function fetchTicker() { try { const data = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${currentPair}`); if (!data || data.length === 0) throw new Error('空数据'); cache.ticker = data[0]; updateTickerUI(data[0]); if (chartData.klines.length) updateChart(); } catch (e) { console.error('Ticker失败:', e); if (cache.ticker) updateTickerUI(cache.ticker); } }
+    function updateTickerUI(t) { const last = parseFloat(t.last); const change = parseFloat(t.change_percentage); document.getElementById('last-price').innerText = formatNum(last); const changeClass = change >= 0 ? 'green' : 'red'; document.getElementById('cn-price').innerHTML = `¥${formatNum(last * CNY_RATE)} <span class="${changeClass}">${formatPercent(change)}</span>`; document.getElementById('high-24').innerText = formatNum(t.high_24h); document.getElementById('low-24').innerText = formatNum(t.low_24h); document.getElementById('vol-24').innerText = formatNum(t.base_volume, 2); document.getElementById('amount-24').innerText = formatNum(t.quote_volume / 100000000, 2) + '亿'; const perfToday = document.getElementById('perf-today'); perfToday.innerText = formatPercent(change); setColor(perfToday, change); }
+    async function fetchKline() { try { const data = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${currentPair}&interval=${currentInterval}&limit=120`); if (!data || data.length === 0) throw new Error('空K线'); cache.klines = data; processKlineData(data); document.getElementById('kline-error').style.display = 'none'; } catch (e) { console.error('K线失败:', e); document.getElementById('kline-error').style.display = 'block'; if (cache.klines) processKlineData(cache.klines); } }
+    function processKlineData(rawData) { const dates = [], klines = [], volumes = []; for (const item of rawData) { const open = parseFloat(item[5]); const close = parseFloat(item[2]); const low = parseFloat(item[4]); const high = parseFloat(item[3]); const vol = parseFloat(item[6]) || parseFloat(item[1]); klines.push([open, close, low, high]); volumes.push(vol); const d = new Date(parseInt(item[0]) * 1000); dates.push(currentInterval === '1d' ? `${d.getMonth() + 1}-${d.getDate()}` : `${d.getMonth() + 1}-${d.getDate()} ${d.getHours()}:00`); } chartData = { dates, klines, volumes }; updateChart(); }
+    async function fetchOrderBook() { try { const data = await fetchWithTimeout(`${BASE_URL}/spot/order_book?currency_pair=${currentPair}&limit=20`); if (!data) throw new Error('空订单簿'); cache.orderBook = data; updateOrderBookUI(data); } catch (e) { console.error('订单簿失败:', e); if (cache.orderBook) updateOrderBookUI(cache.orderBook); } }
+    function updateOrderBookUI(data) { let askVol = 0, bidVol = 0; for (const a of (data.asks || [])) askVol += parseFloat(a[1]); for (const b of (data.bids || [])) bidVol += parseFloat(b[1]); const total = askVol + bidVol; if (total === 0) return; const bidPct = (bidVol / total) * 100; const askPct = 100 - bidPct; document.getElementById('sell-bar').style.width = askPct + '%'; document.getElementById('buy-bar').style.width = bidPct + '%'; document.getElementById('sell-bar').innerText = '卖 ' + askPct.toFixed(1) + '%'; document.getElementById('buy-bar').innerText = '买 ' + bidPct.toFixed(1) + '%'; }
+    async function fetchPeriodChanges() { const periods = [{ id: 'perf-today', days: 1 }, { id: 'perf-7d', days: 7 }, { id: 'perf-30d', days: 30 }, { id: 'perf-90d', days: 90 }, { id: 'perf-180d', days: 180 }, { id: 'perf-365d', days: 365 }]; try { let currentPrice; if (cache.ticker) currentPrice = parseFloat(cache.ticker.last); else { const td = await fetchWithTimeout(`${BASE_URL}/spot/tickers?currency_pair=${currentPair}`); currentPrice = parseFloat(td[0].last); } for (const p of periods) { try { const now = Math.floor(Date.now() / 1000); const from = now - p.days * 86400; const resp = await fetchWithTimeout(`${BASE_URL}/spot/candlesticks?currency_pair=${currentPair}&interval=1d&from=${from}&to=${now}&limit=1`); if (resp && resp.length > 0) { const oldClose = parseFloat(resp[0][2]); const change = ((currentPrice - oldClose) / oldClose) * 100; const el = document.getElementById(p.id); el.innerText = formatPercent(change); setColor(el, change); } } catch (err) { console.warn(`${p.id} 获取失败:`, err); } } } catch (e) { console.error('周期涨跌幅获取失败:', e); } }
 
-    // =================== 交易对弹窗 ===================
-    async function openPairModal() {
-        document.getElementById('pairModalOverlay').classList.add('show');
-        if (allPairs.length === 0) {
-            try {
-                const data = await fetchWithTimeout(`${BASE_URL}/spot/currency_pairs`);
-                allPairs = data.map(p => p.id);
-            } catch (e) {
-                console.warn('交易对列表获取失败，使用默认列表');
-                allPairs = ['BTC_USDT','ETH_USDT','SOL_USDT','ARB_USDT','DOGE_USDT','BNB_USDT','XRP_USDT','LTC_USDT'];
-            }
-        }
-        renderPairList('');
-    }
+    async function openPairModal() { document.getElementById('pairModalOverlay').classList.add('show'); if (allPairs.length === 0) { try { const data = await fetchWithTimeout(`${BASE_URL}/spot/currency_pairs`); allPairs = data.map(p => p.id); } catch (e) { console.warn('交易对列表获取失败，使用默认列表'); allPairs = ['BTC_USDT','ETH_USDT','SOL_USDT','ARB_USDT','DOGE_USDT','BNB_USDT','XRP_USDT','LTC_USDT']; } } renderPairList(''); }
     function closePairModal() { document.getElementById('pairModalOverlay').classList.remove('show'); }
     function filterPairList() { const search = document.getElementById('pairSearchInput').value.trim().toUpperCase(); renderPairList(search); }
-    function renderPairList(search) {
-        const list = document.getElementById('pairModalList');
-        let filtered = allPairs;
-        if (search) filtered = allPairs.filter(p => p.includes(search));
-        filtered = filtered.filter(p => p.endsWith('_USDT')).slice(0, 100);
-        if (filtered.length === 0) {
-            list.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">无匹配交易对</div>';
-            return;
-        }
-        list.innerHTML = filtered.map(pair => {
-            const display = pair.replace('_', '/');
-            return `<div class="pair-item" onclick="selectPair('${pair}')"><span class="symbol">${display}</span></div>`;
-        }).join('');
-    }
-    async function selectPair(pair) {
-        currentPair = pair;
-        closePairModal();
-        document.getElementById('pairSelectorBtn').innerText = pair.replace('_', '/') + ' ▾';
-        document.getElementById('pairBaseAsset').innerText = pair.split('_')[0];
-        await refreshAll();
-        switchOrderTab(currentOrderTab); // 重新加载当前订单Tab数据
-    }
+    function renderPairList(search) { const list = document.getElementById('pairModalList'); let filtered = allPairs; if (search) filtered = allPairs.filter(p => p.includes(search)); filtered = filtered.filter(p => p.endsWith('_USDT')).slice(0, 100); if (filtered.length === 0) { list.innerHTML = '<div style="text-align:center;padding:20px;color:#888;">无匹配交易对</div>'; return; } list.innerHTML = filtered.map(pair => { const display = pair.replace('_', '/'); return `<div class="pair-item" onclick="selectPair('${pair}')"><span class="symbol">${display}</span></div>`; }).join(''); }
+    async function selectPair(pair) { currentPair = pair; closePairModal(); document.getElementById('pairSelectorBtn').innerText = pair.replace('_', '/') + ' ▾'; document.getElementById('pairBaseAsset').innerText = pair.split('_')[0]; await refreshAll(); switchOrderTab(currentOrderTab); }
     document.getElementById('pairSelectorBtn').addEventListener('click', openPairModal);
     document.getElementById('pairModalOverlay').addEventListener('click', function(e) { if (e.target === this) closePairModal(); });
 
-    // =================== 交易弹窗 ===================
-    function openTradeModal(side) {
-        currentSide = side;
-        document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' ' + currentPair.replace('_', '/');
-        document.getElementById('tradeOrderType').value = 'market';
-        document.getElementById('tradePrice').value = '';
-        document.getElementById('tradeAmount').value = '';
-        document.getElementById('takeProfit').value = '';
-        document.getElementById('stopLoss').value = '';
-        toggleTradePriceInput();
-        document.getElementById('tradeModalOverlay').classList.add('show');
-    }
+    function openTradeModal(side) { currentSide = side; document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' ' + currentPair.replace('_', '/'); document.getElementById('tradeOrderType').value = 'market'; document.getElementById('tradePrice').value = ''; document.getElementById('tradeAmount').value = ''; document.getElementById('takeProfit').value = ''; document.getElementById('stopLoss').value = ''; toggleTradePriceInput(); document.getElementById('tradeModalOverlay').classList.add('show'); }
     function closeTradeModal() { document.getElementById('tradeModalOverlay').classList.remove('show'); }
     function toggleTradePriceInput() { document.getElementById('tradePriceRow').style.display = document.getElementById('tradeOrderType').value === 'limit' ? 'flex' : 'none'; }
-    function confirmTrade() {
-        const type = document.getElementById('tradeOrderType').value;
-        const price = parseFloat(document.getElementById('tradePrice').value);
-        const amount = parseFloat(document.getElementById('tradeAmount').value);
-        const takeProfit = parseFloat(document.getElementById('takeProfit').value);
-        const stopLoss = parseFloat(document.getElementById('stopLoss').value);
-        if (!amount || amount <= 0) { alert('请输入有效数量'); return; }
-        if (type === 'limit' && (!price || price <= 0)) { alert('请输入有效限价价格'); return; }
-        alert(`模拟${currentSide === 'buy' ? '买入' : '卖出'}订单：\n交易对：${currentPair}\n类型：${type === 'market' ? '市价' : '限价'}\n数量：${amount}\n${type === 'limit' ? '价格：' + price : ''}\n止盈：${takeProfit || '未设置'}\n止损：${stopLoss || '未设置'}`);
-        closeTradeModal();
-    }
+    function confirmTrade() { const type = document.getElementById('tradeOrderType').value; const price = parseFloat(document.getElementById('tradePrice').value); const amount = parseFloat(document.getElementById('tradeAmount').value); const takeProfit = parseFloat(document.getElementById('takeProfit').value); const stopLoss = parseFloat(document.getElementById('stopLoss').value); if (!amount || amount <= 0) { alert('请输入有效数量'); return; } if (type === 'limit' && (!price || price <= 0)) { alert('请输入有效限价价格'); return; } alert(`模拟${currentSide === 'buy' ? '买入' : '卖出'}订单：\n交易对：${currentPair}\n类型：${type === 'market' ? '市价' : '限价'}\n数量：${amount}\n${type === 'limit' ? '价格：' + price : ''}\n止盈：${takeProfit || '未设置'}\n止损：${stopLoss || '未设置'}`); closeTradeModal(); }
 
-    // =================== 订单Tab切换 ===================
-    function switchOrderTab(tab) {
-        currentOrderTab = tab;
-        // 更新按钮激活状态
-        document.querySelectorAll('.order-tabs span').forEach(el => {
-            el.classList.toggle('active', el.dataset.tab === tab);
-        });
-        const container = document.getElementById('orderDataContent');
-        container.innerHTML = '加载中...';
-        if (tab === 'delegate' || tab === 'depth') {
-            loadOrderBookData(tab === 'depth' ? 10 : 5); // delegate显示5档，depth显示10档
-        } else if (tab === 'trades') {
-            loadRecentTrades();
-        } else if (tab === 'network') {
-            container.innerHTML = '<div style="color:#888;">网络状态：正常，延迟 20ms</div>';
-        }
-    }
+    function switchOrderTab(tab) { currentOrderTab = tab; document.querySelectorAll('.order-tabs span').forEach(el => { el.classList.toggle('active', el.dataset.tab === tab); }); const container = document.getElementById('orderDataContent'); container.innerHTML = '加载中...'; if (tab === 'delegate' || tab === 'depth') { loadOrderBookData(tab === 'depth' ? 10 : 5); } else if (tab === 'trades') { loadRecentTrades(); } else if (tab === 'network') { container.innerHTML = '<div style="color:#888;">网络状态：正常，延迟 20ms</div>'; } }
+    async function loadOrderBookData(limit) { const container = document.getElementById('orderDataContent'); try { const data = await fetchWithTimeout(`${BASE_URL}/spot/order_book?currency_pair=${currentPair}&limit=${limit}`); if (!data || !data.asks || !data.bids) throw new Error('订单簿数据无效'); let html = '<div class="depth-cols"><div><div class="depth-header">卖盘</div>'; data.asks.slice(0, limit).forEach(a => { html += `<div class="order-list-item"><span class="ask-text">${formatNum(parseFloat(a[0]))}</span><span>${parseFloat(a[1]).toFixed(6)}</span></div>`; }); html += '</div><div><div class="depth-header">买盘</div>'; data.bids.slice(0, limit).forEach(b => { html += `<div class="order-list-item"><span class="bid-text">${formatNum(parseFloat(b[0]))}</span><span>${parseFloat(b[1]).toFixed(6)}</span></div>`; }); html += '</div></div>'; container.innerHTML = html; } catch (e) { container.innerHTML = '<div style="color:#f6465d;">数据获取失败，请重试</div>'; } }
+    async function loadRecentTrades() { const container = document.getElementById('orderDataContent'); try { const data = await fetchWithTimeout(`${BASE_URL}/spot/trades?currency_pair=${currentPair}&limit=20`); if (!Array.isArray(data)) throw new Error('成交数据无效'); let html = ''; data.forEach(t => { const side = t.side === 'buy' ? '<span class="bid-text">买入</span>' : '<span class="ask-text">卖出</span>'; const time = new Date(parseInt(t.create_time) * 1000).toLocaleTimeString(); html += `<div class="order-list-item">${side} ${formatNum(parseFloat(t.price))} × ${parseFloat(t.amount).toFixed(6)} <span style="color:#555;">${time}</span></div>`; }); container.innerHTML = html || '<div style="color:#888;">暂无成交记录</div>'; } catch (e) { container.innerHTML = '<div style="color:#f6465d;">数据获取失败，请重试</div>'; } }
 
-    async function loadOrderBookData(limit) {
-        const container = document.getElementById('orderDataContent');
-        try {
-            const data = await fetchWithTimeout(`${BASE_URL}/spot/order_book?currency_pair=${currentPair}&limit=${limit}`);
-            if (!data || !data.asks || !data.bids) throw new Error('订单簿数据无效');
-            let html = '<div class="depth-cols"><div><div class="depth-header">卖盘</div>';
-            data.asks.slice(0, limit).forEach(a => { html += `<div class="order-list-item"><span class="ask-text">${formatNum(parseFloat(a[0]))}</span><span>${parseFloat(a[1]).toFixed(6)}</span></div>`; });
-            html += '</div><div><div class="depth-header">买盘</div>';
-            data.bids.slice(0, limit).forEach(b => { html += `<div class="order-list-item"><span class="bid-text">${formatNum(parseFloat(b[0]))}</span><span>${parseFloat(b[1]).toFixed(6)}</span></div>`; });
-            html += '</div></div>';
-            container.innerHTML = html;
-        } catch (e) {
-            container.innerHTML = '<div style="color:#f6465d;">数据获取失败，请重试</div>';
-        }
-    }
-
-    async function loadRecentTrades() {
-        const container = document.getElementById('orderDataContent');
-        try {
-            const data = await fetchWithTimeout(`${BASE_URL}/spot/trades?currency_pair=${currentPair}&limit=20`);
-            if (!Array.isArray(data)) throw new Error('成交数据无效');
-            let html = '';
-            data.forEach(t => {
-                const side = t.side === 'buy' ? '<span class="bid-text">买入</span>' : '<span class="ask-text">卖出</span>';
-                const time = new Date(parseInt(t.create_time) * 1000).toLocaleTimeString();
-                html += `<div class="order-list-item">${side} ${formatNum(parseFloat(t.price))} × ${parseFloat(t.amount).toFixed(6)} <span style="color:#555;">${time}</span></div>`;
-            });
-            container.innerHTML = html || '<div style="color:#888;">暂无成交记录</div>';
-        } catch (e) {
-            container.innerHTML = '<div style="color:#f6465d;">数据获取失败，请重试</div>';
-        }
-    }
-
-    // =================== 图表更新（修复MACD位置） ===================
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
@@ -567,7 +272,6 @@
 
         const showVolume = indicatorState.VOL || indicatorState.AVL;
         const showMacd = indicatorState.MACD;
-        // 调整高度：确保有空间显示所有副图
         let mainHeight = showVolume && showMacd ? 50 : showVolume || showMacd ? 65 : 100;
         let currentTop = 5;
 
@@ -632,10 +336,11 @@
             series.push({ type:'line', data:sar, xAxisIndex:1, yAxisIndex:1, name:'SAR', lineStyle:{color:'#ff6b6b',width:0}, itemStyle:{color:'#ff6b6b'}, symbol:'circle', symbolSize:3, z:20 });
         }
 
-        // 成交量副图
+        // 成交量副图（增加间距）
+        const gap = 6; // 约两个BOLL按钮高度
         if (showVolume) {
-            currentTop += mainHeight;
-            const volHeight = showMacd ? 15 : 20; // 若有MACD，给成交量留小一些
+            currentTop += mainHeight + gap;
+            const volHeight = showMacd ? 15 : 20;
             grids.push({ left:0, right:'20%', top:currentTop+'%', height:volHeight+'%' });
             xAxes.push({ type:'category', data:dates, gridIndex:2, axisLine:{show:false}, axisTick:{show:false}, axisLabel:{show:false} });
             yAxes.push({ gridIndex:2, splitLine:{show:false}, axisLabel:{show:false} });
@@ -648,9 +353,11 @@
                 series.push({ type:'line', data:avl, xAxisIndex:2, yAxisIndex:2, name:'AVL', lineStyle:{color:'#f0b90b',width:1}, symbol:'none', smooth:true, z:20 });
             }
             currentTop += volHeight;
+        } else if (showMacd) {
+            currentTop += mainHeight + gap;
         }
 
-        // MACD副图（位置修复）
+        // MACD副图
         if (showMacd) {
             const macdHeight = 15;
             grids.push({ left:0, right:'20%', top:currentTop+'%', height:macdHeight+'%' });
@@ -664,7 +371,11 @@
             series.push({ type:'line', data:macdResult.dea, xAxisIndex:macdGridIndex, yAxisIndex:macdGridIndex, name:'DEA', lineStyle:{color:'#e879f9',width:1}, symbol:'none', smooth:true, z:20 });
         }
 
-        const dataZoom = [{ type:'inside', xAxisIndex:[1,2,3], start:(startIndex/totalLen)*100, end:100, zoomOnMouseWheel:true, moveOnMouseMove:true, minValueSpan:Math.floor(visibleCount*100/totalLen), maxValueSpan:100 }];
+        const zoomAxes = [1];
+        if (showVolume) zoomAxes.push(2);
+        if (showMacd) zoomAxes.push(showVolume ? 3 : 2);
+
+        const dataZoom = [{ type:'inside', xAxisIndex: zoomAxes, start:(startIndex/totalLen)*100, end:100, zoomOnMouseWheel:true, moveOnMouseMove:true, minValueSpan:Math.floor(visibleCount*100/totalLen), maxValueSpan:100 }];
 
         myChart.setOption({
             animation: false,
@@ -760,7 +471,6 @@
         });
     }
 
-    // =================== 指标按钮切换 ===================
     document.getElementById('indicator-buttons').addEventListener('click', function(e) {
         const span = e.target.closest('span[data-indicator]');
         if (!span) return;
@@ -770,7 +480,6 @@
         updateChart();
     });
 
-    // =================== 时间周期切换 ===================
     document.getElementById('timeframes').addEventListener('click', function(e) {
         const span = e.target.closest('span[data-interval]');
         if (!span) return;
@@ -780,18 +489,16 @@
         fetchKline();
     });
 
-    // =================== 启动与定时刷新 ===================
     async function refreshAll() {
         await Promise.all([fetchTicker(), fetchKline(), fetchOrderBook()]);
         fetchPeriodChanges();
-        switchOrderTab(currentOrderTab); // 初始加载当前Tab数据
+        switchOrderTab(currentOrderTab);
     }
     document.addEventListener('DOMContentLoaded', refreshAll);
     setInterval(() => { fetchTicker(); fetchKline(); fetchOrderBook(); }, 10000);
     setInterval(fetchPeriodChanges, 60000);
     window.addEventListener('resize', () => myChart.resize());
 
-    // 暴露全局函数
     window.selectPair = selectPair;
     window.closePairModal = closePairModal;
     window.filterPairList = filterPairList;
