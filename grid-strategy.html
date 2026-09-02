@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-    <title>网格策略积分交易系统</title>
+    <title>积分网格策略交易系统</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* 保留原有样式，略作调整 */
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #0a0a0f; color: #e8e8f0; min-height: 100vh; overflow-y: auto; touch-action: manipulation; }
         ::-webkit-scrollbar { width: 3px; } ::-webkit-scrollbar-track { background: transparent; } ::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 4px; }
@@ -59,7 +58,7 @@
         .period-stat-value { font-size: 10px; font-weight: 600; }
         .period-stat-value.green { color: #10b981; }
         .period-stat-value.red { color: #ef4444; }
-        /* 弹窗样式保持不变 */
+        /* 弹窗样式 */
         .params-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000; display: none; align-items: center; justify-content: center; }
         .params-modal-overlay.show { display: flex; }
         .params-modal { background: #12121f; border: 1px solid #1a1a2a; border-radius: 16px; padding: 20px; width: 90%; max-width: 360px; }
@@ -106,6 +105,10 @@
         .strategy-knowledge-panel .highlight-box { background: #1a2a3a; border: 1px solid #2a3a4a; border-radius: 8px; padding: 10px; margin: 10px 0; }
         .strategy-knowledge-panel .highlight-box strong { color: #60a5fa; }
         @media (max-width: 480px) { .strategy-grid { grid-template-columns: 1fr; } .container { padding: 12px; } }
+        /* 订单表格样式 */
+        .orders-table { width: 100%; border-collapse: collapse; font-size: 11px; color: #9ca3af; }
+        .orders-table th { padding: 6px; text-align: left; border-bottom: 1px solid #2a2a3a; }
+        .orders-table td { padding: 6px; border-bottom: 1px solid #1a1a2a; }
     </style>
 </head>
 <body>
@@ -121,9 +124,7 @@
         <div class="strategy-grid" id="strategyCardsContainer"></div>
     </div>
 
-    <!-- 弹窗：参数设置、日志、交易对选择、策略知识 -->
-    <!-- 略，与之前相同，此处省略以节省空间，实际代码必须包含 -->
-    <!-- 为了保证完整性，将弹窗代码放在下面 -->
+    <!-- 参数设置弹窗 -->
     <div class="params-modal-overlay" id="paramsModalOverlay" onclick="closeParamsModal(event)">
         <div class="params-modal" onclick="event.stopPropagation()">
             <div class="modal-title" id="modalTitle">⚙️ 参数设置</div>
@@ -131,12 +132,14 @@
             <div class="modal-buttons"><button class="btn-cancel" onclick="closeParamsModal()">取消</button><button class="btn-confirm" onclick="saveParams()">保存</button></div>
         </div>
     </div>
+    <!-- 日志弹窗 -->
     <div class="log-modal-overlay" id="logModalOverlay" onclick="closeLogModal(event)">
         <div class="log-modal" onclick="event.stopPropagation()">
             <div class="modal-header"><span class="modal-title" id="logModalTitle">📋 操作日志</span><button class="close-btn" onclick="closeLogModal()">✕</button></div>
             <div class="log-box" id="logBoxContent">暂无日志</div>
         </div>
     </div>
+    <!-- 交易对选择弹窗 -->
     <div class="pair-modal-overlay" id="pairModalOverlay" onclick="closePairModal(event)">
         <div class="pair-modal" onclick="event.stopPropagation()">
             <div class="modal-title" id="pairModalTitle">选择交易对</div>
@@ -148,6 +151,7 @@
             </div>
         </div>
     </div>
+    <!-- 了解策略弹窗 -->
     <div class="strategy-knowledge-overlay" id="strategyKnowledgeOverlay" onclick="closeKnowledgePanel(event)">
         <div class="strategy-knowledge-panel" onclick="event.stopPropagation()">
             <div class="panel-header"><span class="panel-title">📖 网格策略完整知识</span><button class="close-btn" onclick="closeKnowledgePanel()">✕</button></div>
@@ -160,15 +164,29 @@
             <div class="highlight-box"><strong>最优策略：</strong>EMA趋势过滤 + 动态ATR网格 + RSI辅助确认</div>
         </div>
     </div>
+    <!-- 订单记录弹窗 -->
+    <div class="log-modal-overlay" id="ordersModalOverlay" onclick="closeOrdersModal(event)">
+        <div class="log-modal" onclick="event.stopPropagation()">
+            <div class="modal-header"><span class="modal-title" id="ordersModalTitle">📋 订单记录</span><button class="close-btn" onclick="closeOrdersModal()">✕</button></div>
+            <div style="overflow-y:auto; max-height:300px;">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>方向</th><th>交易对</th><th>价格</th><th>数量</th><th>金额(积分)</th><th>盈亏(积分)</th><th>时间</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ordersTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
     <script>
         // ============================================================
         //  积分交易系统配置
         // ============================================================
-        var INITIAL_USDT_POINTS = 100000; // 初始USDT积分
-        var INITIAL_BTC_POINTS = 0;       // 初始BTC积分
-
-        // Gate.io 行情 API
+        var INITIAL_USDT_POINTS = 100000;
+        var INITIAL_BTC_POINTS = 0;
         var GATE_BASE_URL = 'https://api.gateio.ws/api/v4';
 
         var FALLBACK_PRICES = {
@@ -183,7 +201,6 @@
         var pairPrices = {};
         Object.keys(FALLBACK_PRICES).forEach(function(key) { pairPrices[key] = FALLBACK_PRICES[key]; });
 
-        // 策略定义（与之前相同）
         var strategies = [
             { id: 'rsi', icon: '📈', name: 'RSI网格策略', badge: 'RSI', description: '基于RSI超买超卖信号的网格交易', signals: ['超卖买入', '超买卖出', '中性持有'], params: { rsiPeriod: { label: 'RSI周期', value: 14 }, oversold: { label: '超卖阈值', value: 30 }, overbought: { label: '超买阈值', value: 70 }, gridSpacing: { label: '网格间距(%)', value: 2 }, positionSize: { label: '单格仓位(%)', value: 10 } } },
             { id: 'bollinger', icon: '📊', name: '布林带网格策略', badge: 'BOLL', description: '基于布林带上下轨的均值回归网格', signals: ['下轨买入', '上轨卖出', '中轨平仓'], params: { bbPeriod: { label: '布林带周期', value: 20 }, stdDev: { label: '标准差倍数', value: 2 }, gridSpacing: { label: '网格间距(%)', value: 1.5 }, positionSize: { label: '单格仓位(%)', value: 8 } } },
@@ -192,25 +209,23 @@
             { id: 'macd', icon: '📋', name: 'MACD网格策略', badge: 'MACD', description: 'MACD趋势判断+网格执行', signals: ['MACD金叉买入', 'MACD死叉卖出', '柱状图缩量'], params: { fastPeriod: { label: '快线周期', value: 12 }, slowPeriod: { label: '慢线周期', value: 26 }, signalPeriod: { label: '信号周期', value: 9 }, gridSpacing: { label: '网格间距(%)', value: 2 }, positionSize: { label: '单格仓位(%)', value: 10 } } },
             { id: 'multi', icon: '🔄', name: '多周期网格策略', badge: 'MULTI', description: '多重时间框架+网格交易', signals: ['4H趋势判断', '1H网格区间', '15M执行'], params: { trendPeriod: { label: '趋势周期(小时)', value: 4 }, gridPeriod: { label: '网格周期(分钟)', value: 15 }, gridSpacing: { label: '网格间距(%)', value: 1.5 }, positionSize: { label: '单格仓位(%)', value: 8 }, maxPositions: { label: '最大持仓(%)', value: 60 } } }
         ];
-
-        // 添加网格上下限和层数
         strategies.forEach(function(s) {
             s.params.gridUpper = { label: '网格上限', value: 70000 };
             s.params.gridLower = { label: '网格下限', value: 60000 };
             s.params.gridLevels = { label: '网格层数', value: 10 };
         });
 
-        // 策略状态（积分系统）
         var strategyStates = {};
         strategies.forEach(function(s) {
             strategyStates[s.id] = {
                 running: false,
-                usdtPoints: INITIAL_USDT_POINTS,   // USDT积分
-                btcPoints: INITIAL_BTC_POINTS,     // BTC积分
+                usdtPoints: INITIAL_USDT_POINTS,
+                btcPoints: INITIAL_BTC_POINTS,
                 interval: null,
                 params: JSON.parse(JSON.stringify(s.params)),
                 currentPair: 'BTC/USDT',
                 logs: [],
+                orders: [],
                 totalTrades: 0,
                 winTrades: 0,
                 lossTrades: 0,
@@ -220,7 +235,6 @@
                 lastPrice: 0,
                 gridLevel: 0,
                 lastBuyPrice: 0,
-                // 周期盈亏统计（积分）
                 periodStats: {
                     '1d': { pnl: 0, trades: 0, lastReset: Date.now() },
                     '1w': { pnl: 0, trades: 0, lastReset: Date.now() },
@@ -234,46 +248,26 @@
         var currentEditingStrategy = null;
         var currentPairSelectStrategy = null;
 
-        // ============================================================
-        //  Gate.io API 获取真实行情
-        // ============================================================
         function fetchGatePrice(pair) {
             return new Promise(function(resolve, reject) {
                 var gatePair = pair.replace('/', '_');
                 var controller = new AbortController();
                 var timer = setTimeout(function() { controller.abort(); reject(new Error('timeout')); }, 5000);
-                fetch(GATE_BASE_URL + '/spot/tickers?currency_pair=' + gatePair, {
-                    signal: controller.signal,
-                    cache: 'no-store'
-                })
-                .then(function(res) {
-                    if (!res.ok) throw new Error('HTTP ' + res.status);
-                    return res.json();
-                })
+                fetch(GATE_BASE_URL + '/spot/tickers?currency_pair=' + gatePair, { signal: controller.signal, cache: 'no-store' })
+                .then(function(res) { if (!res.ok) throw new Error('HTTP ' + res.status); return res.json(); })
                 .then(function(data) {
                     clearTimeout(timer);
-                    if (data && data.length > 0 && data[0].last) {
-                        resolve(parseFloat(data[0].last));
-                    } else {
-                        reject(new Error('empty'));
-                    }
+                    if (data && data.length > 0 && data[0].last) resolve(parseFloat(data[0].last));
+                    else reject(new Error('empty'));
                 })
-                .catch(function(err) {
-                    clearTimeout(timer);
-                    reject(err);
-                });
+                .catch(function(err) { clearTimeout(timer); reject(err); });
             });
         }
 
         function fetchAllPrices() {
             var pairs = availablePairs.slice();
             var promises = pairs.map(function(pair) {
-                return fetchGatePrice(pair)
-                    .then(function(price) {
-                        pairPrices[pair] = price;
-                        return true;
-                    })
-                    .catch(function() { return false; });
+                return fetchGatePrice(pair).then(function(price) { pairPrices[pair] = price; return true; }).catch(function() { return false; });
             });
             Promise.allSettled(promises).then(function() {
                 document.getElementById('apiStatus').textContent = '📡 Gate.io 行情已更新 (' + new Date().toLocaleTimeString() + ')';
@@ -284,15 +278,10 @@
 
         function updateRunningStrategies() {
             strategies.forEach(function(s) {
-                if (strategyStates[s.id].running && pairPrices[strategyStates[s.id].currentPair]) {
-                    checkGridAndTrade(s.id);
-                }
+                if (strategyStates[s.id].running && pairPrices[strategyStates[s.id].currentPair]) checkGridAndTrade(s.id);
             });
         }
 
-        // ============================================================
-        //  周期盈亏统计（积分）
-        // ============================================================
         function updatePeriodStats(state, pnlChange) {
             var now = Date.now();
             var periods = { '1d': 86400000, '1w': 604800000, '1m': 2592000000 };
@@ -309,9 +298,6 @@
             });
         }
 
-        // ============================================================
-        //  网格交易核心（使用积分）
-        // ============================================================
         function checkGridAndTrade(strategyId) {
             var state = strategyStates[strategyId];
             var currentPrice = pairPrices[state.currentPair];
@@ -325,18 +311,11 @@
             if (gridStep <= 0) return;
             if (currentPrice <= lower || currentPrice >= upper) return;
             var level = Math.floor((currentPrice - lower) / gridStep);
-            if (state.lastPrice === 0) {
-                state.lastPrice = currentPrice;
-                state.gridLevel = level;
-                return;
-            }
+            if (state.lastPrice === 0) { state.lastPrice = currentPrice; state.gridLevel = level; return; }
             var prevLevel = state.gridLevel;
             if (level !== prevLevel) {
-                if (level < prevLevel) {
-                    executeBuy(strategyId, currentPrice);
-                } else {
-                    executeSell(strategyId, currentPrice);
-                }
+                if (level < prevLevel) executeBuy(strategyId, currentPrice);
+                else executeSell(strategyId, currentPrice);
                 state.gridLevel = level;
             }
             state.lastPrice = currentPrice;
@@ -353,6 +332,11 @@
             state.usdtPoints -= buyAmountPoints;
             state.totalTrades++;
             state.lastBuyPrice = price;
+            state.orders.push({
+                id: 'ORD' + Date.now() + Math.random().toString(36).substr(2, 4),
+                side: 'buy', pair: state.currentPair, price: price, quantity: quantity,
+                amountPoints: buyAmountPoints, pnl: 0, timestamp: Date.now()
+            });
             var totalValue = state.usdtPoints + state.btcPoints * price;
             if (totalValue > state.peakValue) state.peakValue = totalValue;
             addLog(strategyId, '📈 买入 ' + quantity.toFixed(6) + ' BTC积分 @ $' + price.toFixed(2) + '，消耗 USDT积分 ' + buyAmountPoints.toFixed(2));
@@ -368,23 +352,20 @@
             state.usdtPoints += sellAmountPoints;
             state.totalTrades++;
             var pnlChange = 0;
-            if (state.lastBuyPrice && price > state.lastBuyPrice) {
-                state.winTrades++;
-                pnlChange = (price - state.lastBuyPrice) * sellQuantity;
-            } else {
-                state.lossTrades++;
-                pnlChange = (price - state.lastBuyPrice) * sellQuantity;
-            }
+            if (state.lastBuyPrice && price > state.lastBuyPrice) { state.winTrades++; pnlChange = (price - state.lastBuyPrice) * sellQuantity; }
+            else { state.lossTrades++; pnlChange = (price - state.lastBuyPrice) * sellQuantity; }
+            state.orders.push({
+                id: 'ORD' + Date.now() + Math.random().toString(36).substr(2, 4),
+                side: 'sell', pair: state.currentPair, price: price, quantity: sellQuantity,
+                amountPoints: sellAmountPoints, pnl: pnlChange, timestamp: Date.now()
+            });
             updatePeriodStats(state, pnlChange);
             state.currentPeriodPnl += pnlChange;
             var totalValue = state.usdtPoints + state.btcPoints * price;
             if (totalValue > state.peakValue) state.peakValue = totalValue;
-            addLog(strategyId, '📉 卖出 ' + sellQuantity.toFixed(6) + ' BTC积分 @ $' + price.toFixed(2) + '，获得 USDT积分 ' + sellAmountPoints.toFixed(2) + '，盈亏 ' + (pnlChange >= 0 ? '+' : '') + pnlChange.toFixed(2) + ' USDT积分');
+            addLog(strategyId, '📉 卖出 ' + sellQuantity.toFixed(6) + ' BTC积分 @ $' + price.toFixed(2) + '，盈亏 ' + (pnlChange >= 0 ? '+' : '') + pnlChange.toFixed(2) + ' USDT积分');
         }
 
-        // ============================================================
-        //  状态持久化
-        // ============================================================
         function saveStates() {
             try {
                 var data = {};
@@ -392,7 +373,7 @@
                     var s = strategyStates[id];
                     data[id] = {
                         running: s.running, usdtPoints: s.usdtPoints, btcPoints: s.btcPoints,
-                        params: s.params, currentPair: s.currentPair, logs: s.logs,
+                        params: s.params, currentPair: s.currentPair, logs: s.logs, orders: s.orders,
                         totalTrades: s.totalTrades, winTrades: s.winTrades, lossTrades: s.lossTrades,
                         maxDrawdown: s.maxDrawdown, peakValue: s.peakValue, initialValue: s.initialValue,
                         lastPrice: s.lastPrice, gridLevel: s.gridLevel, lastBuyPrice: s.lastBuyPrice || 0,
@@ -422,6 +403,7 @@
                         }
                         s.currentPair = d.currentPair || 'BTC/USDT';
                         s.logs = d.logs || [];
+                        s.orders = d.orders || [];
                         s.totalTrades = d.totalTrades || 0;
                         s.winTrades = d.winTrades || 0;
                         s.lossTrades = d.lossTrades || 0;
@@ -434,16 +416,12 @@
                         if (d.periodStats) {
                             var required = ['1d','1w','1m','all'];
                             required.forEach(function(k) {
-                                if (!d.periodStats[k]) {
-                                    d.periodStats[k] = (k === 'all') ? { pnl: 0, trades: 0 } : { pnl: 0, trades: 0, lastReset: Date.now() };
-                                }
+                                if (!d.periodStats[k]) d.periodStats[k] = (k === 'all') ? { pnl: 0, trades: 0 } : { pnl: 0, trades: 0, lastReset: Date.now() };
                             });
                             s.periodStats = d.periodStats;
                         }
                         if (d.currentPeriodPnl !== undefined) s.currentPeriodPnl = d.currentPeriodPnl;
-                        if (s.running) {
-                            s.interval = setInterval(function() { checkGridAndTrade(id); }, 5000);
-                        }
+                        if (s.running) s.interval = setInterval(function() { checkGridAndTrade(id); }, 5000);
                     }
                 });
             } catch(e) { console.error('加载状态失败', e); }
@@ -467,9 +445,6 @@
             return pnl;
         }
 
-        // ============================================================
-        //  渲染策略卡片（显示积分）
-        // ============================================================
         function renderStrategyCards() {
             var container = document.getElementById('strategyCardsContainer');
             if (!container) return;
@@ -499,8 +474,6 @@
                         toggleClass = 'running';
                     }
                     var assetSymbol = state.currentPair.split('/')[0] || 'BTC';
-                    
-                    // 周期统计HTML（积分）
                     var periodHtml = '';
                     var periodKeys = ['1d','1w','1m','all'];
                     var periodLabels = { '1d': '1天', '1w': '1周', '1m': '1月', 'all': '累计' };
@@ -510,7 +483,6 @@
                         var cls = ps.pnl >= 0 ? 'green' : 'red';
                         periodHtml += '<div class="period-stat-item"><div class="period-stat-label">' + periodLabels[key] + '</div><div class="period-stat-value ' + cls + '">' + (ps.pnl >= 0 ? '+' : '') + ps.pnl.toFixed(2) + '</div></div>';
                     });
-                    
                     html += '<div class="strategy-card ' + (state.running ? 'running' : '') + '">';
                     html += '<div class="card-header">';
                     html += '<div style="display:flex;align-items:center;gap:8px;">';
@@ -532,6 +504,7 @@
                     html += '<div class="status-row">';
                     html += '<div class="status-left"><span class="status-dot ' + dotClass + '"></span><span>' + statusText + '</span></div>';
                     html += '<span class="log-link" onclick="openLogModal(\'' + strategy.id + '\')">📋 查看日志</span>';
+                    html += '<span class="log-link" onclick="openOrdersModal(\'' + strategy.id + '\')" style="margin-left:8px;">📋 订单记录</span>';
                     html += '</div>';
                     html += '<div class="period-stats">' + periodHtml + '</div>';
                     html += '<div class="account-info">';
@@ -550,17 +523,12 @@
                     html += '</div>';
                     html += '<button class="btn-params" onclick="openParamsModal(\'' + strategy.id + '\')">⚙️ 参数设置</button>';
                     html += '</div>';
-                } catch(e) {
-                    console.error('渲染策略卡片失败:', strategy.id, e);
-                }
+                } catch(e) { console.error('渲染策略卡片失败:', strategy.id, e); }
             });
             container.innerHTML = html;
             saveStates();
         }
 
-        // ============================================================
-        //  交易对选择相关（与之前相同）
-        // ============================================================
         function openPairModal(strategyId) {
             currentPairSelectStrategy = strategyId;
             var strategy = strategies.find(function(s) { return s.id === strategyId; });
@@ -594,10 +562,7 @@
             addLog(currentPairSelectStrategy, '切换交易对至 ' + pair);
             closePairModal();
             renderStrategyCards();
-            fetchGatePrice(pair).then(function(price) {
-                pairPrices[pair] = price;
-                renderStrategyCards();
-            }).catch(function() {});
+            fetchGatePrice(pair).then(function(price) { pairPrices[pair] = price; renderStrategyCards(); }).catch(function() {});
         }
         function handleNewPairKeydown(event) { if (event.key === 'Enter') addNewPair(); }
         function addNewPair() {
@@ -607,13 +572,7 @@
             if (!newPair.includes('/')) { alert('请输入正确格式，如: ATOM/USDT'); return; }
             if (availablePairs.indexOf(newPair) !== -1) { alert('该交易对已存在'); input.value = ''; return; }
             availablePairs.push(newPair);
-            fetchGatePrice(newPair).then(function(price) {
-                pairPrices[newPair] = price;
-                renderPairList(document.getElementById('pairSearchInput').value);
-            }).catch(function() {
-                pairPrices[newPair] = Math.random() * 100 + 1;
-                renderPairList(document.getElementById('pairSearchInput').value);
-            });
+            fetchGatePrice(newPair).then(function(price) { pairPrices[newPair] = price; renderPairList(document.getElementById('pairSearchInput').value); }).catch(function() { pairPrices[newPair] = Math.random() * 100 + 1; renderPairList(document.getElementById('pairSearchInput').value); });
             input.value = '';
             if (currentPairSelectStrategy) addLog(currentPairSelectStrategy, '新增交易对: ' + newPair);
         }
@@ -626,9 +585,6 @@
             alert('✅ 交易对 ' + state.currentPair + ' 已保存');
         }
 
-        // ============================================================
-        //  策略控制
-        // ============================================================
         function toggleStrategy(id) {
             var state = strategyStates[id];
             if (state.running) {
@@ -662,6 +618,7 @@
             state.gridLevel = 0;
             state.lastBuyPrice = 0;
             state.currentPeriodPnl = 0;
+            state.orders = [];
             var now = Date.now();
             state.periodStats = {
                 '1d': { pnl: 0, trades: 0, lastReset: now },
@@ -673,9 +630,6 @@
             renderStrategyCards();
         }
 
-        // ============================================================
-        //  日志
-        // ============================================================
         function openLogModal(id) {
             var state = strategyStates[id];
             var strategy = strategies.find(function(s) { return s.id === id; });
@@ -685,9 +639,39 @@
         }
         function closeLogModal(e) { if (e && e.target !== e.currentTarget) return; document.getElementById('logModalOverlay').classList.remove('show'); }
 
-        // ============================================================
-        //  参数设置
-        // ============================================================
+        function openOrdersModal(id) {
+            var state = strategyStates[id];
+            var strategy = strategies.find(function(s) { return s.id === id; });
+            document.getElementById('ordersModalTitle').textContent = '📋 ' + strategy.name + ' - 订单记录';
+            var tbody = document.getElementById('ordersTableBody');
+            if (!state.orders || state.orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:#5a5a6a;">暂无订单记录</td></tr>';
+            } else {
+                var html = '';
+                for (var i = state.orders.length - 1; i >= 0; i--) {
+                    var o = state.orders[i];
+                    var d = new Date(o.timestamp);
+                    var timeStr = d.toLocaleTimeString();
+                    var sideColor = o.side === 'buy' ? '#10b981' : '#ef4444';
+                    var sideText = o.side === 'buy' ? '买入' : '卖出';
+                    var pnlCls = o.pnl >= 0 ? 'color:#10b981;' : 'color:#ef4444;';
+                    var pnlText = o.pnl >= 0 ? '+' + o.pnl.toFixed(2) : o.pnl.toFixed(2);
+                    html += '<tr style="border-bottom:1px solid #1a1a2a;">';
+                    html += '<td style="padding:6px; color:' + sideColor + ';">' + sideText + '</td>';
+                    html += '<td style="padding:6px;">' + o.pair + '</td>';
+                    html += '<td style="padding:6px; text-align:right;">$' + o.price.toFixed(2) + '</td>';
+                    html += '<td style="padding:6px; text-align:right;">' + o.quantity.toFixed(6) + '</td>';
+                    html += '<td style="padding:6px; text-align:right;">' + o.amountPoints.toFixed(2) + '</td>';
+                    html += '<td style="padding:6px; text-align:right; ' + pnlCls + '">' + pnlText + '</td>';
+                    html += '<td style="padding:6px; text-align:right;">' + timeStr + '</td>';
+                    html += '</tr>';
+                }
+                tbody.innerHTML = html;
+            }
+            document.getElementById('ordersModalOverlay').classList.add('show');
+        }
+        function closeOrdersModal(e) { if (e && e.target !== e.currentTarget) return; document.getElementById('ordersModalOverlay').classList.remove('show'); }
+
         function openParamsModal(id) {
             currentEditingStrategy = id;
             var state = strategyStates[id];
@@ -717,15 +701,9 @@
             renderStrategyCards();
         }
 
-        // ============================================================
-        //  了解策略
-        // ============================================================
         function openKnowledgePanel() { document.getElementById('strategyKnowledgeOverlay').classList.add('show'); document.body.style.overflow = 'hidden'; }
         function closeKnowledgePanel(e) { if (e && e.target !== e.currentTarget) return; document.getElementById('strategyKnowledgeOverlay').classList.remove('show'); document.body.style.overflow = ''; }
 
-        // ============================================================
-        //  初始化
-        // ============================================================
         document.addEventListener('DOMContentLoaded', function() {
             loadStates();
             renderStrategyCards();
@@ -736,11 +714,14 @@
             document.getElementById('logModalOverlay').addEventListener('click', function(e) { if (e.target === this) closeLogModal(); });
             document.getElementById('pairModalOverlay').addEventListener('click', function(e) { if (e.target === this) closePairModal(); });
             document.getElementById('strategyKnowledgeOverlay').addEventListener('click', function(e) { if (e.target === this) closeKnowledgePanel(); });
+            document.getElementById('ordersModalOverlay').addEventListener('click', function(e) { if (e.target === this) closeOrdersModal(); });
 
             window.toggleStrategy = toggleStrategy;
             window.resetStrategy = resetStrategy;
             window.openLogModal = openLogModal;
             window.closeLogModal = closeLogModal;
+            window.openOrdersModal = openOrdersModal;
+            window.closeOrdersModal = closeOrdersModal;
             window.openParamsModal = openParamsModal;
             window.closeParamsModal = closeParamsModal;
             window.saveParams = saveParams;
