@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>RSI网格策略 - 独立策略</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+        body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0a0a0f; color:#e8e8f0; min-height:100vh; padding:20px; }
+        .container { max-width:900px; margin:0 auto; }
+        .header { display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; }
+        .back-btn { background:transparent; border:none; color:#8a8a9a; font-size:24px; cursor:pointer; text-decoration:none; }
+        .title { font-size:20px; font-weight:700; color:#60a5fa; }
+        .chart-container { background:#12121f; border:1px solid #1a1a2a; border-radius:16px; padding:16px; margin-bottom:16px; }
+        .chart-box { position:relative; height:350px; }
+        .controls { display:flex; gap:10px; margin-bottom:16px; }
+        .btn { flex:1; padding:10px 15px; border:none; border-radius:8px; font-weight:600; cursor:pointer; }
+        .btn-start { background:#3b82f6; color:#fff; }
+        .btn-start.running { background:#f59e0b; color:#0a0a0f; }
+        .btn-params { background:#1a1a2a; color:#8a8a9a; }
+        .btn-reset { background:#1a1a2a; color:#8a8a9a; }
+        .info-row { display:flex; justify-content:space-between; font-size:13px; margin-bottom:5px; }
+        .info-label { color:#6a6a7a; }
+        .info-value { color:#e8e8f0; font-weight:600; }
+        .orders-table { width:100%; border-collapse:collapse; font-size:12px; }
+        .orders-table th,.orders-table td { padding:8px; text-align:left; border-bottom:1px solid #1a1a2a; }
+        .orders-table th { color:#6a6a7a; }
+        .profit { color:#10b981; }
+        .loss { color:#ef4444; }
+        .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:1000; align-items:center; justify-content:center; }
+        .modal.show { display:flex; }
+        .modal-content { background:#12121f; border:1px solid #2a2a3a; border-radius:16px; padding:20px; width:90%; max-width:400px; }
+        .modal-content h3 { color:#60a5fa; text-align:center; margin-bottom:15px; }
+        .modal-content input { width:100%; background:#0a0a12; border:1px solid #2a2a3a; border-radius:6px; padding:8px; color:#fff; margin-bottom:10px; }
+        .modal-buttons { display:flex; gap:10px; }
+        .modal-buttons button { flex:1; padding:10px; border:none; border-radius:6px; cursor:pointer; }
+        .btn-confirm { background:#3b82f6; color:#fff; }
+        .btn-cancel { background:#1a1a2a; color:#8a8a9a; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <a class="back-btn" href="javascript:history.back()">←</a>
+        <div class="title">📈 RSI网格策略</div>
+        <div style="width:24px;"></div>
+    </div>
+    <div class="chart-container">
+        <div class="chart-box"><canvas id="priceChart"></canvas></div>
+    </div>
+    <div class="controls">
+        <button class="btn btn-start" id="btnToggle">▶ 启动</button>
+        <button class="btn btn-params" id="btnParams">⚙️ 参数</button>
+        <button class="btn btn-reset" id="btnReset">🔄 撤销</button>
+    </div>
+    <div id="infoPanel"></div>
+    <h3 style="margin:15px 0 10px; color:#60a5fa;">订单记录</h3>
+    <div style="max-height:250px; overflow-y:auto;">
+        <table class="orders-table">
+            <thead><tr><th>方向</th><th>价格</th><th>数量</th><th>盈亏</th><th>时间</th></tr></thead>
+            <tbody id="ordersBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 参数弹窗 -->
+<div class="modal" id="paramsModal">
+    <div class="modal-content">
+        <h3>参数设置</h3>
+        <div id="paramsInputs"></div>
+        <div class="modal-buttons">
+            <button class="btn-cancel" id="btnCancelParams">取消</button>
+            <button class="btn-confirm" id="btnSaveParams">保存</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ================= 策略配置（RSI） =================
+    const STRATEGY_ID = 'rsi';
+    const STRATEGY_NAME = 'RSI网格策略';
+    const STRATEGY_ICON = '📈';
+    const STRATEGY_DESC = '基于RSI超买超卖信号的网格交易';
+    // 默认参数
+    const DEFAULT_PARAMS = {
+        rsiPeriod: { label: 'RSI周期', value: 14 },
+        oversold: { label: '超卖阈值', value: 30 },
+        overbought: { label: '超买阈值', value: 70 },
+        gridSpacing: { label: '网格间距(%每格)', value: 2 },
+        positionSize: { label: '单格仓位(%)', value: 10 },
+        gridUpper: { label: '网格上限', value: 70000 },
+        gridLower: { label: '网格下限', value: 60000 },
+        gridLevels: { label: '最大网格层数', value: 10 }
+    };
+
+    // ================= 全局状态 =================
+    const INITIAL_USDT = 100000;
+    const INITIAL_BTC = 0;
+    const GATE_BASE = 'https://api.gateio.ws/api/v4';
+    const FALLBACK_PRICES = {
+        'BTC/USDT': 65432.10, 'ETH/USDT': 3456.78, 'SOL/USDT': 187.50, 'BNB/USDT': 598.20,
+        'XRP/USDT': 0.612, 'ADA/USDT': 0.456, 'DOT/USDT': 7.89, 'AVAX/USDT': 38.76,
+        'LINK/USDT': 16.45, 'UNI/USDT': 8.92, 'ATOM/USDT': 9.87, 'LTC/USDT': 72.34,
+        'BCH/USDT': 345.67, 'FIL/USDT': 5.67, 'APT/USDT': 12.34, 'SUI/USDT': 1.89,
+        'NEAR/USDT': 5.67, 'OP/USDT': 2.34, 'ARB/USDT': 1.56, 'MATIC/USDT': 0.78,
+        'DOGE/USDT': 0.156, 'SHIB/USDT': 0.0000234, 'TRX/USDT': 0.234, 'ETC/USDT': 23.45
+    };
+    let availablePairs = Object.keys(FALLBACK_PRICES);
+    let pairPrices = {...FALLBACK_PRICES};
+
+    let state = {
+        running: false,
+        usdt: INITIAL_USDT,
+        btc: INITIAL_BTC,
+        currentPair: 'BTC/USDT',
+        params: JSON.parse(JSON.stringify(DEFAULT_PARAMS)),
+        logs: [],
+        orders: [],
+        totalTrades: 0,
+        winTrades: 0,
+        lossTrades: 0,
+        lastPrice: 0,
+        gridLevel: 0,
+        lastBuyPrice: 0,
+        priceHistory: [],           // 保留最多500个价格点用于图表
+        indicatorState: {}          // RSI无需预计算状态
+    };
+
+    // ================= 指标计算函数 =================
+    function calculateRSI(prices, period) {
+        if (prices.length < period + 1) return null;
+        let gains = 0, losses = 0;
+        for (let i = prices.length - period; i < prices.length; i++) {
+            const diff = prices[i] - prices[i-1];
+            if (diff >= 0) gains += diff; else losses -= diff;
+        }
+        if (losses === 0) return 100;
+        const rs = gains / losses;
+        return 100 - (100 / (1 + rs));
+    }
+
+    function shouldBuy(price) {
+        const rsi = calculateRSI(state.priceHistory, state.params.rsiPeriod.value);
+        return rsi !== null && rsi < state.params.oversold.value;
+    }
+
+    function shouldSell(price) {
+        const rsi = calculateRSI(state.priceHistory, state.params.rsiPeriod.value);
+        return rsi !== null && rsi > state.params.overbought.value;
+    }
+
+    // ================= 网格计算 =================
+    function calculateGridLevels() {
+        const upper = state.params.gridUpper.value, lower = state.params.gridLower.value;
+        const spacingPercent = state.params.gridSpacing.value;
+        const maxLevels = state.params.gridLevels.value;
+        if (upper <= lower || spacingPercent <= 0) return 0;
+        let levels = Math.floor(Math.log(upper / lower) / Math.log(1 + spacingPercent / 100));
+        if (levels < 1) levels = 1;
+        if (maxLevels > 0 && levels > maxLevels) levels = maxLevels;
+        return levels;
+    }
+
+    // ================= 交易执行 =================
+    function executeBuy(price) {
+        const posSize = state.params.positionSize.value / 100;
+        const amountUsdt = state.usdt * posSize;
+        if (amountUsdt < 10) return;
+        const qty = amountUsdt / price;
+        state.btc += qty;
+        state.usdt -= amountUsdt;
+        state.totalTrades++;
+        state.lastBuyPrice = price;
+        state.orders.push({ side: 'buy', price, quantity: qty, pnl: 0, timestamp: Date.now() });
+    }
+    function executeSell(price) {
+        if (state.btc <= 0.000001) return;
+        const qty = state.btc * (state.params.positionSize.value / 100);
+        const amountUsdt = qty * price;
+        state.btc -= qty;
+        state.usdt += amountUsdt;
+        state.totalTrades++;
+        let pnl = 0;
+        if (state.lastBuyPrice && price > state.lastBuyPrice) { state.winTrades++; pnl = (price - state.lastBuyPrice) * qty; }
+        else { state.lossTrades++; pnl = (price - state.lastBuyPrice) * qty; }
+        state.orders.push({ side: 'sell', price, quantity: qty, pnl, timestamp: Date.now() });
+    }
+
+    // ================= 行情获取 =================
+    async function fetchPrice(pair) {
+        const gatePair = pair.replace('/', '_');
+        try {
+            const res = await fetch(`${GATE_BASE}/spot/tickers?currency_pair=${gatePair}`, { cache: 'no-store' });
+            if (!res.ok) throw new Error();
+            const data = await res.json();
+            if (data.length > 0 && data[0].last) return parseFloat(data[0].last);
+        } catch (e) {}
+        return FALLBACK_PRICES[pair] || null;
+    }
+
+    async function updatePrices() {
+        const price = await fetchPrice(state.currentPair);
+        if (price) {
+            pairPrices[state.currentPair] = price;
+            state.priceHistory.push(price);
+            if (state.priceHistory.length > 500) state.priceHistory.shift();
+            if (state.running) {
+                checkGridAndTrade(price);
+            }
+            updateUI(price);
+            updateChart();
+        }
+    }
+
+    function checkGridAndTrade(currentPrice) {
+        const levels = calculateGridLevels();
+        if (levels <= 0) return;
+        const upper = state.params.gridUpper.value, lower = state.params.gridLower.value;
+        const gridStep = (upper - lower) / levels;
+        if (currentPrice <= lower || currentPrice >= upper) return;
+        const level = Math.floor((currentPrice - lower) / gridStep);
+        if (state.lastPrice === 0) { state.lastPrice = currentPrice; state.gridLevel = level; return; }
+        const prevLevel = state.gridLevel;
+        if (level !== prevLevel) {
+            if (level < prevLevel && shouldBuy(currentPrice)) executeBuy(currentPrice);
+            else if (level > prevLevel && shouldSell(currentPrice)) executeSell(currentPrice);
+            state.gridLevel = level;
+        }
+        state.lastPrice = currentPrice;
+    }
+
+    // ================= UI更新 =================
+    function updateUI(price) {
+        const totalValue = state.usdt + state.btc * price;
+        const pnl = totalValue - INITIAL_USDT;
+        const winRate = (state.winTrades + state.lossTrades) > 0 ? (state.winTrades / (state.winTrades + state.lossTrades) * 100).toFixed(1) : '0';
+        document.getElementById('infoPanel').innerHTML = `
+            <div class="info-row"><span class="info-label">交易对</span><span class="info-value">${state.currentPair}</span></div>
+            <div class="info-row"><span class="info-label">当前价格</span><span class="info-value">$${price.toFixed(2)}</span></div>
+            <div class="info-row"><span class="info-label">USDT积分</span><span class="info-value">${state.usdt.toFixed(2)}</span></div>
+            <div class="info-row"><span class="info-label">BTC积分</span><span class="info-value">${state.btc.toFixed(8)}</span></div>
+            <div class="info-row"><span class="info-label">总资产</span><span class="info-value">$${totalValue.toFixed(2)}</span></div>
+            <div class="info-row"><span class="info-label">收益率</span><span class="info-value" style="color:${pnl>=0?'#10b981':'#ef4444'}">${(pnl/INITIAL_USDT*100).toFixed(2)}%</span></div>
+            <div class="info-row"><span class="info-label">交易次数</span><span class="info-value">${state.totalTrades}</span></div>
+            <div class="info-row"><span class="info-label">胜率</span><span class="info-value">${winRate}%</span></div>
+        `;
+        const tbody = document.getElementById('ordersBody');
+        if (state.orders.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#5a5a6a;">暂无订单</td></tr>';
+        } else {
+            let html = '';
+            for (let i = state.orders.length - 1; i >= 0; i--) {
+                const o = state.orders[i];
+                const sideText = o.side === 'buy' ? '买入' : '卖出';
+                const pnlText = o.pnl !== 0 ? (o.pnl >= 0 ? '+' + o.pnl.toFixed(2) : o.pnl.toFixed(2)) : '—';
+                html += `<tr>
+                    <td style="color:${o.side==='buy'?'#10b981':'#ef4444'}">${sideText}</td>
+                    <td>$${o.price.toFixed(2)}</td>
+                    <td>${o.quantity.toFixed(6)}</td>
+                    <td class="${o.pnl>=0?'profit':'loss'}">${pnlText}</td>
+                    <td>${new Date(o.timestamp).toLocaleTimeString()}</td>
+                </tr>`;
+            }
+            tbody.innerHTML = html;
+        }
+    }
+
+    // ================= 图表 =================
+    let chart;
+    function initChart() {
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const levels = calculateGridLevels();
+        const upper = state.params.gridUpper.value, lower = state.params.gridLower.value;
+        const gridStep = (upper - lower) / levels;
+        const gridLines = {};
+        for (let i = 0; i <= levels; i++) {
+            const price = lower + i * gridStep;
+            gridLines[`line${i}`] = {
+                type: 'line',
+                yMin: price,
+                yMax: price,
+                borderColor: 'rgba(96,165,250,0.3)',
+                borderWidth: 1,
+                borderDash: [5,5],
+                label: { display: false }
+            };
+        }
+        chart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [
+                    { label: '价格', data: [], borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, pointRadius: 0, tension: 0.1 },
+                    { label: '买入', data: [], backgroundColor: '#10b981', pointRadius: 5, pointStyle: 'triangle', showLine: false },
+                    { label: '卖出', data: [], backgroundColor: '#ef4444', pointRadius: 5, pointStyle: 'triangle', rotation: 180, showLine: false }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { x: { display: false }, y: { ticks: { color: '#9ca3af' }, grid: { color: '#1a1a2a' } } },
+                plugins: {
+                    legend: { labels: { color: '#9ca3af' } },
+                    annotation: { annotations: gridLines }
+                }
+            },
+            plugins: [ChartAnnotation]
+        });
+    }
+
+    function updateChart() {
+        if (!chart) return;
+        const history = state.priceHistory.slice(-100);
+        chart.data.labels = history.map((_, i) => i);
+        chart.data.datasets[0].data = history;
+
+        const buyPoints = [], sellPoints = [];
+        state.orders.forEach(o => {
+            const idx = state.priceHistory.indexOf(o.price);
+            if (idx !== -1) {
+                if (o.side === 'buy') buyPoints.push({ x: idx, y: o.price });
+                else sellPoints.push({ x: idx, y: o.price });
+            }
+        });
+        chart.data.datasets[1].data = buyPoints;
+        chart.data.datasets[2].data = sellPoints;
+
+        // 高亮待触发网格线
+        const levels = calculateGridLevels();
+        const upper = state.params.gridUpper.value, lower = state.params.gridLower.value;
+        const gridStep = (upper - lower) / levels;
+        const currentPrice = state.priceHistory[state.priceHistory.length-1];
+        const currentLevel = Math.floor((currentPrice - lower) / gridStep);
+        const nextLowerPrice = lower + currentLevel * gridStep;
+        const nextUpperPrice = nextLowerPrice + gridStep;
+        const distanceToLower = currentPrice - nextLowerPrice;
+        const distanceToUpper = nextUpperPrice - currentPrice;
+        const threshold = gridStep * 0.1;
+        // 重置所有网格线颜色
+        Object.keys(chart.options.plugins.annotation.annotations).forEach(key => {
+            const ann = chart.options.plugins.annotation.annotations[key];
+            if (ann.type === 'line') {
+                ann.borderColor = 'rgba(96,165,250,0.3)';
+                ann.borderWidth = 1;
+            }
+        });
+        if (distanceToLower < threshold) {
+            const lineKey = `line${currentLevel}`;
+            chart.options.plugins.annotation.annotations[lineKey].borderColor = '#f59e0b';
+            chart.options.plugins.annotation.annotations[lineKey].borderWidth = 2;
+        }
+        if (distanceToUpper < threshold) {
+            const lineKey = `line${currentLevel+1}`;
+            chart.options.plugins.annotation.annotations[lineKey].borderColor = '#f59e0b';
+            chart.options.plugins.annotation.annotations[lineKey].borderWidth = 2;
+        }
+        chart.update();
+    }
+
+    // ================= 交互 =================
+    let updateInterval = null;
+    document.getElementById('btnToggle').addEventListener('click', function() {
+        state.running = !state.running;
+        if (state.running) {
+            this.textContent = '⏸ 暂停';
+            this.classList.add('running');
+            state.lastPrice = 0;
+            state.gridLevel = 0;
+            state.priceHistory = [];
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(updatePrices, 5000);
+        } else {
+            this.textContent = '▶ 启动';
+            this.classList.remove('running');
+            if (updateInterval) clearInterval(updateInterval);
+        }
+    });
+    document.getElementById('btnReset').addEventListener('click', function() {
+        state.usdt = INITIAL_USDT;
+        state.btc = INITIAL_BTC;
+        state.totalTrades = 0;
+        state.winTrades = 0;
+        state.lossTrades = 0;
+        state.orders = [];
+        state.priceHistory = [];
+        state.lastPrice = 0;
+        updateUI(state.priceHistory[state.priceHistory.length-1] || 0);
+        updateChart();
+    });
+    document.getElementById('btnParams').addEventListener('click', function() {
+        const inputsDiv = document.getElementById('paramsInputs');
+        inputsDiv.innerHTML = '';
+        Object.keys(state.params).forEach(key => {
+            const p = state.params[key];
+            inputsDiv.innerHTML += `<label style="display:block; margin-bottom:5px;">${p.label}</label>
+                <input type="number" id="param_${key}" value="${p.value}" step="0.1">`;
+        });
+        document.getElementById('paramsModal').classList.add('show');
+    });
+    document.getElementById('btnCancelParams').addEventListener('click', () => {
+        document.getElementById('paramsModal').classList.remove('show');
+    });
+    document.getElementById('btnSaveParams').addEventListener('click', function() {
+        Object.keys(state.params).forEach(key => {
+            const input = document.getElementById(`param_${key}`);
+            if (input) {
+                const val = parseFloat(input.value);
+                if (!isNaN(val)) state.params[key].value = val;
+            }
+        });
+        document.getElementById('paramsModal').classList.remove('show');
+        updateChart();
+    });
+
+    // 初始化
+    async function init() {
+        initChart();
+        const initialPrice = await fetchPrice(state.currentPair);
+        if (initialPrice) {
+            state.priceHistory.push(initialPrice);
+            pairPrices[state.currentPair] = initialPrice;
+            updateUI(initialPrice);
+            updateChart();
+        }
+        setInterval(updatePrices, 10000); // 后台持续更新
+    }
+    init();
+</script>
+</body>
+</html>
