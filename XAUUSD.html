@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (完美修复版)</title>
+    <title>XAUUSD 交易界面 (最终完美版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -257,28 +257,24 @@
     }
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
 
-    // 核心修复：生成与当前时间戳绝对对齐的平滑数据
+    // 核心修复 1：严格对齐时间戳，彻底杜绝因时间错位引发的拉伸
     function generateFallbackData(interval, count = 100) {
         const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
         const stepSec = (minutesMap[interval] || 60) * 60; 
         
-        // 基准价格：如果已经拿到了真实价格，就用真实的；否则默认 3500
         let basePrice = currentPrice || 3500;
-        
-        // 获取当前周期的结束时间戳
         let currentTs = Math.floor(Date.now() / 1000);
-        currentTs = currentTs - (currentTs % stepSec); 
+        currentTs = currentTs - (currentTs % stepSec); // 核心：强行向下取整到周期起点（比如 16:00）
         
         const dates = [], klines = [], volumes = [], timestamps = [];
         
-        // 倒推生成
         for (let i = count; i >= 0; i--) {
             const ts = currentTs - i * stepSec; 
             timestamps.push(ts);
             dates.push(formatKlineDate(ts, interval));
             
             const open = basePrice; 
-            const close = open + (Math.random() - 0.48) * 5; // 极小的随机波动
+            const close = open + (Math.random() - 0.48) * 5; 
             const high = Math.max(open, close) + Math.random() * 2; 
             const low = Math.min(open, close) - Math.random() * 2;
             
@@ -398,7 +394,6 @@
                 document.getElementById('low-24').innerText = formatNum(ticker.low);
                 document.getElementById('cn-price').innerHTML = `$${formatNum(newPrice)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
                 
-                // 第一次拿到真实价格时，重新生成贴合价格的历史数据
                 if (currentPrice === 0 || Math.abs(newPrice - currentPrice) / currentPrice > 0.05) {
                     currentPrice = newPrice;
                     if (chartData.dates.length === 0) {
@@ -440,14 +435,21 @@
                 if (chartData.dates.length > 0) {
                     const lastIdx = chartData.dates.length - 1;
                     const lastTimestamp = chartData.timestamps[lastIdx];
+                    
+                    // 核心修复 2：计算是否属于同一个周期内
+                    const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
+                    const stepSec = (minutesMap[intv] || 60) * 60; 
+                    
+                    const currentPeriodStart = Math.floor(kTimestamp / stepSec) * stepSec;
+                    const lastPeriodStart = Math.floor(lastTimestamp / stepSec) * stepSec;
 
-                    // 核心修复 2：精准对比时间戳，防止强行追加导致拉伸
-                    if (kTimestamp === lastTimestamp) {
-                        // 时间戳一致，直接替换最后一根
+                    if (currentPeriodStart === lastPeriodStart) {
+                        // 属于同一个周期，不管时间戳具体是几点几分，强制覆盖最后一根
+                        chartData.timestamps[lastIdx] = kTimestamp; // 更新时间戳为真实推送时间
                         chartData.klines[lastIdx] = newKline; 
                         chartData.volumes[lastIdx] = volume; 
-                    } else if (kTimestamp > lastTimestamp) {
-                        // 来了新的一根，直接推入数组
+                    } else if (currentPeriodStart > lastPeriodStart) {
+                        // 确认为新的一根，追加数组
                         chartData.timestamps.push(kTimestamp);
                         chartData.dates.push(dateStr); 
                         chartData.klines.push(newKline); 
