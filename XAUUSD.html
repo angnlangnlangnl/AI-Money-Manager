@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (右侧交易面板)</title>
+    <title>XAUUSD 交易界面 (全真实数据版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -93,7 +93,6 @@
         }
         .toggle-btn:hover { background: #383e46; color: #fff; }
 
-        /* 盘口样式 */
         .order-book-panel { padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
         
         .order-book-bar { display: flex; align-items: center; font-size: 13px; font-weight: bold; }
@@ -110,7 +109,6 @@
         .ask-text { color: #f6465d; }
         .bid-text { color: #0ecb81; }
 
-        /* 右侧交易按钮区 */
         .drawer-actions {
             padding: 15px;
             background: #181a20;
@@ -214,7 +212,7 @@
                         <div class="order-data-content" id="orderDataContent">等待 WebSocket 推送盘口数据...</div>
                     </div>
                 </div>
-                <!-- 交易按钮移入侧边栏底部 -->
+                <!-- 交易按钮 -->
                 <div class="drawer-actions">
                     <button class="buy-btn" onclick="openTradeModal('buy')">买入/做多</button>
                     <button class="sell-btn" onclick="openTradeModal('sell')">卖出/做空</button>
@@ -239,14 +237,6 @@
                 <div class="pair-item" onclick="switchSymbol('USDJPY', '美元/日元', this)">
                     <div class="sym">USDJPY <small>美元/日元</small></div>
                     <div style="color:#0ecb81;">159.297 (+0.02%)</div>
-                </div>
-                <div class="pair-item" onclick="switchSymbol('EURUSD', '欧元/美元', this)">
-                    <div class="sym">EURUSD <small>欧元/美元</small></div>
-                    <div style="color:#f6465d;">1.09478 (-0.15%)</div>
-                </div>
-                <div class="pair-item" onclick="switchSymbol('GER40', '德国 DAX 40', this)">
-                    <div class="sym">GER40 <small>德国 DAX 40</small></div>
-                    <div style="color:#f6465d;">24,945.58 (-1.01%)</div>
                 </div>
             </div>
         </div>
@@ -303,6 +293,7 @@
     // =================== 2. 全局状态 ===================
     let currentInterval = '1h';
     let currentSymbol = 'XAUUSD';
+    // 注意：这里初始为空，不再生成假数据
     let chartData = { dates: [], klines: [], volumes: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0, currentBid = 0, currentAsk = 0;
@@ -314,14 +305,8 @@
         isDrawerOpen = !isDrawerOpen;
         const drawer = document.getElementById('rightDrawer');
         const btn = document.getElementById('drawerToggleBtn');
-        if (isDrawerOpen) {
-            drawer.classList.remove('collapsed');
-            btn.innerText = '▶';
-        } else {
-            drawer.classList.add('collapsed');
-            btn.innerText = '◀';
-        }
-        // 等动画结束重绘图表
+        if (isDrawerOpen) { drawer.classList.remove('collapsed'); btn.innerText = '▶'; } 
+        else { drawer.classList.add('collapsed'); btn.innerText = '◀'; }
         setTimeout(() => myChart.resize(), 350);
     }
 
@@ -333,19 +318,7 @@
         static MACD(data, fast = 12, slow = 26, signal = 9) { const emaFast = this.EMA(data, fast); const emaSlow = this.EMA(data, slow); const dif = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i]; const validDif = dif.filter(v => v !== null); const deaValid = this.EMA(validDif, signal); const dea = new Array(data.length).fill(null); const offset = dif.length - deaValid.length; for (let i = 0; i < deaValid.length; i++) dea[offset + i] = deaValid[i]; const macd = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2; return { dif, dea, macd }; }
     }
 
-    // =================== 5. 模拟数据 & 工具函数 ===================
-    function generateMockHistory(interval, count = 100) {
-        const now = Date.now(); const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
-        const stepMs = (minutesMap[interval] || 60) * 60 * 1000; let basePrice = 4600 + Math.random() * 50;
-        const dates = [], klines = [], volumes = [];
-        for (let i = count; i >= 0; i--) {
-            const ts = now - i * stepMs; const dateStr = formatKlineDate(ts / 1000, interval);
-            const open = basePrice; const close = open + (Math.random() - 0.5) * 20;
-            const high = Math.max(open, close) + Math.random() * 5; const low = Math.min(open, close) - Math.random() * 5;
-            dates.push(dateStr); klines.push([open, close, low, high]); volumes.push(Math.random() * 1000); basePrice = close;
-        }
-        return { dates, klines, volumes };
-    }
+    // =================== 5. 工具函数 ===================
     function formatKlineDate(timestamp, interval) {
         const d = new Date(timestamp * 1000); const month = d.getMonth() + 1; const date = d.getDate();
         const hours = d.getHours().toString().padStart(2, '0'); const minutes = d.getMinutes().toString().padStart(2, '0');
@@ -358,14 +331,17 @@
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
     function updateChart() {
-        if (!chartData.klines.length) return;
+        if (!chartData.klines.length) return; // 无数据时不渲染
         const { dates, klines, volumes } = chartData;
         const closes = klines.map(k => k[1]); const highs = klines.map(k => k[3]); const lows = klines.map(k => k[2]);
+        
         const totalLen = dates.length; const visibleCount = Math.min(50, totalLen);
         const startIndex = Math.max(0, totalLen - visibleCount); const endIndex = totalLen - 1;
+
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = startIndex; i <= endIndex; i++) { minLow = Math.min(minLow, lows[i]); maxHigh = Math.max(maxHigh, highs[i]); }
         const padding = (maxHigh - minLow) * 0.1 || 10; const yMin = minLow - padding; const yMax = maxHigh + padding;
+        
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL; const showMacd = indicatorState.MACD;
         let mainHeight = showVol && showMacd ? 50 : showVol || showMacd ? 65 : 100; let currentTop = 5;
@@ -382,20 +358,23 @@
         if (currentPrice) { klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } }); }
         series.push(klineSeries);
 
-        if (indicatorState.MA) {
-            series.push({ type: 'line', data: Indicators.SMA(closes, 5), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: Indicators.SMA(closes, 10), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: Indicators.SMA(closes, 20), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+        // 修复线断裂问题：将 null 转换为 '-'
+        const cleanData = (arr) => arr.map(v => v === null ? '-' : v);
+
+        if (indicatorState.MA && closes.length > 20) {
+            series.push({ type: 'line', data: cleanData(Indicators.SMA(closes, 5)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ type: 'line', data: cleanData(Indicators.SMA(closes, 10)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ type: 'line', data: cleanData(Indicators.SMA(closes, 20)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true, z: 20 });
         }
-        if (indicatorState.EMA) {
-            series.push({ type: 'line', data: Indicators.EMA(closes, 12), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: Indicators.EMA(closes, 26), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+        if (indicatorState.EMA && closes.length > 26) {
+            series.push({ type: 'line', data: cleanData(Indicators.EMA(closes, 12)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ type: 'line', data: cleanData(Indicators.EMA(closes, 26)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true, z: 20 });
         }
-        if (indicatorState.BOLL) {
+        if (indicatorState.BOLL && closes.length > 20) {
             const boll = Indicators.BOLL(closes, 20, 2);
-            series.push({ type: 'line', data: boll.upper, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none', z: 20 });
-            series.push({ type: 'line', data: boll.middle, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none', z: 20 });
-            series.push({ type: 'line', data: boll.lower, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none', z: 20 });
+            series.push({ type: 'line', data: cleanData(boll.upper), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none', z: 20 });
+            series.push({ type: 'line', data: cleanData(boll.middle), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none', z: 20 });
+            series.push({ type: 'line', data: cleanData(boll.lower), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none', z: 20 });
         }
 
         if (showVol) {
@@ -409,7 +388,7 @@
             currentTop += volHeight;
         }
 
-        if (showMacd) {
+        if (showMacd && closes.length > 26) {
             if (!showVol) currentTop += mainHeight + 6; const macdHeight = 15; const idx = showVol ? 3 : 2;
             grids.push({ left: 0, right: '10%', top: currentTop + '%', height: macdHeight + '%' });
             xAxes.push({ type: 'category', data: dates, gridIndex: idx, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
@@ -417,8 +396,8 @@
             const macdResult = Indicators.MACD(closes);
             const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
             series.push({ type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: idx, yAxisIndex: idx, z: 20 });
-            series.push({ type: 'line', data: macdResult.dif, xAxisIndex: idx, yAxisIndex: idx, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: macdResult.dea, xAxisIndex: idx, yAxisIndex: idx, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ type: 'line', data: cleanData(macdResult.dif), xAxisIndex: idx, yAxisIndex: idx, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ type: 'line', data: cleanData(macdResult.dea), xAxisIndex: idx, yAxisIndex: idx, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
         }
 
         myChart.setOption({
@@ -458,9 +437,8 @@
         wsClient.unsubscribe('tradfi.order_book', [currentSymbol]);
         wsClient.unsubscribe('tradfi.candlesticks', [currentInterval, currentSymbol]);
         
-        chartData = generateMockHistory(currentInterval, 100);
+        chartData = { dates: [], klines: [], volumes: [] }; // 清空数据
         myChart.clear();
-        updateChart();
         initData(); 
     }
 
@@ -481,10 +459,9 @@
         wsClient.unsubscribe('tradfi.candlesticks', [currentInterval, currentSymbol]);
         currentInterval = span.dataset.interval;
         
-        chartData = generateMockHistory(currentInterval, 100);
+        chartData = { dates: [], klines: [], volumes: [] }; // 清空数据
         myChart.clear();
         subscribeKline(currentInterval);
-        updateChart();
     });
 
     function updateOrderTab() {
@@ -522,10 +499,8 @@
         closeTradeModal();
     }
 
-    // =================== 8. 初始化 ===================
+    // =================== 8. 初始化与实时推流 ===================
     function initData() {
-        chartData = generateMockHistory(currentInterval, 100);
-        updateChart();
         wsClient.connect();
 
         wsClient.subscribe('tradfi.tickers', { markets: [currentSymbol] }, (result) => {
@@ -560,16 +535,22 @@
             result.forEach(k => {
                 const [intv, symbol] = k.n.split('_');
                 if (intv !== currentInterval || symbol !== currentSymbol) return;
-                const close = parseFloat(k.c), open = parseFloat(k.o), high = parseFloat(k.h), low = parseFloat(k.l);
+
+                const open = parseFloat(k.o), close = parseFloat(k.c), high = parseFloat(k.h), low = parseFloat(k.l);
                 const volume = parseFloat(k.v) || 0; const dateStr = formatKlineDate(k.t, intv);
                 const newKline = [open, close, low, high];
+                
                 if (chartData.dates.length > 0) {
                     const lastIdx = chartData.dates.length - 1;
-                    if (chartData.dates[lastIdx] === dateStr) { chartData.klines[lastIdx] = newKline; chartData.volumes[lastIdx] = volume; }
-                    else {
+                    if (chartData.dates[lastIdx] === dateStr) { 
+                        chartData.klines[lastIdx] = newKline; chartData.volumes[lastIdx] = volume; 
+                    } else {
                         chartData.dates.push(dateStr); chartData.klines.push(newKline); chartData.volumes.push(volume);
                         if (chartData.dates.length > 200) { chartData.dates.shift(); chartData.klines.shift(); chartData.volumes.shift(); }
                     }
+                } else {
+                    // 第一条数据推过来时直接插入
+                    chartData.dates.push(dateStr); chartData.klines.push(newKline); chartData.volumes.push(volume);
                 }
                 updateChart();
             });
