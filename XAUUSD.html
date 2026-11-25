@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (全真实数据版)</title>
+    <title>XAUUSD 交易界面 (历史数据+WS实时版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -19,7 +19,6 @@
         
         .main-content { display: flex; flex: 1; overflow: hidden; }
         
-        /* 左侧核心图表区 */
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
         .tabs { display: flex; gap: 30px; padding: 0 30px; border-bottom: 1px solid #2b3139; flex-shrink: 0; }
@@ -49,52 +48,17 @@
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
         .indicators span:hover { color: #eaecef; }
 
-        /* ================= 右侧隐藏栏 (Drawer) ================= */
         .right-drawer {
-            width: 320px;
-            background: #1e2329;
-            border-left: 1px solid #2b3139;
-            display: flex;
-            flex-direction: column;
-            flex-shrink: 0;
-            transition: width 0.3s ease, transform 0.3s ease;
-            overflow: hidden;
-            position: relative;
+            width: 320px; background: #1e2329; border-left: 1px solid #2b3139; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s ease, transform 0.3s ease; overflow: hidden; position: relative;
         }
         .right-drawer.collapsed { width: 0; border-left: none; }
-
-        .drawer-content {
-            width: 320px;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
+        .drawer-content { width: 320px; display: flex; flex-direction: column; height: 100%; }
         .toggle-btn {
-            position: absolute;
-            left: -24px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 24px;
-            height: 60px;
-            background: #2b3139;
-            border: 1px solid #383e46;
-            border-right: none;
-            border-radius: 6px 0 0 6px;
-            color: #848e9c;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            z-index: 10;
-            font-size: 12px;
-            user-select: none;
-            transition: background 0.2s;
+            position: absolute; left: -24px; top: 50%; transform: translateY(-50%); width: 24px; height: 60px; background: #2b3139; border: 1px solid #383e46; border-right: none; border-radius: 6px 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; font-size: 12px; user-select: none; transition: background 0.2s;
         }
         .toggle-btn:hover { background: #383e46; color: #fff; }
 
         .order-book-panel { padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
-        
         .order-book-bar { display: flex; align-items: center; font-size: 13px; font-weight: bold; }
         .sell-bar { width: 50%; background: rgba(246,70,93,0.2); color: #f6465d; text-align: left; padding: 10px 15px; border-radius: 4px 0 0 4px; transition: width 0.5s; border: 1px solid #f6465d; border-right: none; }
         .buy-bar { width: 50%; background: rgba(14,203,129,0.2); color: #0ecb81; text-align: right; padding: 10px 15px; border-radius: 0 4px 4px 0; transition: width 0.5s; border: 1px solid #0ecb81; border-left: none; }
@@ -109,30 +73,12 @@
         .ask-text { color: #f6465d; }
         .bid-text { color: #0ecb81; }
 
-        .drawer-actions {
-            padding: 15px;
-            background: #181a20;
-            border-top: 1px solid #2b3139;
-            display: flex;
-            gap: 10px;
-            flex-shrink: 0;
-        }
-        .drawer-actions button {
-            flex: 1;
-            padding: 12px 0;
-            border-radius: 4px;
-            font-size: 15px;
-            font-weight: bold;
-            color: #fff;
-            cursor: pointer;
-            border: none;
-            transition: opacity 0.2s;
-        }
+        .drawer-actions { padding: 15px; background: #181a20; border-top: 1px solid #2b3139; display: flex; gap: 10px; flex-shrink: 0; }
+        .drawer-actions button { flex: 1; padding: 12px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; border: none; transition: opacity 0.2s; }
         .drawer-actions button:hover { opacity: 0.8; }
         .drawer-actions .buy-btn { background: #0ecb81; }
         .drawer-actions .sell-btn { background: #f6465d; }
         
-        /* 弹窗基类 */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; justify-content: center; align-items: center; }
         .modal-overlay.show { display: flex; }
         .modal-content { background: #1e2329; border-radius: 8px; width: 90%; max-width: 400px; padding: 20px; border: 1px solid #2b3139; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
@@ -143,7 +89,6 @@
         .trade-row label { width: 80px; font-size: 13px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 6px; padding: 10px 12px; color: #eaecef; font-size: 14px; outline: none; }
 
-        /* 交易对选择弹窗专用 */
         .pair-list { display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; gap: 5px; }
         .pair-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #2b3139; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
         .pair-item:hover { background: #3b4149; }
@@ -164,7 +109,6 @@
     </div>
 
     <div class="main-content">
-        <!-- 左侧核心图表区 -->
         <div class="trade-panel">
             <div class="tabs">
                 <div class="tab">图表</div><div class="tab">合约信息</div><div class="tab">资讯</div>
@@ -193,17 +137,14 @@
             </div>
         </div>
 
-        <!-- 右侧隐藏抽屉 -->
         <div class="right-drawer" id="rightDrawer">
             <div class="toggle-btn" onclick="toggleDrawer()" id="drawerToggleBtn">▶</div>
-            
             <div class="drawer-content">
                 <div class="order-book-panel">
                     <div class="order-book-bar">
                         <div class="sell-bar" id="sell-bar">卖一 --</div>
                         <div class="buy-bar" id="buy-bar">买一 --</div>
                     </div>
-                    
                     <div class="order-tabs">
                         <span class="active" onclick="switchOrderTab('depth')">深度</span>
                         <span onclick="switchOrderTab('trades')">最新成交</span>
@@ -212,7 +153,6 @@
                         <div class="order-data-content" id="orderDataContent">等待 WebSocket 推送盘口数据...</div>
                     </div>
                 </div>
-                <!-- 交易按钮 -->
                 <div class="drawer-actions">
                     <button class="buy-btn" onclick="openTradeModal('buy')">买入/做多</button>
                     <button class="sell-btn" onclick="openTradeModal('sell')">卖出/做空</button>
@@ -221,7 +161,6 @@
         </div>
     </div>
 
-    <!-- 交易对选择弹窗 -->
     <div class="modal-overlay" id="pairModalOverlay">
         <div class="modal-content">
             <div class="modal-header"><span class="modal-title">选择交易品种</span><span class="modal-close" onclick="closePairModal()">✕</span></div>
@@ -234,15 +173,10 @@
                     <div class="sym">NAS100 <small>纳斯达克 100</small></div>
                     <div style="color:#f6465d;">25,479.29 (-2.70%)</div>
                 </div>
-                <div class="pair-item" onclick="switchSymbol('USDJPY', '美元/日元', this)">
-                    <div class="sym">USDJPY <small>美元/日元</small></div>
-                    <div style="color:#0ecb81;">159.297 (+0.02%)</div>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- 下单弹窗 -->
     <div class="modal-overlay" id="tradeModalOverlay">
         <div class="modal-content">
             <div class="modal-header"><span class="modal-title" id="tradeModalTitle">买入 XAUUSD</span><span class="modal-close" onclick="closeTradeModal()">✕</span></div>
@@ -293,7 +227,6 @@
     // =================== 2. 全局状态 ===================
     let currentInterval = '1h';
     let currentSymbol = 'XAUUSD';
-    // 注意：这里初始为空，不再生成假数据
     let chartData = { dates: [], klines: [], volumes: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0, currentBid = 0, currentAsk = 0;
@@ -331,7 +264,7 @@
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
     function updateChart() {
-        if (!chartData.klines.length) return; // 无数据时不渲染
+        if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
         const closes = klines.map(k => k[1]); const highs = klines.map(k => k[3]); const lows = klines.map(k => k[2]);
         
@@ -358,7 +291,6 @@
         if (currentPrice) { klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } }); }
         series.push(klineSeries);
 
-        // 修复线断裂问题：将 null 转换为 '-'
         const cleanData = (arr) => arr.map(v => v === null ? '-' : v);
 
         if (indicatorState.MA && closes.length > 20) {
@@ -421,87 +353,43 @@
         }, true);
     }
 
-    // =================== 7. 弹窗与交互 ===================
-    function openPairModal() { document.getElementById('pairModalOverlay').classList.add('show'); }
-    function closePairModal() { document.getElementById('pairModalOverlay').classList.remove('show'); }
-
-    function switchSymbol(symbol, name, el) {
-        document.querySelectorAll('.pair-item').forEach(item => item.classList.remove('active'));
-        el.classList.add('active');
-        currentSymbol = symbol;
-        document.getElementById('pairSelectorBtn').innerText = symbol + ' ▾';
-        document.getElementById('pairBaseAsset').innerText = name;
-        closePairModal();
-        
-        wsClient.unsubscribe('tradfi.tickers', { markets: [currentSymbol] });
-        wsClient.unsubscribe('tradfi.order_book', [currentSymbol]);
-        wsClient.unsubscribe('tradfi.candlesticks', [currentInterval, currentSymbol]);
-        
-        chartData = { dates: [], klines: [], volumes: [] }; // 清空数据
-        myChart.clear();
-        initData(); 
-    }
-
-    document.getElementById('indicator-buttons').addEventListener('click', function(e) {
-        const span = e.target.closest('span[data-indicator]');
-        if (!span) return;
-        indicatorState[span.dataset.indicator] = !indicatorState[span.dataset.indicator];
-        span.classList.toggle('active', indicatorState[span.dataset.indicator]);
-        updateChart();
-    });
-
-    document.getElementById('timeframes').addEventListener('click', function(e) {
-        const span = e.target.closest('span[data-interval]');
-        if (!span || span.dataset.interval === currentInterval) return;
-        document.querySelectorAll('#timeframes span[data-interval]').forEach(s => s.classList.remove('active'));
-        span.classList.add('active');
-        
-        wsClient.unsubscribe('tradfi.candlesticks', [currentInterval, currentSymbol]);
-        currentInterval = span.dataset.interval;
-        
-        chartData = { dates: [], klines: [], volumes: [] }; // 清空数据
-        myChart.clear();
-        subscribeKline(currentInterval);
-    });
-
-    function updateOrderTab() {
-        const container = document.getElementById('orderDataContent');
-        if (currentBid && currentAsk) {
-            container.innerHTML = `
-                <div class="order-list-item"><span class="ask-text">卖一价 (Ask)</span><span class="ask-text">${formatNum(currentAsk)}</span></div>
-                <div class="order-list-item"><span class="bid-text">买一价 (Bid)</span><span class="bid-text">${formatNum(currentBid)}</span></div>
-                <div class="order-list-item"><span>价差 (Spread)</span><span>${(currentAsk - currentBid).toFixed(2)}</span></div>
-            `;
+    // =================== 7. 历史数据请求 (修复空白核心) ===================
+    async function fetchInitialKlines() {
+        try {
+            // 根据 Gate TradFi 对应的 REST API 拉取历史数据
+            const url = `https://api.gateio.ws/api/v4/tradfi/candlesticks?symbol=${currentSymbol}&interval=${currentInterval}&limit=100`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('网络请求失败');
+            const data = await res.json();
+            
+            if (Array.isArray(data) && data.length > 0) {
+                const dates = [], klines = [], volumes = [];
+                data.forEach(item => {
+                    const ts = parseInt(item.t || item.time || item[0]);
+                    const open = parseFloat(item.o || item.open || item[5]);
+                    const close = parseFloat(item.c || item.close || item[2]);
+                    const high = parseFloat(item.h || item.high || item[3]);
+                    const low = parseFloat(item.l || item.low || item[4]);
+                    const vol = parseFloat(item.v || item.volume || item[1]) || 0;
+                    
+                    dates.push(formatKlineDate(ts, currentInterval));
+                    klines.push([open, close, low, high]);
+                    volumes.push(vol);
+                });
+                chartData = { dates, klines, volumes };
+                updateChart();
+            }
+        } catch (e) {
+            console.warn('拉取初始历史K线失败，退化为纯WS增量模式:', e);
         }
-    }
-    function switchOrderTab(tab) {
-        document.querySelectorAll('.order-tabs span').forEach(el => el.classList.toggle('active', el.dataset.tab === tab));
-        updateOrderTab();
-    }
-
-    let currentSide = 'buy';
-    function openTradeModal(side) {
-        currentSide = side;
-        document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' ' + currentSymbol;
-        document.getElementById('tradeOrderType').value = 'market';
-        document.getElementById('tradePrice').value = ''; document.getElementById('tradeAmount').value = '';
-        toggleTradePriceInput(); document.getElementById('tradeModalOverlay').classList.add('show');
-    }
-    function closeTradeModal() { document.getElementById('tradeModalOverlay').classList.remove('show'); }
-    function toggleTradePriceInput() { document.getElementById('tradePriceRow').style.display = document.getElementById('tradeOrderType').value === 'limit' ? 'flex' : 'none'; }
-    function confirmTrade() {
-        const type = document.getElementById('tradeOrderType').value;
-        const price = parseFloat(document.getElementById('tradePrice').value);
-        const amount = parseFloat(document.getElementById('tradeAmount').value);
-        if (!amount || amount < 0.01) { alert('请输入有效手数 (最小 0.01)'); return; }
-        if (type === 'limit' && (!price || price <= 0)) { alert('请输入有效限价'); return; }
-        alert(`模拟 ${currentSymbol} ${currentSide === 'buy' ? '买入' : '卖出'}订单：\n类型：${type === 'market' ? '市价' : '限价'}\n手数：${amount}\n${type === 'limit' ? '价格：' + price + ' 美元' : ''}`);
-        closeTradeModal();
     }
 
     // =================== 8. 初始化与实时推流 ===================
     function initData() {
         wsClient.connect();
+
+        // 立即拉取历史数据，避免白屏
+        fetchInitialKlines();
 
         wsClient.subscribe('tradfi.tickers', { markets: [currentSymbol] }, (result) => {
             const ticker = result.find(t => t.symbol === currentSymbol);
@@ -549,7 +437,6 @@
                         if (chartData.dates.length > 200) { chartData.dates.shift(); chartData.klines.shift(); chartData.volumes.shift(); }
                     }
                 } else {
-                    // 第一条数据推过来时直接插入
                     chartData.dates.push(dateStr); chartData.klines.push(newKline); chartData.volumes.push(volume);
                 }
                 updateChart();
