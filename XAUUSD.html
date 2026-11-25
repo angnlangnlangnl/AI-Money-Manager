@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (历史数据+WS实时版)</title>
+    <title>XAUUSD 交易界面 (历史数据修复版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -167,11 +167,9 @@
             <div class="pair-list">
                 <div class="pair-item active" onclick="switchSymbol('XAUUSD', '黄金 Gold', this)">
                     <div class="sym">XAUUSD <small>黄金</small></div>
-                    <div style="color:#f6465d;">3,528.87 (-0.76%)</div>
                 </div>
                 <div class="pair-item" onclick="switchSymbol('NAS100', '纳斯达克 100', this)">
                     <div class="sym">NAS100 <small>纳斯达克 100</small></div>
-                    <div style="color:#f6465d;">25,479.29 (-2.70%)</div>
                 </div>
             </div>
         </div>
@@ -353,34 +351,38 @@
         }, true);
     }
 
-    // =================== 7. 历史数据请求 (修复空白核心) ===================
+    // =================== 7. 修复后的历史数据请求 ===================
     async function fetchInitialKlines() {
         try {
-            // 根据 Gate TradFi 对应的 REST API 拉取历史数据
-            const url = `https://api.gateio.ws/api/v4/tradfi/candlesticks?symbol=${currentSymbol}&interval=${currentInterval}&limit=100`;
+            // 核心修复：使用正确的 TradFi 历史 K 线接口
+            const url = `https://api.gateio.ws/api/v4/tradfi/symbols/${currentSymbol}/klines?kline_type=${currentInterval}&limit=100`;
             const res = await fetch(url);
-            if (!res.ok) throw new Error('网络请求失败');
-            const data = await res.json();
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
             
+            // 核心修复：解析正确的 JSON 嵌套结构
+            const data = json?.data?.list;
             if (Array.isArray(data) && data.length > 0) {
                 const dates = [], klines = [], volumes = [];
+                // 历史数据通常是从旧到新排序，直接遍历
                 data.forEach(item => {
-                    const ts = parseInt(item.t || item.time || item[0]);
-                    const open = parseFloat(item.o || item.open || item[5]);
-                    const close = parseFloat(item.c || item.close || item[2]);
-                    const high = parseFloat(item.h || item.high || item[3]);
-                    const low = parseFloat(item.l || item.low || item[4]);
-                    const vol = parseFloat(item.v || item.volume || item[1]) || 0;
+                    const ts = parseInt(item.t || item.time);
+                    const open = parseFloat(item.o || item.open);
+                    const close = parseFloat(item.c || item.close);
+                    const high = parseFloat(item.h || item.high);
+                    const low = parseFloat(item.l || item.low);
+                    const vol = parseFloat(item.v || item.volume) || 0;
                     
                     dates.push(formatKlineDate(ts, currentInterval));
                     klines.push([open, close, low, high]);
                     volumes.push(vol);
                 });
+                
                 chartData = { dates, klines, volumes };
                 updateChart();
             }
         } catch (e) {
-            console.warn('拉取初始历史K线失败，退化为纯WS增量模式:', e);
+            console.warn('拉取初始历史K线失败:', e);
         }
     }
 
@@ -388,7 +390,7 @@
     function initData() {
         wsClient.connect();
 
-        // 立即拉取历史数据，避免白屏
+        // 先拉取历史数据
         fetchInitialKlines();
 
         wsClient.subscribe('tradfi.tickers', { markets: [currentSymbol] }, (result) => {
@@ -431,8 +433,10 @@
                 if (chartData.dates.length > 0) {
                     const lastIdx = chartData.dates.length - 1;
                     if (chartData.dates[lastIdx] === dateStr) { 
+                        // 更新当前最新一根
                         chartData.klines[lastIdx] = newKline; chartData.volumes[lastIdx] = volume; 
                     } else {
+                        // 新的一根 K 线出现
                         chartData.dates.push(dateStr); chartData.klines.push(newKline); chartData.volumes.push(volume);
                         if (chartData.dates.length > 200) { chartData.dates.shift(); chartData.klines.shift(); chartData.volumes.shift(); }
                     }
