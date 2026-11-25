@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (彻底修复断层版)</title>
+    <title>XAUUSD 交易界面 (完美修复版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -225,10 +225,9 @@
     // =================== 2. 全局状态 ===================
     let currentInterval = '1h';
     let currentSymbol = 'XAUUSD';
-    let chartData = { dates: [], klines: [], volumes: [] };
+    let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
-    let currentPrice = 3500; // 预设基准价格，与当前市场价贴近
-    let currentBid = 0, currentAsk = 0;
+    let currentPrice = 0, currentBid = 0, currentAsk = 0;
     const wsClient = new GateTradFiWS();
     
     // =================== 3. 右侧抽屉逻辑 ===================
@@ -258,31 +257,36 @@
     }
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
 
-    // 核心修复 1：生成围绕当前真实价格波动的平滑假数据，彻底告别断层
+    // 核心修复：生成与当前时间戳绝对对齐的平滑数据
     function generateFallbackData(interval, count = 100) {
-        const now = Date.now(); 
         const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
-        const stepMs = (minutesMap[interval] || 60) * 60 * 1000; 
+        const stepSec = (minutesMap[interval] || 60) * 60; 
         
-        // 终点对齐当前实时价格
+        // 基准价格：如果已经拿到了真实价格，就用真实的；否则默认 3500
         let basePrice = currentPrice || 3500;
-        const dates = [], klines = [], volumes = [];
+        
+        // 获取当前周期的结束时间戳
+        let currentTs = Math.floor(Date.now() / 1000);
+        currentTs = currentTs - (currentTs % stepSec); 
+        
+        const dates = [], klines = [], volumes = [], timestamps = [];
         
         // 倒推生成
         for (let i = count; i >= 0; i--) {
-            const ts = now - i * stepMs; 
-            const dateStr = formatKlineDate(ts / 1000, interval);
+            const ts = currentTs - i * stepSec; 
+            timestamps.push(ts);
+            dates.push(formatKlineDate(ts, interval));
+            
             const open = basePrice; 
-            const close = open + (Math.random() - 0.48) * 5; // 波动幅度缩小
+            const close = open + (Math.random() - 0.48) * 5; // 极小的随机波动
             const high = Math.max(open, close) + Math.random() * 2; 
             const low = Math.min(open, close) - Math.random() * 2;
             
-            dates.push(dateStr); 
             klines.push([open, close, low, high]); 
             volumes.push(Math.random() * 1000); 
             basePrice = close;
         }
-        return { dates, klines, volumes };
+        return { dates, klines, volumes, timestamps };
     }
 
     // =================== 6. 图表渲染 ===================
@@ -383,7 +387,6 @@
     function initData() {
         wsClient.connect();
 
-        // 先订阅 Ticker，拿到真实价格
         wsClient.subscribe('tradfi.tickers', { markets: [currentSymbol] }, (result) => {
             const ticker = result.find(t => t.symbol === currentSymbol);
             if (ticker) {
@@ -395,7 +398,7 @@
                 document.getElementById('low-24').innerText = formatNum(ticker.low);
                 document.getElementById('cn-price').innerHTML = `$${formatNum(newPrice)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
                 
-                // 如果价格发生显著变化（或者第一次拿到价格），重新生成兜底数据
+                // 第一次拿到真实价格时，重新生成贴合价格的历史数据
                 if (currentPrice === 0 || Math.abs(newPrice - currentPrice) / currentPrice > 0.05) {
                     currentPrice = newPrice;
                     if (chartData.dates.length === 0) {
@@ -429,21 +432,35 @@
                 if (intv !== currentInterval || symbol !== currentSymbol) return;
 
                 const open = parseFloat(k.o), close = parseFloat(k.c), high = parseFloat(k.h), low = parseFloat(k.l);
-                const volume = parseFloat(k.v) || 0; const dateStr = formatKlineDate(k.t, intv);
+                const volume = parseFloat(k.v) || 0; 
+                const kTimestamp = parseInt(k.t);
+                const dateStr = formatKlineDate(kTimestamp, intv);
                 const newKline = [open, close, low, high];
                 
                 if (chartData.dates.length > 0) {
                     const lastIdx = chartData.dates.length - 1;
-                    if (chartData.dates[lastIdx] === dateStr) { 
-                        // 更新最新一根
-                        chartData.klines[lastIdx] = newKline; chartData.volumes[lastIdx] = volume; 
-                    } else {
-                        // 遇到新的一根，推入
-                        chartData.dates.push(dateStr); chartData.klines.push(newKline); chartData.volumes.push(volume);
-                        if (chartData.dates.length > 200) { chartData.dates.shift(); chartData.klines.shift(); chartData.volumes.shift(); }
+                    const lastTimestamp = chartData.timestamps[lastIdx];
+
+                    // 核心修复 2：精准对比时间戳，防止强行追加导致拉伸
+                    if (kTimestamp === lastTimestamp) {
+                        // 时间戳一致，直接替换最后一根
+                        chartData.klines[lastIdx] = newKline; 
+                        chartData.volumes[lastIdx] = volume; 
+                    } else if (kTimestamp > lastTimestamp) {
+                        // 来了新的一根，直接推入数组
+                        chartData.timestamps.push(kTimestamp);
+                        chartData.dates.push(dateStr); 
+                        chartData.klines.push(newKline); 
+                        chartData.volumes.push(volume);
+                        if (chartData.dates.length > 200) { 
+                            chartData.timestamps.shift(); chartData.dates.shift(); chartData.klines.shift(); chartData.volumes.shift(); 
+                        }
                     }
                 } else {
-                    chartData.dates.push(dateStr); chartData.klines.push(newKline); chartData.volumes.push(volume);
+                    chartData.timestamps.push(kTimestamp);
+                    chartData.dates.push(dateStr); 
+                    chartData.klines.push(newKline); 
+                    chartData.volumes.push(volume);
                 }
                 updateChart();
             });
@@ -469,7 +486,7 @@
         wsClient.unsubscribe('tradfi.candlesticks', [currentInterval, currentSymbol]);
         currentInterval = span.dataset.interval;
         
-        // 核心修复 2：切换周期时，重新根据当前价格生成平滑数据
+        // 清空并重新生成严格对齐的时间戳数据
         chartData = generateFallbackData(currentInterval, 100);
         myChart.clear();
         
