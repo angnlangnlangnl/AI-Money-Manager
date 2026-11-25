@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (历史数据修复版)</title>
+    <title>XAUUSD 交易界面 (纯WS实时版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -262,7 +262,19 @@
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
     function updateChart() {
-        if (!chartData.klines.length) return;
+        // 核心修复：增加等待提示
+        if (!chartData.klines.length) {
+            myChart.setOption({
+                title: {
+                    text: '等待 WebSocket 推送 K 线...\n(请稍候，数据将在当前周期结束前送达)',
+                    left: 'center',
+                    top: 'center',
+                    textStyle: { color: '#848e9c', fontSize: 14, lineHeight: 24, textAlign: 'center' }
+                }
+            }, true);
+            return;
+        }
+
         const { dates, klines, volumes } = chartData;
         const closes = klines.map(k => k[1]); const highs = klines.map(k => k[3]); const lows = klines.map(k => k[2]);
         
@@ -351,47 +363,9 @@
         }, true);
     }
 
-    // =================== 7. 修复后的历史数据请求 ===================
-    async function fetchInitialKlines() {
-        try {
-            // 核心修复：使用正确的 TradFi 历史 K 线接口
-            const url = `https://api.gateio.ws/api/v4/tradfi/symbols/${currentSymbol}/klines?kline_type=${currentInterval}&limit=100`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const json = await res.json();
-            
-            // 核心修复：解析正确的 JSON 嵌套结构
-            const data = json?.data?.list;
-            if (Array.isArray(data) && data.length > 0) {
-                const dates = [], klines = [], volumes = [];
-                // 历史数据通常是从旧到新排序，直接遍历
-                data.forEach(item => {
-                    const ts = parseInt(item.t || item.time);
-                    const open = parseFloat(item.o || item.open);
-                    const close = parseFloat(item.c || item.close);
-                    const high = parseFloat(item.h || item.high);
-                    const low = parseFloat(item.l || item.low);
-                    const vol = parseFloat(item.v || item.volume) || 0;
-                    
-                    dates.push(formatKlineDate(ts, currentInterval));
-                    klines.push([open, close, low, high]);
-                    volumes.push(vol);
-                });
-                
-                chartData = { dates, klines, volumes };
-                updateChart();
-            }
-        } catch (e) {
-            console.warn('拉取初始历史K线失败:', e);
-        }
-    }
-
-    // =================== 8. 初始化与实时推流 ===================
+    // =================== 7. 初始化与实时推流 ===================
     function initData() {
         wsClient.connect();
-
-        // 先拉取历史数据
-        fetchInitialKlines();
 
         wsClient.subscribe('tradfi.tickers', { markets: [currentSymbol] }, (result) => {
             const ticker = result.find(t => t.symbol === currentSymbol);
