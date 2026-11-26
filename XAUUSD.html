@@ -3,14 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (可右拖动留白)</title>
+    <title>XAUUSD 交易界面 (专业级布局与留白)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app { width: 100%; max-width: 100%; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; }
         
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 9px 30px; height: 55px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
+        /* 优化头部高度与底边距 */
+        .header { display: flex; justify-content: space-between; align-items: center; padding: 0 30px; height: 50px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
         .header-left { display: flex; align-items: center; gap: 20px; font-size: 18px; font-weight: bold; }
         .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 5px 10px; border-radius: 4px; }
         .header-icons { display: flex; gap: 20px; font-size: 18px; color: #848e9c; }
@@ -18,12 +19,15 @@
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        .tabs { display: flex; gap: 30px; padding: 0 30px; border-bottom: 1px solid #2b3139; flex-shrink: 0; }
-        .tab { color: #848e9c; font-size: 14px; padding: 15px 0; cursor: pointer; position: relative; }
-        .tab.active { color: #eaecef; }
-        .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: #f0b90b; }
+        /* 【核心修改】标签页完美贴顶，去除多余内边距，与 header 融合 */
+        .tabs { display: flex; gap: 30px; padding: 0 30px; height: 40px; align-items: center; border-bottom: 1px solid #2b3139; flex-shrink: 0; background: #181a20; }
+        .tab { color: #848e9c; font-size: 14px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; transition: color 0.2s; }
+        .tab:hover { color: #eaecef; }
+        .tab.active { color: #eaecef; font-weight: bold; }
+        .tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #f0b90b; }
         
-        .quote-section { display: flex; justify-content: space-between; padding: 15px 30px; flex-shrink: 0; }
+        /* 缩小行情区上边距，让整体更紧凑 */
+        .quote-section { display: flex; justify-content: space-between; padding: 10px 30px 15px; flex-shrink: 0; }
         .price-main { font-size: 32px; font-weight: bold; }
         .price-sub { font-size: 14px; color: #848e9c; margin-top: 5px; }
         .price-sub span.green { color: #0ecb81; }
@@ -90,6 +94,7 @@
 
     <div class="main-content">
         <div class="trade-panel">
+            <!-- 标签栏位置调整 -->
             <div class="tabs"><div class="tab active">图表</div><div class="tab">合约信息</div><div class="tab">资讯</div></div>
             
             <div class="quote-section">
@@ -218,24 +223,21 @@
             });
 
             // =================== 核心修复：添加 30 个占位空K线 ===================
-            // 让图表总数据增加 30 个虚拟点，这样最新真实K线右边就会有空间可以被拖拽
             const PADDING_BARS = 30; 
             for (let i = 1; i <= PADDING_BARS; i++) {
                 const lastTs = timestamps[timestamps.length - 1];
-                const ts = lastTs + i * 15 * 60 * 1000; // 假设15分钟
+                const ts = lastTs + i * 15 * 60 * 1000; 
                 timestamps.push(ts);
                 dates.push(formatKlineDate(ts, interval));
-                klines.push(['-', '-', '-', '-']); // 必须给个占位，但不能是数字，否则 Y 轴计算会崩溃
+                klines.push(['-', '-', '-', '-']); 
                 volumes.push('-');
             }
 
             chartData = { dates, klines, volumes, timestamps };
-            // 寻找最后一根真实的 K 线作为初始最新价
-            const lastRealIdx = klines.length - PADDING_BARS - 1;
             currentPrice = parseFloat(rawData[rawData.length - 1].c);
 
             zoomStartIndex = Math.max(0, dates.length - 120 - PADDING_BARS);
-            zoomEndIndex = dates.length - 1; // 初始视窗包含所有空白
+            zoomEndIndex = dates.length - 1; 
 
             updateTickerUI();
             updateChart();
@@ -266,7 +268,6 @@
 
                 if (chartData.klines.length > 0 && Math.abs(price - currentPrice) > 0.001) {
                     currentPrice = price;
-                    // 找到最后一根真实的 K 线（跳过末尾的占位）
                     const PADDING_BARS = 30;
                     const lastRealIdx = chartData.klines.length - PADDING_BARS - 1;
                     chartData.klines[lastRealIdx][1] = price; 
@@ -301,7 +302,6 @@
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
         
-        // 过滤掉空值，仅用于计算 Y 轴
         const validKlines = klines.filter(k => k[0] !== '-');
         const closes = validKlines.map(k => k[1]);
         const highs = validKlines.map(k => k[3]);
@@ -309,7 +309,6 @@
 
         const totalLen = dates.length;
 
-        // 计算 Y 轴极值时，针对带占位符的数据，需要跳过 '-'
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (klines[i][0] === '-') continue;
@@ -330,7 +329,7 @@
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
         let currentTop = 5;
-        const rightMargin = '8%'; // 调整到 8%，因为已经加上了占位数据
+        const rightMargin = '8%'; 
 
         grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         
@@ -441,7 +440,7 @@
                     type: 'inside', 
                     xAxisIndex: zoomAxes, 
                     start: (zoomStartIndex / totalLen) * 100, 
-                    end: 100, // 此时由于数据含占位，end: 100% 会让最新K线留在屏幕内
+                    end: 100, 
                     minValueSpan: 10,
                     moveOnMouseMove: true,
                     moveOnMouseWheel: false
@@ -456,7 +455,7 @@
                     const idx = params[0].dataIndex;
                     if (idx == null || idx >= chartData.dates.length) return '';
                     const kline = chartData.klines[idx];
-                    if (kline[0] === '-') return ''; // 占位符不显示 tooltip
+                    if (kline[0] === '-') return ''; 
                     const d = chartData.dates[idx], o = kline[0], c = kline[1], l = kline[2], h = kline[3];
                     const chg = c - o, pct = o !== 0 ? (chg / o) * 100 : 0, col = chg >= 0 ? '#0ecb81' : '#f6465d';
                     return `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div></div>`;
