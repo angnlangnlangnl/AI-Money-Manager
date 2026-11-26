@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (专业K线修复版)</title>
+    <title>XAUUSD 交易界面 (专业级缩放与精准对齐)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -160,6 +160,8 @@
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
     let isDrawerOpen = true;
+    let zoomStartIndex = 0; // 记录当前缩放起止位置
+    let zoomEndIndex = 0;
 
     // =================== 技术指标计算库 ===================
     class Indicators {
@@ -177,13 +179,12 @@
         if (interval === '1d') return `${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 真实数据源 (biquote.io，免密钥公开 API) ===================
+    // =================== 真实数据源 ===================
     async function fetchRealKline(interval) {
         const intervalMap = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '1d': '1d' };
         const apiInterval = intervalMap[interval] || '1h';
 
         try {
-            // 获取 1500 根历史数据，支撑长周期全景缩放
             const url = `https://biquote.io/api/XAUUSD/ohlc?interval=${apiInterval}&limit=1500`;
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -192,28 +193,35 @@
             const raw = json.bars;
             if (!raw || raw.length === 0) throw new Error('数据为空');
 
-            // 反转数组：API返回最新在前，图表需要从旧到新
-            const sortedBars = raw.slice().reverse();
-
+            // 精准对齐：确保所有数据按时间升序排列，并去除重复时间戳
+            const sortedBars = raw.slice().sort((a, b) => new Date(a.openTime) - new Date(b.openTime));
+            
             const dates = [], klines = [], volumes = [], timestamps = [];
             for (const item of sortedBars) {
                 const ts = new Date(item.openTime).getTime() / 1000;
-                // 精度修正：保留两位小数
                 const open = Math.round(parseFloat(item.open) * 100) / 100;
                 const high = Math.round(parseFloat(item.high) * 100) / 100;
                 const low = Math.round(parseFloat(item.low) * 100) / 100;
                 const close = Math.round(parseFloat(item.close) * 100) / 100;
                 const vol = parseFloat(item.tickVolume) || 0;
 
+                // 防止极少数重复数据引发图表错位
+                if (timestamps.length > 0 && ts === timestamps[timestamps.length - 1]) continue;
+
                 timestamps.push(ts);
                 dates.push(formatKlineDate(ts, interval));
-                klines.push([open, close, low, high]); // ECharts 标准顺序
+                klines.push([open, close, low, high]);
                 volumes.push(vol);
             }
 
             chartData = { dates, klines, volumes, timestamps };
             currentPrice = klines[klines.length - 1][1];
             updateTickerUI();
+            
+            // 初始显示最后 120 根
+            zoomStartIndex = Math.max(0, dates.length - 120);
+            zoomEndIndex = dates.length - 1;
+            
             updateChart();
         } catch (e) {
             console.error('获取 K 线失败:', e);
@@ -242,7 +250,7 @@
         document.getElementById('buy-bar').innerText = `买 ${formatNum(close - 0.05)}`;
     }
 
-    // =================== 图表渲染 ===================
+    // =================== 图表渲染引擎 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
@@ -254,15 +262,12 @@
         const lows = klines.map(k => k[2]);
 
         const totalLen = dates.length;
-        // 默认初始显示 120 根
-        const defaultVisible = 120; 
-        const startIndex = Math.max(0, totalLen - defaultVisible);
-        const endIndex = totalLen - 1;
 
+        // 核心：根据当前缩放位置，动态计算 Y 轴边界
         let minLow = Infinity, maxHigh = -Infinity;
-        for (let i = startIndex; i <= endIndex; i++) { 
-            minLow = Math.min(minLow, lows[i]); 
-            maxHigh = Math.max(maxHigh, highs[i]); 
+        for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
+            if (lows[i] < minLow) minLow = lows[i];
+            if (highs[i] > maxHigh) maxHigh = highs[i];
         }
         const padding = (maxHigh - minLow) * 0.1 || 5;
         const yMin = minLow - padding, yMax = maxHigh + padding;
@@ -288,7 +293,7 @@
 
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
-            barMinWidth: 1, // 缩放时 K 线最细为 1px 不消失
+            barMinWidth: 1, // 防止缩放到最小时消失
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
@@ -349,9 +354,9 @@
                 { 
                     type: 'inside', 
                     xAxisIndex: zoomAxes, 
-                    start: (startIndex / totalLen) * 100, // 默认只显示最后 120 根
-                    end: 100,
-                    minValueSpan: 15 // 最少显示 15 根，防止拉得过大
+                    start: (zoomStartIndex / totalLen) * 100, 
+                    end: (zoomEndIndex / totalLen) * 100,
+                    minValueSpan: 10 // 放大极限：最少显示 10 根
                 }
             ],
             tooltip: {
@@ -368,6 +373,36 @@
                 }
             }
         }, true);
+
+        // 【核心修复】监听 dataZoom 事件，实现缩放联动 Y 轴自适应
+        myChart.off('dataZoom');
+        myChart.on('dataZoom', function(params) {
+            if (!params.batch) return;
+            const dz = params.batch[0];
+            const startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
+            const endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
+            
+            zoomStartIndex = startIdx;
+            zoomEndIndex = endIdx;
+
+            // 重新计算缩放区域内的最高最低价
+            let minL = Infinity, maxH = -Infinity;
+            for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
+                if (lows[i] < minL) minL = lows[i];
+                if (highs[i] > maxH) maxH = highs[i];
+            }
+            const pad = (maxH - minL) * 0.1 || 5;
+            const newYMin = minL - pad;
+            const newYMax = maxH + pad;
+
+            // 仅更新 Y 轴，不重新绘制整个图表，确保缩放极度丝滑
+            myChart.setOption({
+                yAxis: [
+                    { min: newYMin, max: newYMax },
+                    { min: newYMin, max: newYMax }
+                ]
+            });
+        });
     }
 
     // =================== 交互与初始化 ===================
