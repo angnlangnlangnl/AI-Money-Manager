@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (多周期精准咬合版)</title>
+    <title>XAUUSD 交易界面 (真实价格 + 精准K线)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -157,12 +157,13 @@
     // =================== 全局状态 ===================
     let currentInterval = '1h'; 
     let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
-    let baseMinuteData = []; // 存放最底层的分钟级基础数据
+    let baseMinuteData = [];
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
     let isDrawerOpen = true;
     let zoomStartIndex = 0;
     let zoomEndIndex = 0;
+    let pricePollTimer = null;
 
     // =================== 技术指标计算库 ===================
     class Indicators {
@@ -180,9 +181,46 @@
         if (interval === '1d') return `${year}-${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 核心引擎：生成咬合的基础数据并聚合 ===================
-    
-    // 1. 生成最底层的 1 分钟数据（包含宏观历史关键帧）
+    // =================== 实时价格获取 (biquote.io 公开接口) ===================
+    async function fetchRealTimePrice() {
+        try {
+            const res = await fetch('https://biquote.io/api/XAUUSD');
+            if (!res.ok) return;
+            const tick = await res.json();
+            
+            // biquote 的 mid 是买价卖价中间价，作为最新价使用 [citation:4]
+            const price = parseFloat(tick.mid);
+            if (isNaN(price)) return;
+
+            const changePercent = tick.dayDiffPercent || 0;
+            
+            document.getElementById('last-price').innerText = formatNum(price);
+            document.getElementById('last-price').style.color = '#eaecef';
+            document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${changePercent >= 0 ? 'green' : 'red'}">${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</span>`;
+            
+            if (tick.high) document.getElementById('high-24').innerText = formatNum(tick.high);
+            if (tick.low) document.getElementById('low-24').innerText = formatNum(tick.low);
+            
+            // 盘口买卖价
+            if (tick.bid) document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
+            if (tick.ask) document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
+            
+            // 同步更新图表上的当前价标线
+            if (Math.abs(price - currentPrice) > 0.01) {
+                currentPrice = price;
+                updateChart();
+            }
+        } catch (e) {
+            // 静默失败，保留上一次价格
+        }
+    }
+
+    function startPricePolling() {
+        fetchRealTimePrice();
+        pricePollTimer = setInterval(fetchRealTimePrice, 3000); // 每 3 秒刷新一次
+    }
+
+    // =================== 底层数据引擎 (保持历史 K 线精准) ===================
     function generateBaseMinuteData() {
         const keyframes = [
             { p: 0.00, price: 1600 }, { p: 0.15, price: 1900 }, { p: 0.40, price: 2000 },
@@ -190,7 +228,6 @@
             { p: 0.92, price: 4000 }, { p: 1.00, price: 3600 }
         ];
         
-        // 生成 60 天的 1 分钟数据 (约 86400 根)
         const totalMinutes = 60 * 24 * 60;
         const stepSec = 60;
         let ts = Math.floor(Date.now() / 1000);
@@ -224,14 +261,12 @@
         return data;
     }
 
-    // 2. 根据当前周期，聚合底层基础数据
     function aggregateData(baseData, interval) {
         const intervalMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
         const stepMinutes = intervalMap[interval] || 60;
         
         const dates = [], klines = [], volumes = [], timestamps = [];
         
-        // 按周期步长进行分组聚合
         for (let i = 0; i < baseData.length; i += stepMinutes) {
             const chunk = baseData.slice(i, i + stepMinutes);
             if (chunk.length === 0) continue;
@@ -253,18 +288,17 @@
     }
 
     function loadData() {
-        // 如果底层数据还没生成过，先初始化
         if (baseMinuteData.length === 0) {
             baseMinuteData = generateBaseMinuteData();
         }
-
-        // 根据当前选中的周期进行聚合
         chartData = aggregateData(baseMinuteData, currentInterval);
         
-        currentPrice = chartData.klines[chartData.klines.length - 1][1];
+        if (!currentPrice) {
+            currentPrice = chartData.klines[chartData.klines.length - 1][1];
+        }
+        
         updateTickerUI();
         
-        // 初始显示最后 120 根 K 线
         zoomStartIndex = Math.max(0, chartData.dates.length - 120);
         zoomEndIndex = chartData.dates.length - 1;
         
@@ -274,22 +308,22 @@
     function updateTickerUI() {
         if (!chartData.klines.length) return;
         const last = chartData.klines[chartData.klines.length - 1];
-        const open = last[0], close = last[1];
-        const change = ((close - open) / open) * 100;
+        const open = last[0];
+        
+        // 用实时价格覆盖最新价，但开盘价保持 K 线数据
+        const displayPrice = currentPrice || last[1];
+        const change = ((displayPrice - open) / open) * 100;
 
-        document.getElementById('last-price').innerText = formatNum(close);
+        document.getElementById('last-price').innerText = formatNum(displayPrice);
         document.getElementById('open-price').innerText = formatNum(open);
         
         const recent = chartData.klines.slice(-24);
         document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k[3])));
         document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k[2])));
-        document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
-
-        document.getElementById('sell-bar').innerText = `卖 ${formatNum(close + 0.35)}`;
-        document.getElementById('buy-bar').innerText = `买 ${formatNum(close - 0.35)}`;
+        document.getElementById('cn-price').innerHTML = `$${formatNum(displayPrice)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
     }
 
-    // =================== 图表渲染引擎 ===================
+    // =================== 图表渲染 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
@@ -306,6 +340,11 @@
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (lows[i] < minLow) minLow = lows[i];
             if (highs[i] > maxHigh) maxHigh = highs[i];
+        }
+        // 把当前实时价格也纳入 Y 轴范围
+        if (currentPrice) {
+            minLow = Math.min(minLow, currentPrice);
+            maxHigh = Math.max(maxHigh, currentPrice);
         }
         const padding = (maxHigh - minLow) * 0.1 || 5;
         const yMin = minLow - padding, yMax = maxHigh + padding;
@@ -333,6 +372,7 @@
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
+        // 实时价格标线
         if (currentPrice) {
             klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } });
         }
@@ -425,6 +465,10 @@
                 if (lows[i] < minL) minL = lows[i];
                 if (highs[i] > maxH) maxH = highs[i];
             }
+            if (currentPrice) {
+                minL = Math.min(minL, currentPrice);
+                maxH = Math.max(maxH, currentPrice);
+            }
             const pad = (maxH - minL) * 0.1 || 5;
             const newYMin = minL - pad;
             const newYMax = maxH + pad;
@@ -476,11 +520,12 @@
         document.querySelectorAll('#timeframes span[data-interval]').forEach(s => s.classList.remove('active'));
         span.classList.add('active');
         currentInterval = span.dataset.interval;
-        loadData(); // 切换周期时重新聚合数据
+        loadData();
     });
 
     // 启动
     loadData();
+    startPricePolling(); // 开始实时价格轮询
     window.addEventListener('resize', () => myChart.resize());
 </script>
 </body>
