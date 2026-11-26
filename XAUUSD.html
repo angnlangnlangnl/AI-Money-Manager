@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 行业精准K线</title>
+    <title>XAUUSD 交易界面 (专业K线修复版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -161,7 +161,7 @@
     let currentPrice = 0;
     let isDrawerOpen = true;
 
-    // =================== 指标计算 ===================
+    // =================== 技术指标计算库 ===================
     class Indicators {
         static SMA(data, period) { const result = new Array(data.length).fill(null); for (let i = period - 1; i < data.length; i++) { let sum = 0; for (let j = i - period + 1; j <= i; j++) sum += data[j]; result[i] = sum / period; } return result; }
         static EMA(data, period) { const result = new Array(data.length).fill(null); if (data.length === 0) return result; const multiplier = 2 / (period + 1); result[0] = data[0]; for (let i = 1; i < data.length; i++) result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1]; return result; }
@@ -169,6 +169,7 @@
         static MACD(data, fast = 12, slow = 26, signal = 9) { const emaFast = this.EMA(data, fast); const emaSlow = this.EMA(data, slow); const dif = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i]; const validDif = dif.filter(v => v !== null); const deaValid = this.EMA(validDif, signal); const dea = new Array(data.length).fill(null); const offset = dif.length - deaValid.length; for (let i = 0; i < deaValid.length; i++) dea[offset + i] = deaValid[i]; const macd = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2; return { dif, dea, macd }; }
     }
 
+    // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
     function formatKlineDate(timestamp, interval) {
         const d = new Date(timestamp * 1000); const month = d.getMonth() + 1; const date = d.getDate();
@@ -176,13 +177,14 @@
         if (interval === '1d') return `${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 真实数据源 (biquote.io，免费、无需 Key、CORS 开放) ===================
+    // =================== 真实数据源 (biquote.io，免密钥公开 API) ===================
     async function fetchRealKline(interval) {
         const intervalMap = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '1d': '1d' };
         const apiInterval = intervalMap[interval] || '1h';
 
         try {
-            const url = `https://biquote.io/api/XAUUSD/ohlc?interval=${apiInterval}&limit=300`;
+            // 获取 1500 根历史数据，支撑长周期全景缩放
+            const url = `https://biquote.io/api/XAUUSD/ohlc?interval=${apiInterval}&limit=1500`;
             const res = await fetch(url);
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -190,21 +192,22 @@
             const raw = json.bars;
             if (!raw || raw.length === 0) throw new Error('数据为空');
 
-            // biquote 返回最新在前，反转成从旧到新
+            // 反转数组：API返回最新在前，图表需要从旧到新
             const sortedBars = raw.slice().reverse();
 
             const dates = [], klines = [], volumes = [], timestamps = [];
             for (const item of sortedBars) {
                 const ts = new Date(item.openTime).getTime() / 1000;
-                const open = parseFloat(item.open);
-                const high = parseFloat(item.high);
-                const low = parseFloat(item.low);
-                const close = parseFloat(item.close);
+                // 精度修正：保留两位小数
+                const open = Math.round(parseFloat(item.open) * 100) / 100;
+                const high = Math.round(parseFloat(item.high) * 100) / 100;
+                const low = Math.round(parseFloat(item.low) * 100) / 100;
+                const close = Math.round(parseFloat(item.close) * 100) / 100;
                 const vol = parseFloat(item.tickVolume) || 0;
 
                 timestamps.push(ts);
                 dates.push(formatKlineDate(ts, interval));
-                klines.push([open, close, low, high]); // ECharts 顺序: [open, close, low, high]
+                klines.push([open, close, low, high]); // ECharts 标准顺序
                 volumes.push(vol);
             }
 
@@ -217,9 +220,7 @@
             document.getElementById('last-price').innerText = '加载失败';
             document.getElementById('last-price').style.color = '#f6465d';
             myChart.clear();
-            myChart.setOption({
-                title: { text: '数据加载失败，请稍后重试', left: 'center', top: 'center', textStyle: { color: '#848e9c', fontSize: 14 } }
-            });
+            myChart.setOption({ title: { text: '数据加载失败，请稍后重试', left: 'center', top: 'center', textStyle: { color: '#848e9c', fontSize: 14 } } });
         }
     }
 
@@ -252,13 +253,18 @@
         const highs = klines.map(k => k[3]);
         const lows = klines.map(k => k[2]);
 
-        const visibleCount = Math.min(80, dates.length);
-        const startIndex = Math.max(0, dates.length - visibleCount);
-        const endIndex = dates.length - 1;
+        const totalLen = dates.length;
+        // 默认初始显示 120 根
+        const defaultVisible = 120; 
+        const startIndex = Math.max(0, totalLen - defaultVisible);
+        const endIndex = totalLen - 1;
 
         let minLow = Infinity, maxHigh = -Infinity;
-        for (let i = startIndex; i <= endIndex; i++) { minLow = Math.min(minLow, lows[i]); maxHigh = Math.max(maxHigh, highs[i]); }
-        const padding = (maxHigh - minLow) * 0.15 || 5;
+        for (let i = startIndex; i <= endIndex; i++) { 
+            minLow = Math.min(minLow, lows[i]); 
+            maxHigh = Math.max(maxHigh, highs[i]); 
+        }
+        const padding = (maxHigh - minLow) * 0.1 || 5;
         const yMin = minLow - padding, yMax = maxHigh + padding;
 
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
@@ -282,7 +288,7 @@
 
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
-            barMaxWidth: 15,
+            barMinWidth: 1, // 缩放时 K 线最细为 1px 不消失
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
@@ -318,7 +324,7 @@
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
-            series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20 });
+            series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
             zoomAxes.push(currentSeriesIndex);
             currentSeriesIndex++;
         }
@@ -331,7 +337,7 @@
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closes);
             const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
-            series.push({ type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20 });
+            series.push({ type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
             series.push({ type: 'line', data: cleanData(macdResult.dif), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
             series.push({ type: 'line', data: cleanData(macdResult.dea), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
             zoomAxes.push(currentSeriesIndex);
@@ -339,9 +345,17 @@
 
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
-            dataZoom: [{ type: 'inside', xAxisIndex: zoomAxes, start: (startIndex / dates.length) * 100, end: 100 }],
+            dataZoom: [
+                { 
+                    type: 'inside', 
+                    xAxisIndex: zoomAxes, 
+                    start: (startIndex / totalLen) * 100, // 默认只显示最后 120 根
+                    end: 100,
+                    minValueSpan: 15 // 最少显示 15 根，防止拉得过大
+                }
+            ],
             tooltip: {
-                trigger: 'axis', triggerOn: 'click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
+                trigger: 'axis', triggerOn: 'mousemove|click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
                 axisPointer: { type: 'cross', lineStyle: { color: '#555', type: 'dashed', width: 1 }, crossStyle: { color: '#555', type: 'dashed', width: 1 } },
                 formatter: function(params) {
@@ -356,7 +370,7 @@
         }, true);
     }
 
-    // =================== 交互 ===================
+    // =================== 交互与初始化 ===================
     function toggleDrawer() {
         isDrawerOpen = !isDrawerOpen;
         const drawer = document.getElementById('rightDrawer');
@@ -397,7 +411,7 @@
         fetchRealKline(currentInterval);
     });
 
-    // 启动：加载真实数据
+    // 启动
     fetchRealKline(currentInterval);
     window.addEventListener('resize', () => myChart.resize());
 </script>
