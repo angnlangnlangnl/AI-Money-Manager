@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (专业级网格与时间轴)</title>
+    <title>XAUUSD 交易界面 (22横线+25纵线)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -191,9 +191,6 @@
         return `${hours}:${minutes}`; 
     }
 
-    // 核心：强制网格线为 5 的整数倍
-    function roundTo5(val) { return Math.round(val / 5) * 5; }
-
     // =================== 数据加载与图表渲染 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
@@ -290,7 +287,6 @@
 
         const totalLen = dates.length;
 
-        // 核心修复 1：严格计算 Y 轴边界，保证为 $5 的倍数
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (lows[i] < minLow) minLow = lows[i];
@@ -299,11 +295,7 @@
         if (currentPrice) { minLow = Math.min(minLow, currentPrice); maxHigh = Math.max(maxHigh, currentPrice); }
         
         const padding = (maxHigh - minLow) * 0.08 || 5;
-        let yMin = roundTo5(minLow - padding);
-        let yMax = roundTo5(maxHigh + padding);
-        
-        // 确保区间足够大，容纳 5 的间距
-        if (yMax - yMin < 30) yMax = yMin + 30;
+        const yMin = minLow - padding, yMax = maxHigh + padding;
 
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
@@ -315,38 +307,40 @@
 
         let currentTop = 5;
         
-        // 主图 Grid (上方)
+        // 主图背景 + Y轴（22根横线 + 右侧价格标签）
         grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
-        // 核心修复 2：给主图绑定底部时间标签，固定在网格下方
+        
+        // 精确计算 X 轴网格线数量为 25 根（也就是把总长度切成 25 份）
+        const xSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
+        
         xAxes.push({ 
             type: 'category', data: dates, gridIndex: 0, 
-            axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, 
+            axisLine: { show: false }, axisTick: { show: false }, 
+            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, // 纵向网格线
+            axisLabel: { show: false },
+            interval: xSplitInterval // 强制 25 根纵线
+        });
+        
+        yAxes.push({ 
+            scale: true, min: yMin, max: yMax, 
+            splitNumber: 22, // 强制 22 根横线
+            position: 'right', gridIndex: 0, 
+            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
             axisLabel: { 
-                show: true, 
-                color: '#848e9c', 
-                fontSize: 10, 
-                margin: 10, 
-                hideOverlap: true, 
-                interval: 'auto',
-                position: 'bottom'
+                color: '#848e9c', fontSize: 10, inside: false, margin: 6, 
+                formatter: v => formatNum(v, 1),
+                showMinLabel: true, showMaxLabel: true
             } 
         });
-        // 核心修复 3：强制 Y 轴间距为 5，固定显示 5 条网格线
-        yAxes.push({ 
-            scale: true, 
-            min: yMin, max: yMax, 
-            splitNumber: 5, 
-            minInterval: 5, // 强制最小间隔为 5
-            position: 'right', 
-            gridIndex: 0, 
-            splitLine: { lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 6, formatter: v => formatNum(v, 0) } 
-        });
 
-        // 主 K 线图层
+        // 主 K 线层
         grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
-        xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
-        yAxes.push({ scale: true, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
+        xAxes.push({ 
+            type: 'category', data: dates, gridIndex: 1, 
+            axisLine: { show: false }, axisTick: { show: false }, 
+            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 10, hideOverlap: true, position: 'bottom' } // 底部时间标签
+        });
+        yAxes.push({ scale: true, min: yMin, max: yMax, splitNumber: 22, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
@@ -355,7 +349,6 @@
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
         
-        // 当前价高亮标签
         if (currentPrice) {
             klineSeries.markLine.data.push({ 
                 yAxis: currentPrice, 
@@ -445,7 +438,6 @@
             }
         }, true);
 
-        // 核心修复 4：缩放时同步重新计算 $5 间距
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
             if (!params.batch) return;
@@ -466,14 +458,20 @@
                 maxH = Math.max(maxH, currentPrice);
             }
             const pad = (maxH - minL) * 0.08 || 5;
-            let newYMin = roundTo5(minL - pad);
-            let newYMax = roundTo5(maxH + pad);
-            if (newYMax - newYMin < 30) newYMax = newYMin + 30;
+            const newYMin = minL - pad;
+            const newYMax = maxH + pad;
+
+            // 重新计算 X 轴动态间隔
+            const newXSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
 
             myChart.setOption({
                 yAxis: [
                     { min: newYMin, max: newYMax },
                     { min: newYMin, max: newYMax }
+                ],
+                xAxis: [
+                    { interval: newXSplitInterval }, // 动态调整纵向网格线
+                    { axisLabel: { hideOverlap: true } }
                 ]
             });
         });
