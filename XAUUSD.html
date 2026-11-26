@@ -3,14 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (紧凑布局版)</title>
+    <title>XAUUSD 交易界面 (专业级紧凑布局)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app { width: 100%; max-width: 100%; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* 进一步压缩头部高度 */
         .header { display: flex; align-items: center; padding: 0 20px; height: 38px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
         .header-left { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: bold; }
         .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 2px 6px; border-radius: 4px; }
@@ -26,18 +25,19 @@
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        /* 核心修改 1：大幅压缩报价区的高度和间距 */
-        .quote-section { display: flex; justify-content: space-between; padding: 5px 20px 5px; flex-shrink: 0; }
-        .price-main { font-size: 24px; font-weight: bold; }
-        .price-sub { font-size: 12px; color: #848e9c; margin-top: 2px; }
+        /* 修复：报价区布局，让文字垂直对齐更美观 */
+        .quote-section { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 20px; flex-shrink: 0; }
+        .quote-left { display: flex; flex-direction: column; }
+        .price-main { font-size: 26px; font-weight: bold; line-height: 1.1; }
+        .price-sub { font-size: 12px; color: #848e9c; margin-top: 4px; }
         .price-sub span.green { color: #0ecb81; }
         .price-sub span.red { color: #f6465d; }
-        .quote-details { font-size: 11px; color: #848e9c; text-align: right; line-height: 1.4; display: flex; gap: 25px; }
-        .quote-details div { display: flex; flex-direction: column; }
-        .quote-details b { color: #eaecef; font-weight: normal; font-size: 12px; margin-top: 1px; }
         
-        /* 核心修改 2：压缩时间周期按钮的上下留白 */
-        .timeframes { display: flex; gap: 15px; padding: 0 20px 5px; font-size: 12px; color: #848e9c; flex-shrink: 0; align-items: center; }
+        .quote-details { font-size: 11px; color: #848e9c; text-align: right; display: flex; gap: 25px; padding-top: 4px; }
+        .quote-details div { display: flex; flex-direction: column; align-items: flex-end; }
+        .quote-details b { color: #eaecef; font-weight: normal; font-size: 12px; margin-top: 2px; }
+        
+        .timeframes { display: flex; gap: 15px; padding: 0 20px 8px; font-size: 12px; color: #848e9c; flex-shrink: 0; align-items: center; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 2px; }
         .timeframes span { cursor: pointer; }
         
@@ -101,8 +101,9 @@
 
     <div class="main-content">
         <div class="trade-panel">
+            <!-- 优化了布局结构 -->
             <div class="quote-section">
-                <div>
+                <div class="quote-left">
                     <div class="price-main" id="last-price">--</div>
                     <div class="price-sub" id="cn-price">-- <span class="green">+0.00%</span></div>
                 </div>
@@ -254,7 +255,9 @@
             if (msg.type === 'ticker') {
                 const tick = msg.data;
                 const price = parseFloat(tick.last);
-                const change = parseFloat(tick.change) * 100;
+                
+                // 【核心修复】Gate API 返回的 change 已经是百分比格式（例如 -0.61 代表 -0.61%），不需要再乘以 100
+                const change = parseFloat(tick.change); 
 
                 document.getElementById('last-price').innerText = formatNum(price);
                 document.getElementById('high-24').innerText = formatNum(tick.high);
@@ -284,6 +287,7 @@
         const lastRealIdx = chartData.klines.length - PADDING_BARS - 1;
         const last = chartData.klines[lastRealIdx];
         const open = last[0], close = last[1];
+        // 这里只是 K 线的内部收益率计算，用于初始显示，后续会由 WebSocket 接管
         const change = ((close - open) / open) * 100;
 
         document.getElementById('last-price').innerText = formatNum(close);
@@ -327,8 +331,7 @@
         if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
-        // 【核心修复】把图表的顶部起始位置调低，让整体往上提，消除多余的顶部空白
-        let currentTop = 2; // 从 5% 改为 2%
+        let currentTop = 2; 
         const rightMargin = '8%'; 
 
         grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
@@ -339,7 +342,7 @@
             type: 'category', data: dates, gridIndex: 0, 
             axisLine: { show: false }, axisTick: { show: false }, 
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
-            axisLabel: { show: false },
+            axisLabel: { show: false }, 
             interval: xSplitInterval 
         });
         
