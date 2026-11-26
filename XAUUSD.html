@@ -315,11 +315,13 @@
 
         let currentTop = 5;
 
-        grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
+        // 【核心修复 1】引入 containLabel: true，自适应右侧价格标签宽度
+        grids.push({ left: 15, right: 15, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10, inside: true, formatter: v => formatNum(v, 1) } });
 
-        grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
+        // 主图 K 线
+        grids.push({ left: 15, right: 15, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
@@ -357,7 +359,7 @@
 
         if (showVol) {
             currentTop += mainHeight + gap;
-            grids.push({ left: 15, right: '12%', top: currentTop + '%', height: volHeight + '%' });
+            grids.push({ left: 15, right: 15, top: currentTop + '%', height: volHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
@@ -369,7 +371,7 @@
         if (showMacd && closes.length > 26) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
-            grids.push({ left: 15, right: '12%', top: currentTop + '%', height: macdHeight + '%' });
+            grids.push({ left: 15, right: 15, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closes);
@@ -406,6 +408,7 @@
             }
         }, true);
 
+        // 【核心修复 2】缩放监听，自适应时间标签防重叠
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
             if (!params.batch) return;
@@ -433,6 +436,10 @@
                 yAxis: [
                     { min: newYMin, max: newYMax },
                     { min: newYMin, max: newYMax }
+                ],
+                xAxis: [
+                    { axisLabel: { hideOverlap: true, margin: 10 } },
+                    { axisLabel: { hideOverlap: true, margin: 10 } }
                 ]
             });
         });
