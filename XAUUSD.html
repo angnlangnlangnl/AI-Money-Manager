@@ -47,7 +47,7 @@
         .right-drawer.collapsed { width: 0; border-left: none; }
         .drawer-content { width: 320px; display: flex; flex-direction: column; height: 100%; }
         
-        .toggle-btn { position: absolute; right: 320px; top: 50%; transform: translateY(-50%); width: 24px; height: 60px; background: #2b3139; border: 1px solid #383e46; border-right: none; border-radius: 6px 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 12px; }
+        .toggle-btn { position: absolute; right: 320px; top: 50%; transform: translateY(-50%); width: 24px; height: 60px; background: #2b3139; border: 1px solid #383e46; border-right: none; border-radius: 6px 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 12px; transition: right 0.3s ease; }
 
         .order-book-panel { padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
         .order-book-bar { display: flex; align-items: center; font-size: 13px; font-weight: bold; }
@@ -176,45 +176,50 @@
         if (interval === '1d') return `${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 真实数据源 (xaus.com 免密钥公开 API) ===================
-    // 文档: https://github.com/misix-git/xaus-api
+    // =================== 真实数据源 (biquote.io，免费、无需 Key、CORS 开放) ===================
     async function fetchRealKline(interval) {
-        // 映射周期到 API 参数
-        const rangeMap = { '1m': '1d', '5m': '5d', '15m': '15d', '30m': '1mo', '1h': '3mo', '4h': '1y', '1d': '1y' };
-        const range = rangeMap[interval] || '3mo';
+        const intervalMap = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '1d': '1d' };
+        const apiInterval = intervalMap[interval] || '1h';
+
         try {
-            const res = await fetch(`https://xaus.com/api/v1/chart?symbol=xau&range=${range}`);
-            if (!res.ok) throw new Error('API 请求失败');
+            const url = `https://biquote.io/api/XAUUSD/ohlc?interval=${apiInterval}&limit=300`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
             const json = await res.json();
-            // API 返回格式通常为 { ohlcv: [ { t, o, h, l, c, v } ] }
-            const raw = json.ohlcv || json.data || [];
-            if (!raw.length) throw new Error('数据为空');
+            const raw = json.bars;
+            if (!raw || raw.length === 0) throw new Error('数据为空');
+
+            // biquote 返回最新在前，反转成从旧到新
+            const sortedBars = raw.slice().reverse();
 
             const dates = [], klines = [], volumes = [], timestamps = [];
-            // 可能返回很多点，截取最后 200 根
-            const start = Math.max(0, raw.length - 200);
-            for (let i = start; i < raw.length; i++) {
-                const item = raw[i];
-                const ts = item.t || item.time || item.timestamp;
-                const open = parseFloat(item.o || item.open);
-                const high = parseFloat(item.h || item.high);
-                const low = parseFloat(item.l || item.low);
-                const close = parseFloat(item.c || item.close);
-                const vol = parseFloat(item.v || item.volume || 0);
-                
+            for (const item of sortedBars) {
+                const ts = new Date(item.openTime).getTime() / 1000;
+                const open = parseFloat(item.open);
+                const high = parseFloat(item.high);
+                const low = parseFloat(item.low);
+                const close = parseFloat(item.close);
+                const vol = parseFloat(item.tickVolume) || 0;
+
                 timestamps.push(ts);
                 dates.push(formatKlineDate(ts, interval));
-                klines.push([open, close, low, high]); // ECharts 标准顺序: [open, close, low, high]
+                klines.push([open, close, low, high]); // ECharts 顺序: [open, close, low, high]
                 volumes.push(vol);
             }
+
             chartData = { dates, klines, volumes, timestamps };
             currentPrice = klines[klines.length - 1][1];
             updateTickerUI();
             updateChart();
         } catch (e) {
-            console.error('获取真实 K 线失败:', e);
-            // 降级：如果公开 API 失败，显示提示，而不是假数据
+            console.error('获取 K 线失败:', e);
             document.getElementById('last-price').innerText = '加载失败';
+            document.getElementById('last-price').style.color = '#f6465d';
+            myChart.clear();
+            myChart.setOption({
+                title: { text: '数据加载失败，请稍后重试', left: 'center', top: 'center', textStyle: { color: '#848e9c', fontSize: 14 } }
+            });
         }
     }
 
@@ -223,80 +228,66 @@
         const last = chartData.klines[chartData.klines.length - 1];
         const open = last[0], close = last[1];
         const change = ((close - open) / open) * 100;
-        
+
         document.getElementById('last-price').innerText = formatNum(close);
+        document.getElementById('last-price').style.color = '#eaecef';
         document.getElementById('open-price').innerText = formatNum(open);
-        // 取最近 24 根计算高低
         const recent = chartData.klines.slice(-24);
-        const high24 = Math.max(...recent.map(k => k[3]));
-        const low24 = Math.min(...recent.map(k => k[2]));
-        document.getElementById('high-24').innerText = formatNum(high24);
-        document.getElementById('low-24').innerText = formatNum(low24);
+        document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k[3])));
+        document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k[2])));
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
-        
+
         document.getElementById('sell-bar').innerText = `卖 ${formatNum(close + 0.05)}`;
         document.getElementById('buy-bar').innerText = `买 ${formatNum(close - 0.05)}`;
     }
 
-    // =================== 图表渲染 (行业标准) ===================
+    // =================== 图表渲染 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
-        const closes = klines.map(k => k[1]); 
-        const highs = klines.map(k => k[3]); 
+        const closes = klines.map(k => k[1]);
+        const highs = klines.map(k => k[3]);
         const lows = klines.map(k => k[2]);
-        
-        // 显示最后 80 根
+
         const visibleCount = Math.min(80, dates.length);
         const startIndex = Math.max(0, dates.length - visibleCount);
         const endIndex = dates.length - 1;
 
-        // Y 轴：只根据可见 K 线的真实高、低计算，上下留 15% 空间
         let minLow = Infinity, maxHigh = -Infinity;
-        for (let i = startIndex; i <= endIndex; i++) { 
-            minLow = Math.min(minLow, lows[i]); 
-            maxHigh = Math.max(maxHigh, highs[i]); 
-        }
+        for (let i = startIndex; i <= endIndex; i++) { minLow = Math.min(minLow, lows[i]); maxHigh = Math.max(maxHigh, highs[i]); }
         const padding = (maxHigh - minLow) * 0.15 || 5;
-        const yMin = minLow - padding;
-        const yMax = maxHigh + padding;
+        const yMin = minLow - padding, yMax = maxHigh + padding;
 
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
-        const showVol = indicatorState.VOL; const showMacd = indicatorState.MACD;
-        
-        let mainHeight = 100; let volHeight = 0; let macdHeight = 0; const gap = 5;
+        const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
+        let mainHeight = 100, volHeight = 0, macdHeight = 0;
+        const gap = 5;
         if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
         let currentTop = 5;
 
-        // 主图背景
+        // 主图背景 + 轴标签
         grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
         xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
-        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10, inside: true, formatter: value => formatNum(value, 1) } });
+        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10, inside: true, formatter: v => formatNum(v, 1) } });
 
         // 主图 K 线
         grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
         xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
-        // 【关键修复】K 线图：限制宽度，真实 OHLC 数据，消除锯齿感
-        const klineSeries = { 
-            id: 'klineMain', 
-            type: 'candlestick', 
-            data: klines, 
-            xAxisIndex: 1, 
-            yAxisIndex: 1, 
-            z: 10, 
-            barMaxWidth: 15, // 防止 K 线太宽
-            itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' }, 
-            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] } 
+        const klineSeries = {
+            id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
+            barMaxWidth: 15,
+            itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
+            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
-        if (currentPrice) { 
-            klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } }); 
+        if (currentPrice) {
+            klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } });
         }
         series.push(klineSeries);
 
@@ -348,7 +339,7 @@
 
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
-            dataZoom: [{ type: 'inside', xAxisIndex: zoomAxes, start: (startIndex/dates.length)*100, end: 100 }],
+            dataZoom: [{ type: 'inside', xAxisIndex: zoomAxes, start: (startIndex / dates.length) * 100, end: 100 }],
             tooltip: {
                 trigger: 'axis', triggerOn: 'click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
@@ -357,10 +348,9 @@
                     if (!params || params.length === 0) return '';
                     const idx = params[0].dataIndex;
                     if (idx == null || idx >= chartData.dates.length) return '';
-                    const date = chartData.dates[idx]; const open = chartData.klines[idx][0]; const close = chartData.klines[idx][1];
-                    const low = chartData.klines[idx][2]; const high = chartData.klines[idx][3];
-                    const change = close - open; const changePercent = open !== 0 ? (change / open) * 100 : 0; const colorChange = change >= 0 ? '#0ecb81' : '#f6465d';
-                    return `<div style="font-size:10px; line-height:1.6;"><div style="color:#aaa;">时间：${date}</div><div>开：${formatNum(open)}</div><div>高：${formatNum(high)}</div><div>低：${formatNum(low)}</div><div>收：${formatNum(close)}</div><div style="color:${colorChange};">涨跌幅：${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</div></div>`;
+                    const d = chartData.dates[idx], o = chartData.klines[idx][0], c = chartData.klines[idx][1], l = chartData.klines[idx][2], h = chartData.klines[idx][3];
+                    const chg = c - o, pct = o !== 0 ? (chg / o) * 100 : 0, col = chg >= 0 ? '#0ecb81' : '#f6465d';
+                    return `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div></div>`;
                 }
             }
         }, true);
@@ -378,8 +368,9 @@
 
     function switchOrderTab(tab) {
         document.querySelectorAll('.order-tabs span').forEach(s => s.classList.toggle('active', s.innerText.includes(tab === 'depth' ? '深度' : '成交')));
-        const c = document.getElementById('orderDataContent');
-        c.innerHTML = tab === 'depth' ? '<div style="color:#888;padding:20px;text-align:center;">盘口深度（演示）</div>' : '<div style="color:#888;padding:20px;text-align:center;">最新成交（演示）</div>';
+        document.getElementById('orderDataContent').innerHTML = tab === 'depth'
+            ? '<div style="color:#888;padding:20px;text-align:center;">盘口深度（演示）</div>'
+            : '<div style="color:#888;padding:20px;text-align:center;">最新成交（演示）</div>';
     }
 
     function openTradeModal(side) {
