@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (深度复刻TradingView体验)</title>
+    <title>XAUUSD 交易界面 (专业级网格与时间轴)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -191,6 +191,9 @@
         return `${hours}:${minutes}`; 
     }
 
+    // 核心：强制网格线为 5 的整数倍
+    function roundTo5(val) { return Math.round(val / 5) * 5; }
+
     // =================== 数据加载与图表渲染 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
@@ -287,6 +290,7 @@
 
         const totalLen = dates.length;
 
+        // 核心修复 1：严格计算 Y 轴边界，保证为 $5 的倍数
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (lows[i] < minLow) minLow = lows[i];
@@ -294,9 +298,12 @@
         }
         if (currentPrice) { minLow = Math.min(minLow, currentPrice); maxHigh = Math.max(maxHigh, currentPrice); }
         
-        // 留出上下 8% 的空间
         const padding = (maxHigh - minLow) * 0.08 || 5;
-        const yMin = minLow - padding, yMax = maxHigh + padding;
+        let yMin = roundTo5(minLow - padding);
+        let yMax = roundTo5(maxHigh + padding);
+        
+        // 确保区间足够大，容纳 5 的间距
+        if (yMax - yMin < 30) yMax = yMin + 30;
 
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
@@ -308,22 +315,38 @@
 
         let currentTop = 5;
         
-        // 【修复点 2】网格和右边界调整
-        // right: 8 表示给右侧价格标签留出固定 8px 的微小间隙
+        // 主图 Grid (上方)
         grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
-        xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
+        // 核心修复 2：给主图绑定底部时间标签，固定在网格下方
+        xAxes.push({ 
+            type: 'category', data: dates, gridIndex: 0, 
+            axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, 
+            axisLabel: { 
+                show: true, 
+                color: '#848e9c', 
+                fontSize: 10, 
+                margin: 10, 
+                hideOverlap: true, 
+                interval: 'auto',
+                position: 'bottom'
+            } 
+        });
+        // 核心修复 3：强制 Y 轴间距为 5，固定显示 5 条网格线
         yAxes.push({ 
-            scale: false, min: yMin, max: yMax, 
-            splitNumber: 5, // 【修复点 1】固定 Y 轴网格线为 5 条
+            scale: true, 
+            min: yMin, max: yMax, 
+            splitNumber: 5, 
+            minInterval: 5, // 强制最小间隔为 5
             position: 'right', 
             gridIndex: 0, 
             splitLine: { lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 4, formatter: v => formatNum(v, 1) } 
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 6, formatter: v => formatNum(v, 0) } 
         });
 
+        // 主 K 线图层
         grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
-        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
+        yAxes.push({ scale: true, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
@@ -332,7 +355,7 @@
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
         
-        // 【修复点 2】精准复刻右侧高亮价格标签
+        // 当前价高亮标签
         if (currentPrice) {
             klineSeries.markLine.data.push({ 
                 yAxis: currentPrice, 
@@ -370,7 +393,6 @@
 
         let currentSeriesIndex = 2;
         const zoomAxes = [1];
-        let bottomXAxisIndex = 1;
 
         if (showVol) {
             currentTop += mainHeight + gap;
@@ -380,7 +402,6 @@
             const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
             series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
             zoomAxes.push(currentSeriesIndex);
-            bottomXAxisIndex = currentSeriesIndex;
             currentSeriesIndex++;
         }
 
@@ -396,23 +417,7 @@
             series.push({ type: 'line', data: cleanData(macdResult.dif), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
             series.push({ type: 'line', data: cleanData(macdResult.dea), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
             zoomAxes.push(currentSeriesIndex);
-            bottomXAxisIndex = currentSeriesIndex;
         }
-
-        // 【修复点 3】底部时间标签精准控制
-        const bottomXAxis = xAxes[bottomXAxisIndex];
-        bottomXAxis.axisLabel = { 
-            show: true, 
-            color: '#848e9c', 
-            fontSize: 10, 
-            margin: 12,           // 留出合适底边距
-            hideOverlap: true,    // 防重叠
-            interval: 'auto',     // 自适应密度（根据宽度智能显示）
-            formatter: function (value) { return value; }
-        };
-        bottomXAxis.axisLine = { show: false };
-        bottomXAxis.axisTick = { show: false };
-        xAxes[bottomXAxisIndex] = bottomXAxis;
 
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
@@ -440,6 +445,7 @@
             }
         }, true);
 
+        // 核心修复 4：缩放时同步重新计算 $5 间距
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
             if (!params.batch) return;
@@ -460,21 +466,15 @@
                 maxH = Math.max(maxH, currentPrice);
             }
             const pad = (maxH - minL) * 0.08 || 5;
-            const newYMin = minL - pad;
-            const newYMax = maxH + pad;
+            let newYMin = roundTo5(minL - pad);
+            let newYMax = roundTo5(maxH + pad);
+            if (newYMax - newYMin < 30) newYMax = newYMin + 30;
 
             myChart.setOption({
                 yAxis: [
                     { min: newYMin, max: newYMax },
                     { min: newYMin, max: newYMax }
-                ],
-                xAxis: xAxes.map((ax, idx) => {
-                    const newAx = { ...ax };
-                    if (idx === bottomXAxisIndex) {
-                        newAx.axisLabel = { ...ax.axisLabel, hideOverlap: true, margin: 12 };
-                    }
-                    return newAx;
-                })
+                ]
             });
         });
     }
