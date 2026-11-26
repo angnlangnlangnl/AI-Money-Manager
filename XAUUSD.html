@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (Gate官方真实数据+TradingView布局)</title>
+    <title>XAUUSD 交易界面 (深度复刻TradingView体验)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -105,7 +105,7 @@
             </div>
 
             <div class="timeframes" id="timeframes">
-                <span data-interval="1m">1分</span><span data-interval="5m">5分</span><span data-interval="15m">15分</span><span data-interval="30m">30分</span><span data-interval="1h">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">1日</span>
+                <span data-interval="1m">1分</span><span data-interval="5m">5分</span><span data-interval="15m" class="active">15分</span><span data-interval="30m">30分</span><span data-interval="1h">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">1日</span>
             </div>
             
             <div class="chart-container"><div id="kline"></div></div>
@@ -159,7 +159,7 @@
     const WS_URL = 'wss://cfd.heimi888.com';
 
     // =================== 全局状态 ===================
-    let currentInterval = '15m'; // 参考截图默认设为 15分
+    let currentInterval = '15m';
     let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
@@ -167,10 +167,6 @@
     let zoomStartIndex = 0;
     let zoomEndIndex = 0;
     let wsConnection = null;
-
-    // 默认高亮 15分
-    document.querySelector('#timeframes span[data-interval="15m"]').classList.add('active');
-    document.querySelector('#timeframes span[data-interval="1h"]').classList.remove('active');
 
     // =================== 技术指标计算库 ===================
     class Indicators {
@@ -182,12 +178,16 @@
 
     // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
+    
     function formatKlineDate(timestamp, interval) {
         const d = new Date(timestamp); 
-        const year = d.getFullYear(); const month = d.getMonth() + 1; const date = d.getDate();
-        const hours = d.getHours().toString().padStart(2, '0'); const minutes = d.getMinutes().toString().padStart(2, '0');
-        if (interval === '1d') return `${year}-${month}-${date}`;
-        if (interval === '1h' || interval === '4h') return `${hours}:00`;
+        const month = (d.getMonth() + 1).toString().padStart(2, '0'); 
+        const date = d.getDate().toString().padStart(2, '0');
+        const hours = d.getHours().toString().padStart(2, '0'); 
+        const minutes = d.getMinutes().toString().padStart(2, '0');
+        
+        if (interval === '1d') return `${month}-${date}`;
+        if (interval === '4h') return `${month}-${date} ${hours}:00`;
         return `${hours}:${minutes}`; 
     }
 
@@ -220,7 +220,6 @@
             chartData = { dates, klines, volumes, timestamps };
             currentPrice = klines[klines.length - 1][1];
 
-            // 默认显示最近 120 根
             zoomStartIndex = Math.max(0, chartData.dates.length - 120);
             zoomEndIndex = chartData.dates.length - 1;
 
@@ -232,10 +231,8 @@
         }
     }
 
-    // =================== WebSocket 实时推流 ===================
     function initWebSocket() {
         if (wsConnection) wsConnection.close();
-        
         wsConnection = new WebSocket(WS_URL);
 
         wsConnection.onmessage = (event) => {
@@ -263,7 +260,6 @@
                 }
             }
         };
-
         wsConnection.onclose = () => setTimeout(initWebSocket, 5000);
     }
 
@@ -298,6 +294,7 @@
         }
         if (currentPrice) { minLow = Math.min(minLow, currentPrice); maxHigh = Math.max(maxHigh, currentPrice); }
         
+        // 留出上下 8% 的空间
         const padding = (maxHigh - minLow) * 0.08 || 5;
         const yMin = minLow - padding, yMax = maxHigh + padding;
 
@@ -305,22 +302,26 @@
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
         let mainHeight = 100, volHeight = 0, macdHeight = 0;
         const gap = 5;
+        
         if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
         let currentTop = 5;
-
-        // 主图底层网格 (用于绘制横线等)
-        grids.push({ left: 15, right: 60, top: currentTop + '%', height: mainHeight + '%' });
+        
+        // 【修复点 2】网格和右边界调整
+        // right: 8 表示给右侧价格标签留出固定 8px 的微小间隙
+        grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
         yAxes.push({ 
-            scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 0, 
+            scale: false, min: yMin, max: yMax, 
+            splitNumber: 5, // 【修复点 1】固定 Y 轴网格线为 5 条
+            position: 'right', 
+            gridIndex: 0, 
             splitLine: { lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 8, formatter: v => formatNum(v, 1) } 
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 4, formatter: v => formatNum(v, 1) } 
         });
 
-        // 主图 K 线层
-        grids.push({ left: 15, right: 60, top: currentTop + '%', height: mainHeight + '%' });
+        grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
@@ -331,7 +332,7 @@
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
         
-        // 当前价高亮显示（模拟 TradingView 效果）
+        // 【修复点 2】精准复刻右侧高亮价格标签
         if (currentPrice) {
             klineSeries.markLine.data.push({ 
                 yAxis: currentPrice, 
@@ -340,8 +341,9 @@
                     formatter: formatNum(currentPrice), 
                     color: '#181a20', 
                     backgroundColor: '#0ecb81', 
-                    padding: [2, 5],
-                    borderRadius: 2,
+                    padding: [2, 4], 
+                    borderRadius: 2, 
+                    fontSize: 11,
                     distance: 0 
                 } 
             });
@@ -372,7 +374,7 @@
 
         if (showVol) {
             currentTop += mainHeight + gap;
-            grids.push({ left: 15, right: 60, top: currentTop + '%', height: volHeight + '%' });
+            grids.push({ left: 15, right: 8, top: currentTop + '%', height: volHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
@@ -385,7 +387,7 @@
         if (showMacd && closes.length > 26) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
-            grids.push({ left: 15, right: 60, top: currentTop + '%', height: macdHeight + '%' });
+            grids.push({ left: 15, right: 8, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closes);
@@ -397,15 +399,16 @@
             bottomXAxisIndex = currentSeriesIndex;
         }
 
-        // 最底部时间轴显示
+        // 【修复点 3】底部时间标签精准控制
         const bottomXAxis = xAxes[bottomXAxisIndex];
         bottomXAxis.axisLabel = { 
             show: true, 
             color: '#848e9c', 
             fontSize: 10, 
-            margin: 10, 
-            hideOverlap: true, 
-            formatter: function (value, index) { return value; }
+            margin: 12,           // 留出合适底边距
+            hideOverlap: true,    // 防重叠
+            interval: 'auto',     // 自适应密度（根据宽度智能显示）
+            formatter: function (value) { return value; }
         };
         bottomXAxis.axisLine = { show: false };
         bottomXAxis.axisTick = { show: false };
@@ -437,7 +440,6 @@
             }
         }, true);
 
-        // 缩放监听
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
             if (!params.batch) return;
@@ -466,7 +468,13 @@
                     { min: newYMin, max: newYMax },
                     { min: newYMin, max: newYMax }
                 ],
-                xAxis: xAxes.map(ax => ({ ...ax, axisLabel: { ...ax.axisLabel, hideOverlap: true, margin: 10 } }))
+                xAxis: xAxes.map((ax, idx) => {
+                    const newAx = { ...ax };
+                    if (idx === bottomXAxisIndex) {
+                        newAx.axisLabel = { ...ax.axisLabel, hideOverlap: true, margin: 12 };
+                    }
+                    return newAx;
+                })
             });
         });
     }
@@ -514,7 +522,7 @@
 
     // 启动
     loadRealData(currentInterval);
-    initWebSocket(); // 启动 WebSocket 推流
+    initWebSocket();
     window.addEventListener('resize', () => myChart.resize());
 </script>
 </body>
