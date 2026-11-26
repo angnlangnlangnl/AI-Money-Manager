@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (多周期完美嵌套版)</title>
+    <title>XAUUSD 交易界面 (多周期精准咬合版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -155,29 +155,16 @@
 
 <script>
     // =================== 全局状态 ===================
-    let currentInterval = '1d'; 
+    let currentInterval = '1h'; 
     let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
+    let baseMinuteData = []; // 存放最底层的分钟级基础数据
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
     let isDrawerOpen = true;
     let zoomStartIndex = 0;
     let zoomEndIndex = 0;
 
-    // 基础锚点，生成 1600 -> 2000 -> 5500 -> 3600 的宏观结构
-    const macroKeyframes = [
-        { p: 0.00, price: 1600 },
-        { p: 0.10, price: 2050 },
-        { p: 0.20, price: 1850 },
-        { p: 0.40, price: 1950 },
-        { p: 0.60, price: 2400 },
-        { p: 0.70, price: 3200 },
-        { p: 0.82, price: 5500 }, // 顶峰
-        { p: 0.88, price: 4000 },
-        { p: 0.95, price: 3650 },
-        { p: 1.00, price: 3602 }  // 当前
-    ];
-
-    // =================== 技术指标 ===================
+    // =================== 技术指标计算库 ===================
     class Indicators {
         static SMA(data, period) { const result = new Array(data.length).fill(null); for (let i = period - 1; i < data.length; i++) { let sum = 0; for (let j = i - period + 1; j <= i; j++) sum += data[j]; result[i] = sum / period; } return result; }
         static EMA(data, period) { const result = new Array(data.length).fill(null); if (data.length === 0) return result; const multiplier = 2 / (period + 1); result[0] = data[0]; for (let i = 1; i < data.length; i++) result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1]; return result; }
@@ -193,91 +180,92 @@
         if (interval === '1d') return `${year}-${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 核心：多周期嵌套生成器 ===================
-    // 生成一根日线，其实是一段包含趋势和随机波动的曲线
-    function generateDataForInterval(interval) {
-        const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
-        const stepMinutes = minutesMap[interval] || 1440;
+    // =================== 核心引擎：生成咬合的基础数据并聚合 ===================
+    
+    // 1. 生成最底层的 1 分钟数据（包含宏观历史关键帧）
+    function generateBaseMinuteData() {
+        const keyframes = [
+            { p: 0.00, price: 1600 }, { p: 0.15, price: 1900 }, { p: 0.40, price: 2000 },
+            { p: 0.60, price: 2400 }, { p: 0.75, price: 3800 }, { p: 0.85, price: 5500 },
+            { p: 0.92, price: 4000 }, { p: 1.00, price: 3600 }
+        ];
         
-        // 目标生成总数：日线看大趋势 1000 根；1小时看近期 2000 根；1分钟看更近 1500 根
-        let totalBars = 1000;
-        if (interval === '4h') totalBars = 1200;
-        if (interval === '1h') totalBars = 2000;
-        if (interval === '30m') totalBars = 1500;
-        if (interval === '15m') totalBars = 1500;
-        if (interval === '5m') totalBars = 1500;
-        if (interval === '1m') totalBars = 1500;
+        // 生成 60 天的 1 分钟数据 (约 86400 根)
+        const totalMinutes = 60 * 24 * 60;
+        const stepSec = 60;
+        let ts = Math.floor(Date.now() / 1000);
+        ts = ts - (ts % 60);
 
-        const stepSec = stepMinutes * 60;
-        let endTs = Math.floor(Date.now() / 1000);
-        endTs = endTs - (endTs % stepSec);
+        const data = [];
+        let currentPrice = 3600;
 
-        const dates = [], klines = [], volumes = [], timestamps = [];
-        
-        // 对于日线，从头开始走一遍宏观；对于分钟线，只取宏观数据末尾的一小段
-        const startProgress = interval === '1d' ? 0 : (1 - (totalBars * stepMinutes) / (1000 * 1440));
-        
-        let prevClose = 0;
-
-        for (let i = 0; i < totalBars; i++) {
-            const progress = startProgress + (i / (totalBars - 1)) * (1 - startProgress);
-            
-            // 找到所在的宏观区间
-            let startKF = macroKeyframes[0], endKF = macroKeyframes[macroKeyframes.length - 1];
-            for (let j = 0; j < macroKeyframes.length - 1; j++) {
-                if (progress >= macroKeyframes[j].p && progress <= macroKeyframes[j + 1].p) {
-                    startKF = macroKeyframes[j];
-                    endKF = macroKeyframes[j + 1];
+        for (let i = 0; i < totalMinutes; i++) {
+            const progress = i / totalMinutes;
+            let target = 3600;
+            for (let j = 0; j < keyframes.length - 1; j++) {
+                if (progress >= keyframes[j].p && progress <= keyframes[j + 1].p) {
+                    const kfP = (progress - keyframes[j].p) / (keyframes[j + 1].p - keyframes[j].p);
+                    target = keyframes[j].price + (keyframes[j + 1].price - keyframes[j].price) * kfP;
                     break;
                 }
             }
 
-            const kfProgress = (progress - startKF.p) / (endKF.p - startKF.p || 1);
-            const targetPrice = startKF.price + (endKF.price - startKF.price) * kfProgress;
-
-            // 波动率：周期越短，单根K线波动越小
-            const timeFactor = stepMinutes / 1440; 
-            const volatility = targetPrice * 0.04 * Math.sqrt(timeFactor); 
-
-            if (i === 0) {
-                prevClose = targetPrice + (Math.random() - 0.5) * volatility;
-            }
-
-            const open = prevClose;
-            // 收盘价向目标价靠拢，加上随机噪音
-            const close = open + (targetPrice - open) * 0.2 + (Math.random() - 0.48) * volatility;
+            const volatility = currentPrice * 0.0005; 
+            currentPrice = currentPrice * 0.99 + target * 0.01 + (Math.random() - 0.5) * volatility;
             
-            const high = Math.max(open, close) + Math.random() * volatility * 0.4;
-            const low = Math.min(open, close) - Math.random() * volatility * 0.4;
-
-            const currentTs = endTs - (totalBars - i - 1) * stepSec;
-            timestamps.push(currentTs);
-            dates.push(formatKlineDate(currentTs, interval));
-            klines.push([open, close, low, high]);
-            volumes.push(1000 + Math.random() * 3000);
-
-            prevClose = close;
+            const open = currentPrice;
+            const close = open + (Math.random() - 0.5) * volatility;
+            const high = Math.max(open, close) + Math.random() * volatility * 0.5;
+            const low = Math.min(open, close) - Math.random() * volatility * 0.5;
+            
+            const currentTs = ts - (totalMinutes - i - 1) * stepSec;
+            data.push({ t: currentTs, o: open, c: close, l: low, h: high, v: 100 + Math.random() * 500 });
         }
+        return data;
+    }
 
-        // 强制修正最后一根，确保 UI 显示 3602.19
-        if (klines.length > 0) {
-            const last = klines[klines.length - 1];
-            last[1] = 3602.19;
-            last[2] = Math.min(last[2], last[1]);
-            last[3] = Math.max(last[3], last[1]);
+    // 2. 根据当前周期，聚合底层基础数据
+    function aggregateData(baseData, interval) {
+        const intervalMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
+        const stepMinutes = intervalMap[interval] || 60;
+        
+        const dates = [], klines = [], volumes = [], timestamps = [];
+        
+        // 按周期步长进行分组聚合
+        for (let i = 0; i < baseData.length; i += stepMinutes) {
+            const chunk = baseData.slice(i, i + stepMinutes);
+            if (chunk.length === 0) continue;
+
+            const open = chunk[0].o;
+            const close = chunk[chunk.length - 1].c;
+            const high = Math.max(...chunk.map(d => d.h));
+            const low = Math.min(...chunk.map(d => d.l));
+            const vol = chunk.reduce((sum, d) => sum + d.v, 0);
+            const t = chunk[0].t;
+
+            timestamps.push(t);
+            dates.push(formatKlineDate(t, interval));
+            klines.push([open, close, low, high]);
+            volumes.push(vol);
         }
 
         return { dates, klines, volumes, timestamps };
     }
 
     function loadData() {
-        chartData = generateDataForInterval(currentInterval);
+        // 如果底层数据还没生成过，先初始化
+        if (baseMinuteData.length === 0) {
+            baseMinuteData = generateBaseMinuteData();
+        }
+
+        // 根据当前选中的周期进行聚合
+        chartData = aggregateData(baseMinuteData, currentInterval);
+        
         currentPrice = chartData.klines[chartData.klines.length - 1][1];
         updateTickerUI();
         
-        // 初始显示：日线看全景最后 200 根，分钟线看最后 120 根
-        const defaultVisible = currentInterval === '1d' ? 200 : 120;
-        zoomStartIndex = Math.max(0, chartData.dates.length - defaultVisible);
+        // 初始显示最后 120 根 K 线
+        zoomStartIndex = Math.max(0, chartData.dates.length - 120);
         zoomEndIndex = chartData.dates.length - 1;
         
         updateChart();
@@ -488,7 +476,7 @@
         document.querySelectorAll('#timeframes span[data-interval]').forEach(s => s.classList.remove('active'));
         span.classList.add('active');
         currentInterval = span.dataset.interval;
-        loadData(); // 切换周期时重新调用，利用嵌套算法生成对应精度
+        loadData(); // 切换周期时重新聚合数据
     });
 
     // 启动
