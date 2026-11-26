@@ -3,31 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (专业级布局与留白)</title>
+    <title>XAUUSD 交易界面 (顶部标签与抽屉)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app { width: 100%; max-width: 100%; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* 优化头部高度与底边距 */
-        .header { display: flex; justify-content: space-between; align-items: center; padding: 0 30px; height: 50px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
-        .header-left { display: flex; align-items: center; gap: 20px; font-size: 18px; font-weight: bold; }
+        /* 头部区域：整合了 Logo、品种和标签 */
+        .header { display: flex; align-items: center; padding: 0 30px; height: 50px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
+        .header-left { display: flex; align-items: center; gap: 15px; font-size: 18px; font-weight: bold; }
         .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 5px 10px; border-radius: 4px; }
-        .header-icons { display: flex; gap: 20px; font-size: 18px; color: #848e9c; }
+        .header-left .base-asset { font-size: 12px; color: #848e9c; font-weight: normal; margin-right: 20px; }
+        
+        /* 将 Tabs 移入 Header 中的样式 */
+        .header-tabs { display: flex; align-items: center; height: 100%; gap: 25px; }
+        .header-tab { color: #848e9c; font-size: 14px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; transition: color 0.2s; }
+        .header-tab:hover { color: #eaecef; }
+        .header-tab.active { color: #eaecef; font-weight: bold; }
+        .header-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #f0b90b; }
+
+        .header-icons { margin-left: auto; display: flex; gap: 20px; font-size: 18px; color: #848e9c; }
         
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        /* 【核心修改】标签页完美贴顶，去除多余内边距，与 header 融合 */
-        .tabs { display: flex; gap: 30px; padding: 0 30px; height: 40px; align-items: center; border-bottom: 1px solid #2b3139; flex-shrink: 0; background: #181a20; }
-        .tab { color: #848e9c; font-size: 14px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; transition: color 0.2s; }
-        .tab:hover { color: #eaecef; }
-        .tab.active { color: #eaecef; font-weight: bold; }
-        .tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #f0b90b; }
-        
-        /* 缩小行情区上边距，让整体更紧凑 */
-        .quote-section { display: flex; justify-content: space-between; padding: 10px 30px 15px; flex-shrink: 0; }
+        /* 移除旧的 tabs 区域，调整间距 */
+        .quote-section { display: flex; justify-content: space-between; padding: 15px 30px; flex-shrink: 0; }
         .price-main { font-size: 32px; font-weight: bold; }
         .price-sub { font-size: 14px; color: #848e9c; margin-top: 5px; }
         .price-sub span.green { color: #0ecb81; }
@@ -51,7 +53,9 @@
         .right-drawer.collapsed { width: 0; border-left: none; }
         .drawer-content { width: 320px; display: flex; flex-direction: column; height: 100%; }
         
-        .toggle-btn { position: absolute; right: 320px; top: 50%; transform: translateY(-50%); width: 24px; height: 60px; background: #2b3139; border: 1px solid #383e46; border-right: none; border-radius: 6px 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 12px; transition: right 0.3s ease; }
+        /* 【核心修改】将切换按钮移到了右侧抽屉的顶部边缘，不再影响图表点击 */
+        .toggle-btn { position: absolute; right: 320px; top: 0; width: 24px; height: 40px; background: #1e2329; border: 1px solid #2b3139; border-top: none; border-right: none; border-radius: 0 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 12px; transition: right 0.3s ease; }
+        .toggle-btn:hover { background: #2b3139; color: #fff; }
 
         .order-book-panel { padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
         .order-book-bar { display: flex; align-items: center; font-size: 13px; font-weight: bold; }
@@ -83,19 +87,25 @@
 </head>
 <body>
 <div class="app">
+    <!-- 头部区域，包含所有导航 -->
     <div class="header">
         <div class="header-left">
             <span style="color:#f0b90b; font-size:22px;">Gate</span>
             <span class="pair-selector">XAUUSD ▾</span>
-            <span style="font-size:12px; color:#848e9c; font-weight:normal;">黄金 Gold</span>
+            <span class="base-asset">黄金 Gold</span>
+            <!-- 平移到 Header 的 Tabs -->
+            <div class="header-tabs">
+                <div class="header-tab active">图表</div>
+                <div class="header-tab">合约信息</div>
+                <div class="header-tab">资讯</div>
+            </div>
         </div>
         <div class="header-icons"><span>✨</span><span>★</span><span>🔔</span></div>
     </div>
 
     <div class="main-content">
         <div class="trade-panel">
-            <!-- 标签栏位置调整 -->
-            <div class="tabs"><div class="tab active">图表</div><div class="tab">合约信息</div><div class="tab">资讯</div></div>
+            <!-- 移除了旧的 tabs 区块 -->
             
             <div class="quote-section">
                 <div>
@@ -141,6 +151,7 @@
                 </div>
             </div>
         </div>
+        <!-- 抽屉按钮，现在悬浮在右侧顶端 -->
         <div class="toggle-btn" onclick="toggleDrawer()" id="drawerToggleBtn">▶</div>
     </div>
 
@@ -222,7 +233,6 @@
                 volumes.push(1000); 
             });
 
-            // =================== 核心修复：添加 30 个占位空K线 ===================
             const PADDING_BARS = 30; 
             for (let i = 1; i <= PADDING_BARS; i++) {
                 const lastTs = timestamps[timestamps.length - 1];
@@ -319,6 +329,7 @@
         
         const padding = (maxHigh - minLow) * 0.08 || 5;
         const yMin = minLow - padding, yMax = maxHigh + padding;
+        const yInterval = (yMax - yMin) / 23; // 固定23根线
 
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
@@ -344,8 +355,7 @@
         });
         
         yAxes.push({ 
-            scale: true, min: yMin, max: yMax, 
-            splitNumber: 22, 
+            scale: true, min: yMin, max: yMax, interval: yInterval,
             position: 'right', gridIndex: 0, 
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
             axisLabel: { 
@@ -361,7 +371,7 @@
             axisLine: { show: false }, axisTick: { show: false }, 
             axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 10, hideOverlap: true, position: 'bottom' } 
         });
-        yAxes.push({ scale: true, min: yMin, max: yMax, splitNumber: 22, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
+        yAxes.push({ scale: true, min: yMin, max: yMax, interval: yInterval, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
@@ -486,13 +496,13 @@
             const pad = (maxH - minL) * 0.08 || 5;
             const newYMin = minL - pad;
             const newYMax = maxH + pad;
-
+            const newYInterval = (newYMax - newYMin) / 23;
             const newXSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
 
             myChart.setOption({
                 yAxis: [
-                    { min: newYMin, max: newYMax },
-                    { min: newYMin, max: newYMax }
+                    { min: newYMin, max: newYMax, interval: newYInterval },
+                    { min: newYMin, max: newYMax, interval: newYInterval }
                 ],
                 xAxis: [
                     { interval: newXSplitInterval }, 
