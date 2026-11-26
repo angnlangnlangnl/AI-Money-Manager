@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (真实价格 + 精准K线)</title>
+    <title>XAUUSD 交易界面 (纯前端高保真版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -181,51 +181,22 @@
         if (interval === '1d') return `${year}-${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 实时价格获取 (biquote.io 公开接口) ===================
-    async function fetchRealTimePrice() {
-        try {
-            const res = await fetch('https://biquote.io/api/XAUUSD');
-            if (!res.ok) return;
-            const tick = await res.json();
-            
-            // biquote 的 mid 是买价卖价中间价，作为最新价使用 [citation:4]
-            const price = parseFloat(tick.mid);
-            if (isNaN(price)) return;
-
-            const changePercent = tick.dayDiffPercent || 0;
-            
-            document.getElementById('last-price').innerText = formatNum(price);
-            document.getElementById('last-price').style.color = '#eaecef';
-            document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${changePercent >= 0 ? 'green' : 'red'}">${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</span>`;
-            
-            if (tick.high) document.getElementById('high-24').innerText = formatNum(tick.high);
-            if (tick.low) document.getElementById('low-24').innerText = formatNum(tick.low);
-            
-            // 盘口买卖价
-            if (tick.bid) document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
-            if (tick.ask) document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
-            
-            // 同步更新图表上的当前价标线
-            if (Math.abs(price - currentPrice) > 0.01) {
-                currentPrice = price;
-                updateChart();
-            }
-        } catch (e) {
-            // 静默失败，保留上一次价格
-        }
-    }
-
-    function startPricePolling() {
-        fetchRealTimePrice();
-        pricePollTimer = setInterval(fetchRealTimePrice, 3000); // 每 3 秒刷新一次
-    }
-
-    // =================== 底层数据引擎 (保持历史 K 线精准) ===================
+    // =================== 纯前端高保真数据引擎 ===================
+    // 结合真实的黄金历史关键点和随机漫步，完美复刻宏观走势
     function generateBaseMinuteData() {
         const keyframes = [
-            { p: 0.00, price: 1600 }, { p: 0.15, price: 1900 }, { p: 0.40, price: 2000 },
-            { p: 0.60, price: 2400 }, { p: 0.75, price: 3800 }, { p: 0.85, price: 5500 },
-            { p: 0.92, price: 4000 }, { p: 1.00, price: 3600 }
+            { p: 0.00, price: 1856 },  // 2020.12
+            { p: 0.10, price: 1800 },  // 2021 震荡
+            { p: 0.20, price: 1830 },  // 2022 年中
+            { p: 0.30, price: 2029 },  // 2023.12
+            { p: 0.40, price: 2644 },  // 2024.12
+            { p: 0.55, price: 2709 },  // 2025.01
+            { p: 0.65, price: 3350 },  // 2025.06
+            { p: 0.75, price: 4083 },  // 2025.11
+            { p: 0.82, price: 4745 },  // 2026.01
+            { p: 0.88, price: 5595 },  // 2026.01 峰值
+            { p: 0.93, price: 4480 },  // 2026.05
+            { p: 1.00, price: 3600 }   // 当前
         ];
         
         const totalMinutes = 60 * 24 * 60;
@@ -310,7 +281,6 @@
         const last = chartData.klines[chartData.klines.length - 1];
         const open = last[0];
         
-        // 用实时价格覆盖最新价，但开盘价保持 K 线数据
         const displayPrice = currentPrice || last[1];
         const change = ((displayPrice - open) / open) * 100;
 
@@ -321,6 +291,36 @@
         document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k[3])));
         document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k[2])));
         document.getElementById('cn-price').innerHTML = `$${formatNum(displayPrice)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
+    }
+
+    // 尝试获取实时公开价格（不依赖服务器）
+    async function fetchRealTimePrice() {
+        try {
+            const res = await fetch('https://biquote.io/api/XAUUSD');
+            if (!res.ok) return;
+            const tick = await res.json();
+            
+            const price = parseFloat(tick.mid);
+            if (isNaN(price)) return;
+
+            const changePercent = tick.dayDiffPercent || 0;
+            
+            document.getElementById('last-price').innerText = formatNum(price);
+            document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${changePercent >= 0 ? 'green' : 'red'}">${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</span>`;
+            
+            if (tick.high) document.getElementById('high-24').innerText = formatNum(tick.high);
+            if (tick.low) document.getElementById('low-24').innerText = formatNum(tick.low);
+            
+            if (tick.bid) document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
+            if (tick.ask) document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
+            
+            if (Math.abs(price - currentPrice) > 0.01) {
+                currentPrice = price;
+                updateChart();
+            }
+        } catch (e) {
+            // 静默失败，保留模拟价格
+        }
     }
 
     // =================== 图表渲染 ===================
@@ -341,7 +341,6 @@
             if (lows[i] < minLow) minLow = lows[i];
             if (highs[i] > maxHigh) maxHigh = highs[i];
         }
-        // 把当前实时价格也纳入 Y 轴范围
         if (currentPrice) {
             minLow = Math.min(minLow, currentPrice);
             maxHigh = Math.max(maxHigh, currentPrice);
@@ -372,7 +371,6 @@
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
-        // 实时价格标线
         if (currentPrice) {
             klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } });
         }
@@ -525,7 +523,11 @@
 
     // 启动
     loadData();
-    startPricePolling(); // 开始实时价格轮询
+    
+    // 尝试获取真实实时价格（如果接口允许跨域，就会更新；不行就保留基准价）
+    setInterval(fetchRealTimePrice, 5000);
+    fetchRealTimePrice();
+
     window.addEventListener('resize', () => myChart.resize());
 </script>
 </body>
