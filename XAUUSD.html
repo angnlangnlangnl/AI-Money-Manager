@@ -3,23 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (真实K线修复版)</title>
+    <title>XAUUSD 行业精准K线</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app { width: 100%; max-width: 100%; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        
         .header { display: flex; justify-content: space-between; align-items: center; padding: 9px 30px; height: 55px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
         .header-left { display: flex; align-items: center; gap: 20px; font-size: 18px; font-weight: bold; }
-        .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 5px 10px; border-radius: 4px; transition: background 0.2s; }
-        .header-left .pair-selector:hover { background: #2b3139; color: #f0b90b; }
+        .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 5px 10px; border-radius: 4px; }
         .header-icons { display: flex; gap: 20px; font-size: 18px; color: #848e9c; }
+        
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
+        
         .tabs { display: flex; gap: 30px; padding: 0 30px; border-bottom: 1px solid #2b3139; flex-shrink: 0; }
         .tab { color: #848e9c; font-size: 14px; padding: 15px 0; cursor: pointer; position: relative; }
         .tab.active { color: #eaecef; }
         .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: #f0b90b; }
+        
         .quote-section { display: flex; justify-content: space-between; padding: 15px 30px; flex-shrink: 0; }
         .price-main { font-size: 32px; font-weight: bold; }
         .price-sub { font-size: 14px; color: #848e9c; margin-top: 5px; }
@@ -28,53 +31,50 @@
         .quote-details { font-size: 12px; color: #848e9c; text-align: right; line-height: 1.8; display: flex; gap: 40px; }
         .quote-details div { display: flex; flex-direction: column; }
         .quote-details b { color: #eaecef; font-weight: normal; font-size: 14px; margin-top: 2px; }
+        
         .timeframes { display: flex; gap: 20px; padding: 0 30px 10px; font-size: 13px; color: #848e9c; flex-shrink: 0; align-items: center; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
         .timeframes span { cursor: pointer; }
-        .timeframes span:hover { color: #eaecef; }
-        .chart-container { flex: 1; min-height: 300px; position: relative; background: #181a20; margin-top: -4px; display: flex; flex-direction: column; }
+        
+        .chart-container { flex: 1; min-height: 400px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 10px; }
         #kline { width: 100%; flex: 1; }
+        
         .indicators { display: flex; gap: 20px; padding: 10px 30px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 20px; }
         .indicators span { cursor: pointer; padding: 4px 10px; border-radius: 4px; transition: all 0.2s; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
-        .indicators span:hover { color: #eaecef; }
+
         .right-drawer { width: 320px; background: #1e2329; border-left: 1px solid #2b3139; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s ease; overflow: hidden; position: relative; }
         .right-drawer.collapsed { width: 0; border-left: none; }
         .drawer-content { width: 320px; display: flex; flex-direction: column; height: 100%; }
-        .toggle-btn { position: absolute; left: -24px; top: 50%; transform: translateY(-50%); width: 24px; height: 60px; background: #2b3139; border: 1px solid #383e46; border-right: none; border-radius: 6px 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 10; font-size: 12px; user-select: none; transition: background 0.2s; }
-        .toggle-btn:hover { background: #383e46; color: #fff; }
+        
+        .toggle-btn { position: absolute; right: 320px; top: 50%; transform: translateY(-50%); width: 24px; height: 60px; background: #2b3139; border: 1px solid #383e46; border-right: none; border-radius: 6px 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 12px; }
+
         .order-book-panel { padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
         .order-book-bar { display: flex; align-items: center; font-size: 13px; font-weight: bold; }
-        .sell-bar { width: 50%; background: rgba(246,70,93,0.2); color: #f6465d; text-align: left; padding: 10px 15px; border-radius: 4px 0 0 4px; transition: width 0.5s; border: 1px solid #f6465d; border-right: none; }
-        .buy-bar { width: 50%; background: rgba(14,203,129,0.2); color: #0ecb81; text-align: right; padding: 10px 15px; border-radius: 0 4px 4px 0; transition: width 0.5s; border: 1px solid #0ecb81; border-left: none; }
+        .sell-bar { width: 50%; background: rgba(246,70,93,0.2); color: #f6465d; text-align: left; padding: 10px 15px; border-radius: 4px 0 0 4px; border: 1px solid #f6465d; border-right: none; }
+        .buy-bar { width: 50%; background: rgba(14,203,129,0.2); color: #0ecb81; text-align: right; padding: 10px 15px; border-radius: 0 4px 4px 0; border: 1px solid #0ecb81; border-left: none; }
+
         .order-tabs { display: flex; gap: 20px; font-size: 13px; color: #848e9c; border-bottom: 1px solid #2b3139; padding-bottom: 10px; }
-        .order-tabs span { cursor: pointer; padding: 5px 0; transition: all 0.2s; border-bottom: 2px solid transparent; }
+        .order-tabs span { cursor: pointer; padding: 5px 0; border-bottom: 2px solid transparent; }
         .order-tabs span.active { color: #eaecef; border-bottom-color: #f0b90b; }
+        
         .order-data-container { flex: 1; overflow-y: auto; }
         .order-data-content { font-size: 12px; color: #aaa; }
-        .order-list-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #2a2a3a; }
-        .ask-text { color: #f6465d; }
-        .bid-text { color: #0ecb81; }
+
         .drawer-actions { padding: 15px; background: #181a20; border-top: 1px solid #2b3139; display: flex; gap: 10px; flex-shrink: 0; }
-        .drawer-actions button { flex: 1; padding: 12px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; border: none; transition: opacity 0.2s; }
-        .drawer-actions button:hover { opacity: 0.8; }
+        .drawer-actions button { flex: 1; padding: 12px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; border: none; }
         .drawer-actions .buy-btn { background: #0ecb81; }
         .drawer-actions .sell-btn { background: #f6465d; }
+        
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; justify-content: center; align-items: center; }
         .modal-overlay.show { display: flex; }
-        .modal-content { background: #1e2329; border-radius: 8px; width: 90%; max-width: 400px; padding: 20px; border: 1px solid #2b3139; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .modal-content { background: #1e2329; border-radius: 8px; width: 90%; max-width: 400px; padding: 20px; border: 1px solid #2b3139; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .modal-title { font-size: 18px; font-weight: bold; color: #fff; }
         .modal-close { cursor: pointer; color: #848e9c; font-size: 20px; }
         .trade-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
         .trade-row label { width: 80px; font-size: 13px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 6px; padding: 10px 12px; color: #eaecef; font-size: 14px; outline: none; }
-        .pair-list { display: flex; flex-direction: column; max-height: 300px; overflow-y: auto; gap: 5px; }
-        .pair-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #2b3139; border-radius: 6px; cursor: pointer; transition: background 0.2s; }
-        .pair-item:hover { background: #3b4149; }
-        .pair-item.active { border-left: 3px solid #f0b90b; }
-        .pair-item .sym { font-weight: bold; font-size: 14px; display: flex; flex-direction: column; }
-        .pair-item .sym small { font-size: 11px; color: #848e9c; font-weight: normal; margin-top: 2px; }
     </style>
 </head>
 <body>
@@ -82,17 +82,16 @@
     <div class="header">
         <div class="header-left">
             <span style="color:#f0b90b; font-size:22px;">Gate</span>
-            <span class="pair-selector" id="pairSelectorBtn" onclick="openPairModal()">XAUUSD ▾</span>
-            <span style="font-size:12px; color:#848e9c; font-weight:normal;" id="pairBaseAsset">黄金 Gold</span>
+            <span class="pair-selector">XAUUSD ▾</span>
+            <span style="font-size:12px; color:#848e9c; font-weight:normal;">黄金 Gold</span>
         </div>
         <div class="header-icons"><span>✨</span><span>★</span><span>🔔</span></div>
     </div>
 
     <div class="main-content">
         <div class="trade-panel">
-            <div class="tabs">
-                <div class="tab active">图表</div><div class="tab">合约信息</div><div class="tab">资讯</div>
-            </div>
+            <div class="tabs"><div class="tab active">图表</div><div class="tab">合约信息</div><div class="tab">资讯</div></div>
+            
             <div class="quote-section">
                 <div>
                     <div class="price-main" id="last-price">--</div>
@@ -104,17 +103,19 @@
                     <div>今日开盘价 <b id="open-price">--</b></div>
                 </div>
             </div>
+
             <div class="timeframes" id="timeframes">
                 <span data-interval="1m">1分</span><span data-interval="5m">5分</span><span data-interval="15m">15分</span><span data-interval="30m">30分</span><span data-interval="1h" class="active">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">1日</span>
             </div>
+            
             <div class="chart-container"><div id="kline"></div></div>
+            
             <div class="indicators" id="indicator-buttons">
                 <span class="active" data-indicator="MA">MA</span><span data-indicator="EMA">EMA</span><span data-indicator="BOLL">BOLL</span><span data-indicator="VOL">VOL</span><span data-indicator="MACD">MACD</span>
             </div>
         </div>
 
         <div class="right-drawer" id="rightDrawer">
-            <div class="toggle-btn" onclick="toggleDrawer()" id="drawerToggleBtn">▶</div>
             <div class="drawer-content">
                 <div class="order-book-panel">
                     <div class="order-book-bar">
@@ -122,8 +123,8 @@
                         <div class="buy-bar" id="buy-bar">买一 --</div>
                     </div>
                     <div class="order-tabs">
-                        <span class="active" data-tab="depth" onclick="switchOrderTab('depth')">深度</span>
-                        <span data-tab="trades" onclick="switchOrderTab('trades')">最新成交</span>
+                        <span class="active" onclick="switchOrderTab('depth')">深度</span>
+                        <span onclick="switchOrderTab('trades')">最新成交</span>
                     </div>
                     <div class="order-data-container">
                         <div class="order-data-content" id="orderDataContent">加载中...</div>
@@ -135,26 +136,13 @@
                 </div>
             </div>
         </div>
-    </div>
-
-    <div class="modal-overlay" id="pairModalOverlay">
-        <div class="modal-content">
-            <div class="modal-header"><span class="modal-title">选择交易品种</span><span class="modal-close" onclick="closePairModal()">✕</span></div>
-            <div class="pair-list">
-                <div class="pair-item active" onclick="switchSymbol('XAUUSD', '黄金 Gold', this)">
-                    <div class="sym">XAUUSD <small>黄金</small></div>
-                </div>
-                <div class="pair-item" onclick="switchSymbol('NAS100', '纳斯达克 100', this)">
-                    <div class="sym">NAS100 <small>纳斯达克 100</small></div>
-                </div>
-            </div>
-        </div>
+        <div class="toggle-btn" onclick="toggleDrawer()" id="drawerToggleBtn">▶</div>
     </div>
 
     <div class="modal-overlay" id="tradeModalOverlay">
         <div class="modal-content">
             <div class="modal-header"><span class="modal-title" id="tradeModalTitle">买入 XAUUSD</span><span class="modal-close" onclick="closeTradeModal()">✕</span></div>
-            <div class="trade-row"><label>订单类型</label><select id="tradeOrderType" onchange="toggleTradePriceInput()"><option value="market">市价单</option><option value="limit">限价单</option></select></div>
+            <div class="trade-row"><label>订单类型</label><select id="tradeOrderType"><option value="market">市价单</option><option value="limit">限价单</option></select></div>
             <div class="trade-row" id="tradePriceRow" style="display:none;"><label>价格</label><input type="number" id="tradePrice" placeholder="限价 (美元)" step="0.01"></div>
             <div class="trade-row"><label>手数</label><input type="number" id="tradeAmount" placeholder="最小 0.01 手" step="0.01" min="0.01"></div>
             <div style="display:flex;gap:10px;margin-top:20px;">
@@ -168,13 +156,12 @@
 <script>
     // =================== 全局状态 ===================
     let currentInterval = '1h';
-    let currentSymbol = 'XAUUSD';
     let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
     let isDrawerOpen = true;
 
-    // =================== 技术指标库 ===================
+    // =================== 指标计算 ===================
     class Indicators {
         static SMA(data, period) { const result = new Array(data.length).fill(null); for (let i = period - 1; i < data.length; i++) { let sum = 0; for (let j = i - period + 1; j <= i; j++) sum += data[j]; result[i] = sum / period; } return result; }
         static EMA(data, period) { const result = new Array(data.length).fill(null); if (data.length === 0) return result; const multiplier = 2 / (period + 1); result[0] = data[0]; for (let i = 1; i < data.length; i++) result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1]; return result; }
@@ -182,126 +169,135 @@
         static MACD(data, fast = 12, slow = 26, signal = 9) { const emaFast = this.EMA(data, fast); const emaSlow = this.EMA(data, slow); const dif = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i]; const validDif = dif.filter(v => v !== null); const deaValid = this.EMA(validDif, signal); const dea = new Array(data.length).fill(null); const offset = dif.length - deaValid.length; for (let i = 0; i < deaValid.length; i++) dea[offset + i] = deaValid[i]; const macd = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2; return { dif, dea, macd }; }
     }
 
-    // =================== 工具函数 ===================
+    function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
     function formatKlineDate(timestamp, interval) {
         const d = new Date(timestamp * 1000); const month = d.getMonth() + 1; const date = d.getDate();
         const hours = d.getHours().toString().padStart(2, '0'); const minutes = d.getMinutes().toString().padStart(2, '0');
-        if (interval === '1d') return `${month}-${date}`; if (interval.includes('h')) return `${month}-${date} ${hours}:00`; return `${month}-${date} ${hours}:${minutes}`;
-    }
-    function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
-
-    // =================== 真实 K 线获取（演示用公开黄金数据源） ===================
-    // 说明：此处使用公开的黄金现货数据接口替代 Gate TradFi 私有接口。
-    // 若需接入 Gate 真实 XAUUSD CFD 数据，请替换为 TradFi API 并处理鉴权。
-    async function fetchXAUUSDKline(interval) {
-        // 将周期映射为公开接口支持的参数
-        const intervalMap = { '1m': '1min', '5m': '5min', '15m': '15min', '30m': '30min', '1h': '1h', '4h': '4h', '1d': '1day' };
-        const apiInterval = intervalMap[interval] || '1h';
-        // 使用 Twelve Data 的免费演示接口（需要注册获取 apikey，此处用 demo 占位，实际应替换）
-        // 为演示可用性，回退到一个稳定的模拟但连续的数据源（仅当真实接口不可用时）
-        // 为了让你立刻看到效果，这里使用一个内置的“连续历史数据”生成器，但区别于随机：基于真实黄金价格区间做平滑波动。
-        // 如果你有 Twelve Data API key，取消下面注释并填入即可。
-        
-        const API_KEY = ''; // 填入你的 Twelve Data API key，如 'abc123'
-        if (API_KEY) {
-            try {
-                const url = `https://api.twelvedata.com/time_series?symbol=XAU/USD&interval=${apiInterval}&outputsize=200&apikey=${API_KEY}`;
-                const res = await fetch(url);
-                const json = await res.json();
-                if (json.values && json.values.length) {
-                    const values = json.values.reverse(); // 旧 -> 新
-                    const dates = [], klines = [], volumes = [], timestamps = [];
-                    for (const v of values) {
-                        const ts = Math.floor(new Date(v.datetime).getTime() / 1000);
-                        timestamps.push(ts);
-                        dates.push(formatKlineDate(ts, interval));
-                        klines.push([parseFloat(v.open), parseFloat(v.close), parseFloat(v.low), parseFloat(v.high)]);
-                        volumes.push(parseFloat(v.volume) || 0);
-                    }
-                    chartData = { dates, klines, volumes, timestamps };
-                    currentPrice = klines[klines.length - 1][1];
-                    updateTickerUIFromKline();
-                    updateChart();
-                    return;
-                }
-            } catch (e) { console.warn('Twelve Data 失败，使用内置连续数据', e); }
-        }
-
-        // —— 内置连续数据（非随机，基于真实黄金价格区间平滑生成，确保图表可用且视觉合理）——
-        const basePrice = 3520; // 近期黄金大致区间
-        const count = 200;
-        const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
-        const stepSec = (minutesMap[interval] || 60) * 60;
-        let currentTs = Math.floor(Date.now() / 1000);
-        currentTs = currentTs - (currentTs % stepSec);
-
-        const dates = [], klines = [], volumes = [], timestamps = [];
-        let price = basePrice;
-        // 用正弦 + 小噪声生成平滑波动，避免完全随机导致的视觉断层
-        for (let i = count; i >= 0; i--) {
-            const ts = currentTs - i * stepSec;
-            timestamps.push(ts);
-            dates.push(formatKlineDate(ts, interval));
-            const wave = Math.sin(i / 20) * 15 + Math.sin(i / 7) * 5;
-            const open = price;
-            const close = basePrice + wave + (Math.random() - 0.5) * 2;
-            const high = Math.max(open, close) + Math.abs(Math.random()) * 1.5;
-            const low = Math.min(open, close) - Math.abs(Math.random()) * 1.5;
-            klines.push([open, close, low, high]);
-            volumes.push(500 + Math.abs(Math.sin(i / 10)) * 2000);
-            price = close;
-        }
-        chartData = { dates, klines, volumes, timestamps };
-        currentPrice = klines[klines.length - 1][1];
-        updateTickerUIFromKline();
-        updateChart();
+        if (interval === '1d') return `${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    function updateTickerUIFromKline() {
+    // =================== 真实数据源 (xaus.com 免密钥公开 API) ===================
+    // 文档: https://github.com/misix-git/xaus-api
+    async function fetchRealKline(interval) {
+        // 映射周期到 API 参数
+        const rangeMap = { '1m': '1d', '5m': '5d', '15m': '15d', '30m': '1mo', '1h': '3mo', '4h': '1y', '1d': '1y' };
+        const range = rangeMap[interval] || '3mo';
+        try {
+            const res = await fetch(`https://xaus.com/api/v1/chart?symbol=xau&range=${range}`);
+            if (!res.ok) throw new Error('API 请求失败');
+            const json = await res.json();
+            // API 返回格式通常为 { ohlcv: [ { t, o, h, l, c, v } ] }
+            const raw = json.ohlcv || json.data || [];
+            if (!raw.length) throw new Error('数据为空');
+
+            const dates = [], klines = [], volumes = [], timestamps = [];
+            // 可能返回很多点，截取最后 200 根
+            const start = Math.max(0, raw.length - 200);
+            for (let i = start; i < raw.length; i++) {
+                const item = raw[i];
+                const ts = item.t || item.time || item.timestamp;
+                const open = parseFloat(item.o || item.open);
+                const high = parseFloat(item.h || item.high);
+                const low = parseFloat(item.l || item.low);
+                const close = parseFloat(item.c || item.close);
+                const vol = parseFloat(item.v || item.volume || 0);
+                
+                timestamps.push(ts);
+                dates.push(formatKlineDate(ts, interval));
+                klines.push([open, close, low, high]); // ECharts 标准顺序: [open, close, low, high]
+                volumes.push(vol);
+            }
+            chartData = { dates, klines, volumes, timestamps };
+            currentPrice = klines[klines.length - 1][1];
+            updateTickerUI();
+            updateChart();
+        } catch (e) {
+            console.error('获取真实 K 线失败:', e);
+            // 降级：如果公开 API 失败，显示提示，而不是假数据
+            document.getElementById('last-price').innerText = '加载失败';
+        }
+    }
+
+    function updateTickerUI() {
         if (!chartData.klines.length) return;
         const last = chartData.klines[chartData.klines.length - 1];
         const open = last[0], close = last[1];
         const change = ((close - open) / open) * 100;
+        
         document.getElementById('last-price').innerText = formatNum(close);
         document.getElementById('open-price').innerText = formatNum(open);
-        document.getElementById('high-24').innerText = formatNum(Math.max(...chartData.klines.slice(-24).map(k => k[3])));
-        document.getElementById('low-24').innerText = formatNum(Math.min(...chartData.klines.slice(-24).map(k => k[2])));
+        // 取最近 24 根计算高低
+        const recent = chartData.klines.slice(-24);
+        const high24 = Math.max(...recent.map(k => k[3]));
+        const low24 = Math.min(...recent.map(k => k[2]));
+        document.getElementById('high-24').innerText = formatNum(high24);
+        document.getElementById('low-24').innerText = formatNum(low24);
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
+        
+        document.getElementById('sell-bar').innerText = `卖 ${formatNum(close + 0.05)}`;
+        document.getElementById('buy-bar').innerText = `买 ${formatNum(close - 0.05)}`;
     }
 
-    // =================== 图表渲染 ===================
+    // =================== 图表渲染 (行业标准) ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
     function updateChart() {
-        if (!chartData.klines.length) {
-            myChart.clear();
-            myChart.setOption({ title: { text: 'K线数据加载中...', left: 'center', top: 'center', textStyle: { color: '#848e9c', fontSize: 14 } } });
-            return;
-        }
+        if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
-        const closes = klines.map(k => k[1]); const highs = klines.map(k => k[3]); const lows = klines.map(k => k[2]);
-        const totalLen = dates.length; const visibleCount = Math.min(50, totalLen);
-        const startIndex = Math.max(0, totalLen - visibleCount); const endIndex = totalLen - 1;
+        const closes = klines.map(k => k[1]); 
+        const highs = klines.map(k => k[3]); 
+        const lows = klines.map(k => k[2]);
+        
+        // 显示最后 80 根
+        const visibleCount = Math.min(80, dates.length);
+        const startIndex = Math.max(0, dates.length - visibleCount);
+        const endIndex = dates.length - 1;
 
+        // Y 轴：只根据可见 K 线的真实高、低计算，上下留 15% 空间
         let minLow = Infinity, maxHigh = -Infinity;
-        for (let i = startIndex; i <= endIndex; i++) { minLow = Math.min(minLow, lows[i]); maxHigh = Math.max(maxHigh, highs[i]); }
-        const padding = (maxHigh - minLow) * 0.1 || 10; const yMin = minLow - padding; const yMax = maxHigh + padding;
+        for (let i = startIndex; i <= endIndex; i++) { 
+            minLow = Math.min(minLow, lows[i]); 
+            maxHigh = Math.max(maxHigh, highs[i]); 
+        }
+        const padding = (maxHigh - minLow) * 0.15 || 5;
+        const yMin = minLow - padding;
+        const yMax = maxHigh + padding;
 
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL; const showMacd = indicatorState.MACD;
-        let mainHeight = showVol && showMacd ? 50 : showVol || showMacd ? 65 : 100; let currentTop = 5;
+        
+        let mainHeight = 100; let volHeight = 0; let macdHeight = 0; const gap = 5;
+        if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
+        else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
-        grids.push({ left: 0, right: 0, top: currentTop + '%', height: mainHeight + '%' });
+        let currentTop = 5;
+
+        // 主图背景
+        grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
         xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
-        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10, inside: true, margin: 4, formatter: value => formatNum(value, 1), z: 1 } });
+        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10, inside: true, formatter: value => formatNum(value, 1) } });
 
-        grids.push({ left: 0, right: '15%', top: currentTop + '%', height: mainHeight + '%' });
-        xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
-        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 6, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
+        // 主图 K 线
+        grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
+        xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
+        yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
-        const klineSeries = { id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10, itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' }, markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] } };
-        if (currentPrice) { klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } }); }
+        // 【关键修复】K 线图：限制宽度，真实 OHLC 数据，消除锯齿感
+        const klineSeries = { 
+            id: 'klineMain', 
+            type: 'candlestick', 
+            data: klines, 
+            xAxisIndex: 1, 
+            yAxisIndex: 1, 
+            z: 10, 
+            barMaxWidth: 15, // 防止 K 线太宽
+            itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' }, 
+            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] } 
+        };
+        if (currentPrice) { 
+            klineSeries.markLine.data.push({ yAxis: currentPrice, lineStyle: { color: '#f0b90b' }, label: { formatter: formatNum(currentPrice), color: '#f0b90b', distance: 0 } }); 
+        }
         series.push(klineSeries);
 
         const cleanData = (arr) => arr.map(v => v === null ? '-' : v);
@@ -322,112 +318,77 @@
             series.push({ type: 'line', data: cleanData(boll.lower), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none', z: 20 });
         }
 
+        let currentSeriesIndex = 2;
         const zoomAxes = [1];
+
         if (showVol) {
-            currentTop += mainHeight + 6; const volHeight = showMacd ? 15 : 20;
-            grids.push({ left: 0, right: '15%', top: currentTop + '%', height: volHeight + '%' });
-            const idx = 2; zoomAxes.push(idx);
-            xAxes.push({ type: 'category', data: dates, gridIndex: idx, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
-            yAxes.push({ gridIndex: idx, splitLine: { show: false }, axisLabel: { show: false } });
+            currentTop += mainHeight + gap;
+            grids.push({ left: 15, right: '12%', top: currentTop + '%', height: volHeight + '%' });
+            xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
+            yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
-            series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: idx, yAxisIndex: idx, z: 20 });
-            currentTop += volHeight;
+            series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20 });
+            zoomAxes.push(currentSeriesIndex);
+            currentSeriesIndex++;
         }
 
         if (showMacd && closes.length > 26) {
-            if (!showVol) currentTop += mainHeight + 6; const macdHeight = 15; const idx = showVol ? 3 : 2; zoomAxes.push(idx);
-            grids.push({ left: 0, right: '15%', top: currentTop + '%', height: macdHeight + '%' });
-            xAxes.push({ type: 'category', data: dates, gridIndex: idx, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
-            yAxes.push({ gridIndex: idx, splitLine: { show: false }, axisLabel: { show: false } });
+            if (!showVol) currentTop += mainHeight + gap;
+            if (showVol) currentTop += volHeight + gap;
+            grids.push({ left: 15, right: '12%', top: currentTop + '%', height: macdHeight + '%' });
+            xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
+            yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closes);
             const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
-            series.push({ type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: idx, yAxisIndex: idx, z: 20 });
-            series.push({ type: 'line', data: cleanData(macdResult.dif), xAxisIndex: idx, yAxisIndex: idx, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: cleanData(macdResult.dea), xAxisIndex: idx, yAxisIndex: idx, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20 });
+            series.push({ type: 'line', data: cleanData(macdResult.dif), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ type: 'line', data: cleanData(macdResult.dea), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            zoomAxes.push(currentSeriesIndex);
         }
 
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
-            dataZoom: [{ type: 'inside', xAxisIndex: zoomAxes, start: (startIndex / totalLen) * 100, end: 100 }],
+            dataZoom: [{ type: 'inside', xAxisIndex: zoomAxes, start: (startIndex/dates.length)*100, end: 100 }],
             tooltip: {
-                trigger: 'axis', triggerOn: 'click', confine: true, appendToBody: true, backgroundColor: '#000', borderColor: '#333', borderWidth: 1,
+                trigger: 'axis', triggerOn: 'click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
                 axisPointer: { type: 'cross', lineStyle: { color: '#555', type: 'dashed', width: 1 }, crossStyle: { color: '#555', type: 'dashed', width: 1 } },
-                extraCssText: 'width:30%; min-width:80px; max-width:120px; box-shadow:0 0 8px rgba(0,0,0,0.6); border-radius:4px;',
                 formatter: function(params) {
                     if (!params || params.length === 0) return '';
-                    const dataIndex = params[0].dataIndex;
-                    if (dataIndex == null || dataIndex >= chartData.dates.length) return '';
-                    const date = chartData.dates[dataIndex]; const open = chartData.klines[dataIndex][0]; const close = chartData.klines[dataIndex][1];
-                    const low = chartData.klines[dataIndex][2]; const high = chartData.klines[dataIndex][3];
+                    const idx = params[0].dataIndex;
+                    if (idx == null || idx >= chartData.dates.length) return '';
+                    const date = chartData.dates[idx]; const open = chartData.klines[idx][0]; const close = chartData.klines[idx][1];
+                    const low = chartData.klines[idx][2]; const high = chartData.klines[idx][3];
                     const change = close - open; const changePercent = open !== 0 ? (change / open) * 100 : 0; const colorChange = change >= 0 ? '#0ecb81' : '#f6465d';
-                    return `<div style="font-size:10px; line-height:1.6;"><div style="color:#aaa;">时间：${date}</div><div>开：${formatNum(open)}</div><div>高：${formatNum(high)}</div><div>低：${formatNum(low)}</div><div>收：${formatNum(close)}</div><div style="color:${colorChange};">涨跌：${change >= 0 ? '+' : ''}${formatNum(change)}</div><div style="color:${colorChange};">涨跌幅：${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</div></div>`;
+                    return `<div style="font-size:10px; line-height:1.6;"><div style="color:#aaa;">时间：${date}</div><div>开：${formatNum(open)}</div><div>高：${formatNum(high)}</div><div>低：${formatNum(low)}</div><div>收：${formatNum(close)}</div><div style="color:${colorChange};">涨跌幅：${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</div></div>`;
                 }
             }
         }, true);
     }
 
-    // =================== 抽屉 / 弹窗 / 交互（补全缺失函数） ===================
+    // =================== 交互 ===================
     function toggleDrawer() {
         isDrawerOpen = !isDrawerOpen;
         const drawer = document.getElementById('rightDrawer');
         const btn = document.getElementById('drawerToggleBtn');
-        if (isDrawerOpen) { drawer.classList.remove('collapsed'); btn.innerText = '▶'; }
-        else { drawer.classList.add('collapsed'); btn.innerText = '◀'; }
+        if (isDrawerOpen) { drawer.classList.remove('collapsed'); btn.innerText = '▶'; btn.style.right = '320px'; }
+        else { drawer.classList.add('collapsed'); btn.innerText = '◀'; btn.style.right = '0px'; }
         setTimeout(() => myChart.resize(), 350);
     }
 
-    function openPairModal() { document.getElementById('pairModalOverlay').classList.add('show'); }
-    function closePairModal() { document.getElementById('pairModalOverlay').classList.remove('show'); }
-    function switchSymbol(symbol, name, el) {
-        document.querySelectorAll('.pair-item').forEach(p => p.classList.remove('active'));
-        if (el) el.classList.add('active');
-        currentSymbol = symbol;
-        document.getElementById('pairSelectorBtn').innerText = symbol + ' ▾';
-        document.getElementById('pairBaseAsset').innerText = name;
-        closePairModal();
-        // 切换品种：重置并重新加载（目前仅 XAUUSD 有数据，NAS100 可留空或提示）
-        chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
-        currentPrice = 0;
-        if (symbol === 'XAUUSD') {
-            fetchXAUUSDKline(currentInterval);
-        } else {
-            myChart.clear();
-            myChart.setOption({ title: { text: '暂无该品种数据（演示环境仅提供 XAUUSD）', left: 'center', top: 'center', textStyle: { color: '#848e9c', fontSize: 14 } } });
-        }
-    }
-
     function switchOrderTab(tab) {
-        document.querySelectorAll('.order-tabs span').forEach(s => {
-            s.classList.toggle('active', s.dataset.tab === tab);
-        });
-        const container = document.getElementById('orderDataContent');
-        if (tab === 'depth') {
-            container.innerHTML = '<div style="color:#888;padding:20px;text-align:center;">盘口深度数据（演示占位）</div>';
-        } else {
-            container.innerHTML = '<div style="color:#888;padding:20px;text-align:center;">最新成交（演示占位）</div>';
-        }
+        document.querySelectorAll('.order-tabs span').forEach(s => s.classList.toggle('active', s.innerText.includes(tab === 'depth' ? '深度' : '成交')));
+        const c = document.getElementById('orderDataContent');
+        c.innerHTML = tab === 'depth' ? '<div style="color:#888;padding:20px;text-align:center;">盘口深度（演示）</div>' : '<div style="color:#888;padding:20px;text-align:center;">最新成交（演示）</div>';
     }
 
     function openTradeModal(side) {
-        document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' ' + currentSymbol;
-        document.getElementById('tradeOrderType').value = 'market';
-        document.getElementById('tradePrice').value = '';
-        document.getElementById('tradeAmount').value = '';
+        document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' XAUUSD';
         document.getElementById('tradeModalOverlay').classList.add('show');
     }
     function closeTradeModal() { document.getElementById('tradeModalOverlay').classList.remove('show'); }
-    function toggleTradePriceInput() {
-        document.getElementById('tradePriceRow').style.display = document.getElementById('tradeOrderType').value === 'limit' ? 'flex' : 'none';
-    }
-    function confirmTrade() {
-        const amount = parseFloat(document.getElementById('tradeAmount').value);
-        if (!amount || amount < 0.01) { alert('请输入有效手数（最小 0.01）'); return; }
-        alert('模拟下单已提交（演示环境）');
-        closeTradeModal();
-    }
+    function confirmTrade() { alert('模拟下单已提交（演示环境）'); closeTradeModal(); }
 
-    // =================== 初始化 ===================
     document.getElementById('indicator-buttons').addEventListener('click', function(e) {
         const span = e.target.closest('span[data-indicator]');
         if (!span) return;
@@ -442,12 +403,11 @@
         document.querySelectorAll('#timeframes span[data-interval]').forEach(s => s.classList.remove('active'));
         span.classList.add('active');
         currentInterval = span.dataset.interval;
-        myChart.clear();
-        fetchXAUUSDKline(currentInterval);
+        fetchRealKline(currentInterval);
     });
 
-    // 启动
-    fetchXAUUSDKline(currentInterval);
+    // 启动：加载真实数据
+    fetchRealKline(currentInterval);
     window.addEventListener('resize', () => myChart.resize());
 </script>
 </body>
