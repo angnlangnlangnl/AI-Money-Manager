@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (高保真内置行情版)</title>
+    <title>XAUUSD 交易界面 (完美复刻版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -155,7 +155,7 @@
 
 <script>
     // =================== 全局状态 ===================
-    let currentInterval = '1h';
+    let currentInterval = '1d'; // 默认设为日线以展示宏观趋势
     let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
@@ -174,61 +174,120 @@
     // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
     function formatKlineDate(timestamp, interval) {
-        const d = new Date(timestamp * 1000); const month = d.getMonth() + 1; const date = d.getDate();
+        const d = new Date(timestamp * 1000); const year = d.getFullYear(); const month = d.getMonth() + 1; const date = d.getDate();
         const hours = d.getHours().toString().padStart(2, '0'); const minutes = d.getMinutes().toString().padStart(2, '0');
-        if (interval === '1d') return `${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
+        if (interval === '1d') return `${year}-${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 高保真模拟数据引擎 ===================
-    // 使用几何布朗运动生成极其逼真的 K 线，彻底摆脱第三方 API 的不稳定性
-    function generateSimulatedData(interval, count = 500) {
-        const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
-        const stepSec = (minutesMap[interval] || 60) * 60;
+    // =================== 完美复刻 Gate 宏观走势的引擎 ===================
+    function generateHistoricalData() {
+        // 根据你提供的截图，提取关键时间节点的黄金价格中枢（从 2020 到 2026）
+        // 格式: [时间进度百分比, 价格]
+        const keyframes = [
+            { p: 0.00, price: 1600 }, // 2020年初
+            { p: 0.10, price: 2000 }, // 2020年中 (急速拉升)
+            { p: 0.15, price: 1800 }, // 回调
+            { p: 0.40, price: 1900 }, // 长期震荡
+            { p: 0.55, price: 2100 }, // 2024 突破
+            { p: 0.70, price: 2800 }, // 2025 主升浪
+            { p: 0.82, price: 5500 }, // 2026 见顶 (截图中的最高点)
+            { p: 0.88, price: 3800 }, // 见顶后崩盘
+            { p: 1.00, price: 3600 }  // 当前最新价 (符合截图 3602 左右)
+        ];
+
+        const totalBars = 1000; // 生成 1000 根日线
+        const stepSec = 86400; // 每天
         let ts = Math.floor(Date.now() / 1000);
         ts = ts - (ts % stepSec);
 
         const dates = [], klines = [], volumes = [], timestamps = [];
-        let basePrice = 3598.45; // 设定黄金当前基准价，与顶部 UI 完全一致
-        const volatility = 0.002; // 波动率
+        
+        let currentPrice = 1600;
 
-        for (let i = count; i >= 0; i--) {
-            const currentTs = ts - i * stepSec;
-            timestamps.push(currentTs);
-            dates.push(formatKlineDate(currentTs, interval));
-
-            const open = basePrice;
-            // 随机漫步 + 趋势回归
-            const change = open * volatility * (Math.random() - 0.48);
-            const close = open + change;
+        for (let i = 0; i < totalBars; i++) {
+            const progress = i / (totalBars - 1);
             
-            // 生成合理的上下影线
+            // 找到当前进度所在的两个关键帧，进行线性插值
+            let startKF = keyframes[0], endKF = keyframes[keyframes.length - 1];
+            for (let j = 0; j < keyframes.length - 1; j++) {
+                if (progress >= keyframes[j].p && progress <= keyframes[j + 1].p) {
+                    startKF = keyframes[j];
+                    endKF = keyframes[j + 1];
+                    break;
+                }
+            }
+
+            const kfProgress = (progress - startKF.p) / (endKF.p - startKF.p || 1);
+            const targetPrice = startKF.price + (endKF.price - startKF.price) * kfProgress;
+
+            // 添加随机波动，使得走势逼真 (根据目标价格的规模设定波动率)
+            const volatility = targetPrice * 0.015; // 1.5% 的日波动
+            const noise = (Math.random() - 0.5) * volatility;
+            
+            // 平滑向目标靠拢
+            currentPrice = currentPrice * 0.95 + targetPrice * 0.05 + noise;
+            
+            // 如果是最后几根，强制向截图中的最新价靠拢
+            if (i > totalBars - 5) currentPrice = 3602.19 + (Math.random() - 0.5) * 10;
+
+            const open = currentPrice;
+            const close = open + (Math.random() - 0.48) * volatility * 0.5;
+            
             const maxOC = Math.max(open, close);
             const minOC = Math.min(open, close);
-            const high = maxOC + maxOC * volatility * Math.random() * 0.5;
-            const low = minOC - minOC * volatility * Math.random() * 0.5;
-            
-            const vol = 1000 + Math.random() * 5000;
+            const high = maxOC + Math.random() * volatility * 0.3;
+            const low = minOC - Math.random() * volatility * 0.3;
 
+            const currentTs = ts - (totalBars - i - 1) * stepSec;
+            timestamps.push(currentTs);
+            dates.push(formatKlineDate(currentTs, '1d'));
             klines.push([open, close, low, high]);
-            volumes.push(vol);
-            
-            // 均值回归，防止价格无限发散偏离
-            if (basePrice > 4200) basePrice -= 2;
-            else if (basePrice < 3000) basePrice += 2;
-            else basePrice = close;
+            volumes.push(1000 + Math.random() * 2000);
         }
 
+        // 截取最后 1000 根（实际上就是全部）
         return { dates, klines, volumes, timestamps };
     }
 
     function loadData() {
-        // 直接使用内置引擎生成 500 根高度真实的 K 线
-        chartData = generateSimulatedData(currentInterval, 500);
+        if (currentInterval === '1d') {
+            // 日线使用高保真复刻数据
+            chartData = generateHistoricalData();
+        } else {
+            // 分钟线直接从日线数据截取最近一段并细化
+            const baseData = generateHistoricalData();
+            const lastPrice = baseData.klines[baseData.klines.length - 1][1];
+            
+            // 简单生成 200 根分钟线以模拟近期波动
+            const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240 };
+            const stepSec = (minutesMap[currentInterval] || 60) * 60;
+            let ts = Math.floor(Date.now() / 1000);
+            ts = ts - (ts % stepSec);
+
+            const dates = [], klines = [], volumes = [], timestamps = [];
+            let cp = lastPrice - 20; // 从略低的价格开始
+
+            for (let i = 200; i >= 0; i--) {
+                const currentTs = ts - i * stepSec;
+                timestamps.push(currentTs);
+                dates.push(formatKlineDate(currentTs, currentInterval));
+
+                const open = cp;
+                const close = open + (Math.random() - 0.49) * 5;
+                const high = Math.max(open, close) + Math.random() * 2;
+                const low = Math.min(open, close) - Math.random() * 2;
+
+                klines.push([open, close, low, high]);
+                volumes.push(Math.random() * 1000);
+                cp = close;
+            }
+            chartData = { dates, klines, volumes, timestamps };
+        }
+
         currentPrice = chartData.klines[chartData.klines.length - 1][1];
-        
         updateTickerUI();
         
-        // 初始显示最后 120 根
+        // 初始显示最后 120 根（如果是日线，就是近 120 个交易日）
         zoomStartIndex = Math.max(0, chartData.dates.length - 120);
         zoomEndIndex = chartData.dates.length - 1;
         
@@ -244,7 +303,6 @@
         document.getElementById('last-price').innerText = formatNum(close);
         document.getElementById('open-price').innerText = formatNum(open);
         
-        // 计算最近 24 根的高低价
         const recent = chartData.klines.slice(-24);
         document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k[3])));
         document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k[2])));
@@ -254,7 +312,7 @@
         document.getElementById('buy-bar').innerText = `买 ${formatNum(close - 0.35)}`;
     }
 
-    // =================== 图表渲染引擎 ===================
+    // =================== 图表渲染引擎 (保持丝滑缩放的修复) ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
@@ -267,7 +325,6 @@
 
         const totalLen = dates.length;
 
-        // 动态计算 Y 轴边界
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (lows[i] < minLow) minLow = lows[i];
@@ -285,12 +342,10 @@
 
         let currentTop = 5;
 
-        // 主图背景 + 轴标签
         grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
         xAxes.push({ type: 'category', data: dates, gridIndex: 0, axisLine: { show: false }, axisTick: { show: false }, splitLine: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 0, splitLine: { lineStyle: { color: '#2b3139', type: 'dashed' } }, axisLabel: { color: '#848e9c', fontSize: 10, inside: true, formatter: v => formatNum(v, 1) } });
 
-        // 主图 K 线
         grids.push({ left: 15, right: '12%', top: currentTop + '%', height: mainHeight + '%' });
         xAxes.push({ type: 'category', data: dates, gridIndex: 1, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
         yAxes.push({ scale: false, min: yMin, max: yMax, splitNumber: 5, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
@@ -378,7 +433,6 @@
             }
         }, true);
 
-        // 监听缩放，动态调整 Y 轴，完美防止越界
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
             if (!params.batch) return;
