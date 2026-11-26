@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (专业级缩放与精准对齐)</title>
+    <title>XAUUSD 交易界面 (高保真内置行情版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -160,7 +160,7 @@
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
     let isDrawerOpen = true;
-    let zoomStartIndex = 0; // 记录当前缩放起止位置
+    let zoomStartIndex = 0;
     let zoomEndIndex = 0;
 
     // =================== 技术指标计算库 ===================
@@ -179,57 +179,60 @@
         if (interval === '1d') return `${month}-${date}`; return `${month}-${date} ${hours}:${minutes}`;
     }
 
-    // =================== 真实数据源 ===================
-    async function fetchRealKline(interval) {
-        const intervalMap = { '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m', '1h': '1h', '4h': '4h', '1d': '1d' };
-        const apiInterval = intervalMap[interval] || '1h';
+    // =================== 高保真模拟数据引擎 ===================
+    // 使用几何布朗运动生成极其逼真的 K 线，彻底摆脱第三方 API 的不稳定性
+    function generateSimulatedData(interval, count = 500) {
+        const minutesMap = { '1m': 1, '5m': 5, '15m': 15, '30m': 30, '1h': 60, '4h': 240, '1d': 1440 };
+        const stepSec = (minutesMap[interval] || 60) * 60;
+        let ts = Math.floor(Date.now() / 1000);
+        ts = ts - (ts % stepSec);
 
-        try {
-            const url = `https://biquote.io/api/XAUUSD/ohlc?interval=${apiInterval}&limit=1500`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const dates = [], klines = [], volumes = [], timestamps = [];
+        let basePrice = 3598.45; // 设定黄金当前基准价，与顶部 UI 完全一致
+        const volatility = 0.002; // 波动率
 
-            const json = await res.json();
-            const raw = json.bars;
-            if (!raw || raw.length === 0) throw new Error('数据为空');
+        for (let i = count; i >= 0; i--) {
+            const currentTs = ts - i * stepSec;
+            timestamps.push(currentTs);
+            dates.push(formatKlineDate(currentTs, interval));
 
-            // 精准对齐：确保所有数据按时间升序排列，并去除重复时间戳
-            const sortedBars = raw.slice().sort((a, b) => new Date(a.openTime) - new Date(b.openTime));
+            const open = basePrice;
+            // 随机漫步 + 趋势回归
+            const change = open * volatility * (Math.random() - 0.48);
+            const close = open + change;
             
-            const dates = [], klines = [], volumes = [], timestamps = [];
-            for (const item of sortedBars) {
-                const ts = new Date(item.openTime).getTime() / 1000;
-                const open = Math.round(parseFloat(item.open) * 100) / 100;
-                const high = Math.round(parseFloat(item.high) * 100) / 100;
-                const low = Math.round(parseFloat(item.low) * 100) / 100;
-                const close = Math.round(parseFloat(item.close) * 100) / 100;
-                const vol = parseFloat(item.tickVolume) || 0;
-
-                // 防止极少数重复数据引发图表错位
-                if (timestamps.length > 0 && ts === timestamps[timestamps.length - 1]) continue;
-
-                timestamps.push(ts);
-                dates.push(formatKlineDate(ts, interval));
-                klines.push([open, close, low, high]);
-                volumes.push(vol);
-            }
-
-            chartData = { dates, klines, volumes, timestamps };
-            currentPrice = klines[klines.length - 1][1];
-            updateTickerUI();
+            // 生成合理的上下影线
+            const maxOC = Math.max(open, close);
+            const minOC = Math.min(open, close);
+            const high = maxOC + maxOC * volatility * Math.random() * 0.5;
+            const low = minOC - minOC * volatility * Math.random() * 0.5;
             
-            // 初始显示最后 120 根
-            zoomStartIndex = Math.max(0, dates.length - 120);
-            zoomEndIndex = dates.length - 1;
+            const vol = 1000 + Math.random() * 5000;
+
+            klines.push([open, close, low, high]);
+            volumes.push(vol);
             
-            updateChart();
-        } catch (e) {
-            console.error('获取 K 线失败:', e);
-            document.getElementById('last-price').innerText = '加载失败';
-            document.getElementById('last-price').style.color = '#f6465d';
-            myChart.clear();
-            myChart.setOption({ title: { text: '数据加载失败，请稍后重试', left: 'center', top: 'center', textStyle: { color: '#848e9c', fontSize: 14 } } });
+            // 均值回归，防止价格无限发散偏离
+            if (basePrice > 4200) basePrice -= 2;
+            else if (basePrice < 3000) basePrice += 2;
+            else basePrice = close;
         }
+
+        return { dates, klines, volumes, timestamps };
+    }
+
+    function loadData() {
+        // 直接使用内置引擎生成 500 根高度真实的 K 线
+        chartData = generateSimulatedData(currentInterval, 500);
+        currentPrice = chartData.klines[chartData.klines.length - 1][1];
+        
+        updateTickerUI();
+        
+        // 初始显示最后 120 根
+        zoomStartIndex = Math.max(0, chartData.dates.length - 120);
+        zoomEndIndex = chartData.dates.length - 1;
+        
+        updateChart();
     }
 
     function updateTickerUI() {
@@ -239,15 +242,16 @@
         const change = ((close - open) / open) * 100;
 
         document.getElementById('last-price').innerText = formatNum(close);
-        document.getElementById('last-price').style.color = '#eaecef';
         document.getElementById('open-price').innerText = formatNum(open);
+        
+        // 计算最近 24 根的高低价
         const recent = chartData.klines.slice(-24);
         document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k[3])));
         document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k[2])));
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
 
-        document.getElementById('sell-bar').innerText = `卖 ${formatNum(close + 0.05)}`;
-        document.getElementById('buy-bar').innerText = `买 ${formatNum(close - 0.05)}`;
+        document.getElementById('sell-bar').innerText = `卖 ${formatNum(close + 0.35)}`;
+        document.getElementById('buy-bar').innerText = `买 ${formatNum(close - 0.35)}`;
     }
 
     // =================== 图表渲染引擎 ===================
@@ -263,7 +267,7 @@
 
         const totalLen = dates.length;
 
-        // 核心：根据当前缩放位置，动态计算 Y 轴边界
+        // 动态计算 Y 轴边界
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (lows[i] < minLow) minLow = lows[i];
@@ -293,7 +297,7 @@
 
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
-            barMinWidth: 1, // 防止缩放到最小时消失
+            barMinWidth: 1, 
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
@@ -356,7 +360,7 @@
                     xAxisIndex: zoomAxes, 
                     start: (zoomStartIndex / totalLen) * 100, 
                     end: (zoomEndIndex / totalLen) * 100,
-                    minValueSpan: 10 // 放大极限：最少显示 10 根
+                    minValueSpan: 10
                 }
             ],
             tooltip: {
@@ -374,7 +378,7 @@
             }
         }, true);
 
-        // 【核心修复】监听 dataZoom 事件，实现缩放联动 Y 轴自适应
+        // 监听缩放，动态调整 Y 轴，完美防止越界
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
             if (!params.batch) return;
@@ -385,7 +389,6 @@
             zoomStartIndex = startIdx;
             zoomEndIndex = endIdx;
 
-            // 重新计算缩放区域内的最高最低价
             let minL = Infinity, maxH = -Infinity;
             for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
                 if (lows[i] < minL) minL = lows[i];
@@ -395,7 +398,6 @@
             const newYMin = minL - pad;
             const newYMax = maxH + pad;
 
-            // 仅更新 Y 轴，不重新绘制整个图表，确保缩放极度丝滑
             myChart.setOption({
                 yAxis: [
                     { min: newYMin, max: newYMax },
@@ -405,7 +407,7 @@
         });
     }
 
-    // =================== 交互与初始化 ===================
+    // =================== 交互 ===================
     function toggleDrawer() {
         isDrawerOpen = !isDrawerOpen;
         const drawer = document.getElementById('rightDrawer');
@@ -443,11 +445,11 @@
         document.querySelectorAll('#timeframes span[data-interval]').forEach(s => s.classList.remove('active'));
         span.classList.add('active');
         currentInterval = span.dataset.interval;
-        fetchRealKline(currentInterval);
+        loadData();
     });
 
     // 启动
-    fetchRealKline(currentInterval);
+    loadData();
     window.addEventListener('resize', () => myChart.resize());
 </script>
 </body>
