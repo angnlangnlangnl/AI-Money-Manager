@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (Gate官方真实数据版)</title>
+    <title>XAUUSD 交易界面 (Gate官方真实数据+WebSocket实时版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -154,8 +154,9 @@
 </div>
 
 <script>
-    // ⚠️ 重要：这里填写你阿里云服务器的真实公网 IP
+    // ⚠️ 这里填你真实的 API 域名
     const API_BASE = 'https://cfd.heimi888.com'; 
+    const WS_URL = 'wss://cfd.heimi888.com';
 
     // =================== 全局状态 ===================
     let currentInterval = '1h';
@@ -165,7 +166,7 @@
     let isDrawerOpen = true;
     let zoomStartIndex = 0;
     let zoomEndIndex = 0;
-    let pricePollTimer = null;
+    let wsConnection = null;
 
     // =================== 技术指标计算库 ===================
     class Indicators {
@@ -207,7 +208,7 @@
                 timestamps.push(ts);
                 dates.push(formatKlineDate(ts, interval));
                 klines.push([open, close, low, high]);
-                volumes.push(1000); // Gate 此接口无成交量，用占位符
+                volumes.push(1000); 
             });
 
             chartData = { dates, klines, volumes, timestamps };
@@ -224,35 +225,51 @@
         }
     }
 
-    async function fetchRealTicker() {
-        try {
-            const res = await fetch(`${API_BASE}/api/ticker`);
-            const json = await res.json();
-            if (json.success && json.data) {
-                const tick = json.data;
-                const price = parseFloat(tick.last);
-                const change = parseFloat(tick.change) * 100; // Gate 返回的是小数，需要 *100
+    // =================== 核心：WebSocket 实时推流 ===================
+    function initWebSocket() {
+        if (wsConnection) wsConnection.close();
+        
+        wsConnection = new WebSocket(WS_URL);
 
+        wsConnection.onopen = () => {
+            console.log('WebSocket 已连接，开始接收毫秒级数据');
+        };
+
+        wsConnection.onmessage = (event) => {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'ticker') {
+                const tick = msg.data;
+                const price = parseFloat(tick.last);
+                const change = parseFloat(tick.change) * 100;
+
+                // 1. 更新顶部 UI
                 document.getElementById('last-price').innerText = formatNum(price);
                 document.getElementById('high-24').innerText = formatNum(tick.high);
                 document.getElementById('low-24').innerText = formatNum(tick.low);
                 document.getElementById('open-price').innerText = formatNum(tick.open);
                 document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
-
                 document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
                 document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
 
-                if (Math.abs(price - currentPrice) > 0.01) {
+                // 2. 核心：实时改变当前最后一根 K 线的“收盘价”和“最高/最低价”
+                if (chartData.klines.length > 0 && Math.abs(price - currentPrice) > 0.001) {
                     currentPrice = price;
+                    const lastIdx = chartData.klines.length - 1;
+                    
+                    chartData.klines[lastIdx][1] = price; // 更新收盘价
+                    if (price > chartData.klines[lastIdx][3]) chartData.klines[lastIdx][3] = price; // 更新最高价
+                    if (price < chartData.klines[lastIdx][2]) chartData.klines[lastIdx][2] = price; // 更新最低价
+                    
+                    // 局部刷新图表
                     updateChart();
                 }
             }
-        } catch (e) { console.error('Ticker 获取失败:', e); }
-    }
+        };
 
-    function startPricePolling() {
-        fetchRealTicker();
-        pricePollTimer = setInterval(fetchRealTicker, 5000); 
+        wsConnection.onclose = () => {
+            console.log('WebSocket 断开，5 秒后重连...');
+            setTimeout(initWebSocket, 5000);
+        };
     }
 
     function updateTickerUI() {
@@ -464,7 +481,7 @@
 
     // 启动
     loadRealData(currentInterval);
-    startPricePolling();
+    initWebSocket(); // 启动 WebSocket 推流
     window.addEventListener('resize', () => myChart.resize());
 </script>
 </body>
