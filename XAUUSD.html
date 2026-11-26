@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (纯前端真实数据版)</title>
+    <title>XAUUSD 交易界面 (Gate官方真实数据版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -81,9 +81,9 @@
 <div class="app">
     <div class="header">
         <div class="header-left">
-            <span style="color:#f0b90b; font-size:22px;">XAUUSD</span>
-            <span class="pair-selector">黄金 Gold ▾</span>
-            <span style="font-size:12px; color:#848e9c; font-weight:normal;">实时行情</span>
+            <span style="color:#f0b90b; font-size:22px;">Gate</span>
+            <span class="pair-selector">XAUUSD ▾</span>
+            <span style="font-size:12px; color:#848e9c; font-weight:normal;">黄金 Gold</span>
         </div>
         <div class="header-icons"><span>✨</span><span>★</span><span>🔔</span></div>
     </div>
@@ -154,6 +154,9 @@
 </div>
 
 <script>
+    // ⚠️ 重要：这里填写你阿里云服务器的真实公网 IP
+    const API_BASE = 'http://121.40.161.212:8080'; 
+
     // =================== 全局状态 ===================
     let currentInterval = '1h';
     let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
@@ -175,7 +178,6 @@
     // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
     function formatKlineDate(timestamp, interval) {
-        // timestamp 是毫秒（因为 API 返回的是毫秒）
         const d = new Date(timestamp); 
         const year = d.getFullYear(); const month = d.getMonth() + 1; const date = d.getDate();
         const hours = d.getHours().toString().padStart(2, '0'); const minutes = d.getMinutes().toString().padStart(2, '0');
@@ -188,86 +190,69 @@
 
     async function loadRealData(interval) {
         try {
-            // 使用 biquote.io 的 OHLC 接口，完全免费、CORS 开放
-            // 文档: https://biquote.io/docs
-            const url = `https://biquote.io/api/XAUUSD/ohlc?interval=${interval}&limit=300`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('HTTP ' + res.status);
-            
+            const res = await fetch(`${API_BASE}/api/kline?interval=${interval}&limit=500`);
             const json = await res.json();
-            // biquote 返回格式: { symbol, interval, bars: [ { openTime, open, high, low, close, tickVolume }, ... ] }
-            const raw = json.bars;
-            if (!raw || raw.length === 0) throw new Error('数据为空');
+            if (!json.success || !json.data) throw new Error('K线获取失败');
 
-            // biquote 的 bars 是最新在前，需要反转为从旧到新
-            const sortedBars = raw.reverse();
-
+            const rawData = json.data; // 后端已经排好序（旧->新）并转成毫秒
             const dates = [], klines = [], volumes = [], timestamps = [];
-            for (const item of sortedBars) {
-                const ts = new Date(item.openTime).getTime(); // 毫秒
-                const open = Math.round(parseFloat(item.open) * 100) / 100;
-                const high = Math.round(parseFloat(item.high) * 100) / 100;
-                const low = Math.round(parseFloat(item.low) * 100) / 100;
-                const close = Math.round(parseFloat(item.close) * 100) / 100;
-                const vol = parseFloat(item.tickVolume) || 0;
+
+            rawData.forEach(item => {
+                const ts = item.t; // 毫秒
+                const open = item.o;
+                const high = item.h;
+                const low = item.l;
+                const close = item.c;
 
                 timestamps.push(ts);
                 dates.push(formatKlineDate(ts, interval));
-                klines.push([open, close, low, high]); // ECharts 格式 [开, 收, 低, 高]
-                volumes.push(vol);
-            }
+                klines.push([open, close, low, high]);
+                volumes.push(1000); // Gate 此接口无成交量，用占位符
+            });
 
             chartData = { dates, klines, volumes, timestamps };
             currentPrice = klines[klines.length - 1][1];
-            
-            zoomStartIndex = Math.max(0, chartData.dates.length - 80); // 初始显示 80 根
+
+            zoomStartIndex = Math.max(0, chartData.dates.length - 80);
             zoomEndIndex = chartData.dates.length - 1;
-            
+
             updateTickerUI();
             updateChart();
         } catch (e) {
             console.error('获取 K 线失败:', e);
-            alert('数据加载失败: ' + e.message + '\n请检查网络连接。');
-            myChart.clear();
-            myChart.setOption({ title: { text: '数据加载失败，请检查网络', left: 'center', top: 'center', textStyle: { color: '#848e9c', fontSize: 14 } } });
+            alert('数据加载失败: ' + e.message);
         }
     }
 
-    // 轮询实时价格
     async function fetchRealTicker() {
         try {
-            const res = await fetch('https://biquote.io/api/XAUUSD');
-            const tick = await res.json();
-            
-            const price = parseFloat(tick.mid);
-            if (isNaN(price)) return;
+            const res = await fetch(`${API_BASE}/api/ticker`);
+            const json = await res.json();
+            if (json.success && json.data) {
+                const tick = json.data;
+                const price = parseFloat(tick.last);
+                const change = parseFloat(tick.change) * 100; // Gate 返回的是小数，需要 *100
 
-            const changePercent = tick.dayDiffPercent || 0;
-            
-            document.getElementById('last-price').innerText = formatNum(price);
-            document.getElementById('last-price').style.color = '#eaecef';
-            document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${changePercent >= 0 ? 'green' : 'red'}">${changePercent >= 0 ? '+' : ''}${changePercent.toFixed(2)}%</span>`;
-            
-            if (tick.high) document.getElementById('high-24').innerText = formatNum(tick.high);
-            if (tick.low) document.getElementById('low-24').innerText = formatNum(tick.low);
-            
-            // 盘口买卖价
-            if (tick.bid) document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
-            if (tick.ask) document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
-            
-            // 同步更新图表上的当前价标线
-            if (Math.abs(price - currentPrice) > 0.01) {
-                currentPrice = price;
-                updateChart();
+                document.getElementById('last-price').innerText = formatNum(price);
+                document.getElementById('high-24').innerText = formatNum(tick.high);
+                document.getElementById('low-24').innerText = formatNum(tick.low);
+                document.getElementById('open-price').innerText = formatNum(tick.open);
+                document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
+
+                document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
+                document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
+
+                if (Math.abs(price - currentPrice) > 0.01) {
+                    currentPrice = price;
+                    updateChart();
+                }
             }
-        } catch (e) { 
-            console.error('Ticker 获取失败:', e); 
-        }
+        } catch (e) { console.error('Ticker 获取失败:', e); }
     }
 
     function startPricePolling() {
         fetchRealTicker();
-        pricePollTimer = setInterval(fetchRealTicker, 5000); // 每 5 秒刷新一次
+        pricePollTimer = setInterval(fetchRealTicker, 5000); 
     }
 
     function updateTickerUI() {
