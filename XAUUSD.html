@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (22横线+25纵线)</title>
+    <title>XAUUSD 交易界面 (可右拖动留白)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -217,11 +217,25 @@
                 volumes.push(1000); 
             });
 
-            chartData = { dates, klines, volumes, timestamps };
-            currentPrice = klines[klines.length - 1][1];
+            // =================== 核心修复：添加 30 个占位空K线 ===================
+            // 让图表总数据增加 30 个虚拟点，这样最新真实K线右边就会有空间可以被拖拽
+            const PADDING_BARS = 30; 
+            for (let i = 1; i <= PADDING_BARS; i++) {
+                const lastTs = timestamps[timestamps.length - 1];
+                const ts = lastTs + i * 15 * 60 * 1000; // 假设15分钟
+                timestamps.push(ts);
+                dates.push(formatKlineDate(ts, interval));
+                klines.push(['-', '-', '-', '-']); // 必须给个占位，但不能是数字，否则 Y 轴计算会崩溃
+                volumes.push('-');
+            }
 
-            zoomStartIndex = Math.max(0, chartData.dates.length - 120);
-            zoomEndIndex = chartData.dates.length - 1;
+            chartData = { dates, klines, volumes, timestamps };
+            // 寻找最后一根真实的 K 线作为初始最新价
+            const lastRealIdx = klines.length - PADDING_BARS - 1;
+            currentPrice = parseFloat(rawData[rawData.length - 1].c);
+
+            zoomStartIndex = Math.max(0, dates.length - 120 - PADDING_BARS);
+            zoomEndIndex = dates.length - 1; // 初始视窗包含所有空白
 
             updateTickerUI();
             updateChart();
@@ -252,10 +266,12 @@
 
                 if (chartData.klines.length > 0 && Math.abs(price - currentPrice) > 0.001) {
                     currentPrice = price;
-                    const lastIdx = chartData.klines.length - 1;
-                    chartData.klines[lastIdx][1] = price; 
-                    if (price > chartData.klines[lastIdx][3]) chartData.klines[lastIdx][3] = price; 
-                    if (price < chartData.klines[lastIdx][2]) chartData.klines[lastIdx][2] = price; 
+                    // 找到最后一根真实的 K 线（跳过末尾的占位）
+                    const PADDING_BARS = 30;
+                    const lastRealIdx = chartData.klines.length - PADDING_BARS - 1;
+                    chartData.klines[lastRealIdx][1] = price; 
+                    if (price > chartData.klines[lastRealIdx][3]) chartData.klines[lastRealIdx][3] = price; 
+                    if (price < chartData.klines[lastRealIdx][2]) chartData.klines[lastRealIdx][2] = price; 
                     updateChart();
                 }
             }
@@ -265,30 +281,38 @@
 
     function updateTickerUI() {
         if (!chartData.klines.length) return;
-        const last = chartData.klines[chartData.klines.length - 1];
+        const PADDING_BARS = 30;
+        const lastRealIdx = chartData.klines.length - PADDING_BARS - 1;
+        const last = chartData.klines[lastRealIdx];
         const open = last[0], close = last[1];
         const change = ((close - open) / open) * 100;
 
         document.getElementById('last-price').innerText = formatNum(close);
         document.getElementById('open-price').innerText = formatNum(open);
         
-        const recent = chartData.klines.slice(-24);
-        document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k[3])));
-        document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k[2])));
+        const recent = chartData.klines.slice(Math.max(0, lastRealIdx - 23), lastRealIdx + 1);
+        const validRecent = recent.filter(k => k[3] !== '-');
+        document.getElementById('high-24').innerText = formatNum(Math.max(...validRecent.map(k => k[3])));
+        document.getElementById('low-24').innerText = formatNum(Math.min(...validRecent.map(k => k[2])));
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
     }
 
     function updateChart() {
         if (!chartData.klines.length) return;
         const { dates, klines, volumes } = chartData;
-        const closes = klines.map(k => k[1]);
-        const highs = klines.map(k => k[3]);
-        const lows = klines.map(k => k[2]);
+        
+        // 过滤掉空值，仅用于计算 Y 轴
+        const validKlines = klines.filter(k => k[0] !== '-');
+        const closes = validKlines.map(k => k[1]);
+        const highs = validKlines.map(k => k[3]);
+        const lows = validKlines.map(k => k[2]);
 
         const totalLen = dates.length;
 
+        // 计算 Y 轴极值时，针对带占位符的数据，需要跳过 '-'
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
+            if (klines[i][0] === '-') continue;
             if (lows[i] < minLow) minLow = lows[i];
             if (highs[i] > maxHigh) maxHigh = highs[i];
         }
@@ -306,24 +330,23 @@
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
         let currentTop = 5;
+        const rightMargin = '8%'; // 调整到 8%，因为已经加上了占位数据
+
+        grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         
-        // 主图背景 + Y轴（22根横线 + 右侧价格标签）
-        grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
-        
-        // 精确计算 X 轴网格线数量为 25 根（也就是把总长度切成 25 份）
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
         
         xAxes.push({ 
             type: 'category', data: dates, gridIndex: 0, 
             axisLine: { show: false }, axisTick: { show: false }, 
-            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, // 纵向网格线
+            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
             axisLabel: { show: false },
-            interval: xSplitInterval // 强制 25 根纵线
+            interval: xSplitInterval 
         });
         
         yAxes.push({ 
             scale: true, min: yMin, max: yMax, 
-            splitNumber: 22, // 强制 22 根横线
+            splitNumber: 22, 
             position: 'right', gridIndex: 0, 
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
             axisLabel: { 
@@ -333,12 +356,11 @@
             } 
         });
 
-        // 主 K 线层
-        grids.push({ left: 15, right: 8, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
+        grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         xAxes.push({ 
             type: 'category', data: dates, gridIndex: 1, 
             axisLine: { show: false }, axisTick: { show: false }, 
-            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 10, hideOverlap: true, position: 'bottom' } // 底部时间标签
+            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 10, hideOverlap: true, position: 'bottom' } 
         });
         yAxes.push({ scale: true, min: yMin, max: yMax, splitNumber: 22, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
@@ -389,10 +411,10 @@
 
         if (showVol) {
             currentTop += mainHeight + gap;
-            grids.push({ left: 15, right: 8, top: currentTop + '%', height: volHeight + '%', containLabel: true });
+            grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
-            const volColors = klines.map(k => k[1] >= k[0] ? '#0ecb81' : '#f6465d');
+            const volColors = klines.map(k => k[1] !== '-' && k[1] >= k[0] ? '#0ecb81' : '#f6465d');
             series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
             zoomAxes.push(currentSeriesIndex);
             currentSeriesIndex++;
@@ -401,7 +423,7 @@
         if (showMacd && closes.length > 26) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
-            grids.push({ left: 15, right: 8, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
+            grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closes);
@@ -419,8 +441,10 @@
                     type: 'inside', 
                     xAxisIndex: zoomAxes, 
                     start: (zoomStartIndex / totalLen) * 100, 
-                    end: (zoomEndIndex / totalLen) * 100,
-                    minValueSpan: 10
+                    end: 100, // 此时由于数据含占位，end: 100% 会让最新K线留在屏幕内
+                    minValueSpan: 10,
+                    moveOnMouseMove: true,
+                    moveOnMouseWheel: false
                 }
             ],
             tooltip: {
@@ -431,7 +455,9 @@
                     if (!params || params.length === 0) return '';
                     const idx = params[0].dataIndex;
                     if (idx == null || idx >= chartData.dates.length) return '';
-                    const d = chartData.dates[idx], o = chartData.klines[idx][0], c = chartData.klines[idx][1], l = chartData.klines[idx][2], h = chartData.klines[idx][3];
+                    const kline = chartData.klines[idx];
+                    if (kline[0] === '-') return ''; // 占位符不显示 tooltip
+                    const d = chartData.dates[idx], o = kline[0], c = kline[1], l = kline[2], h = kline[3];
                     const chg = c - o, pct = o !== 0 ? (chg / o) * 100 : 0, col = chg >= 0 ? '#0ecb81' : '#f6465d';
                     return `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div></div>`;
                 }
@@ -450,6 +476,7 @@
 
             let minL = Infinity, maxH = -Infinity;
             for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
+                if (klines[i][0] === '-') continue;
                 if (lows[i] < minL) minL = lows[i];
                 if (highs[i] > maxH) maxH = highs[i];
             }
@@ -461,7 +488,6 @@
             const newYMin = minL - pad;
             const newYMax = maxH + pad;
 
-            // 重新计算 X 轴动态间隔
             const newXSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
 
             myChart.setOption({
@@ -470,7 +496,7 @@
                     { min: newYMin, max: newYMax }
                 ],
                 xAxis: [
-                    { interval: newXSplitInterval }, // 动态调整纵向网格线
+                    { interval: newXSplitInterval }, 
                     { axisLabel: { hideOverlap: true } }
                 ]
             });
