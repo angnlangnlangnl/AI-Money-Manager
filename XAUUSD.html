@@ -3,97 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (顶部标签与抽屉)</title>
+    <title>XAUUSD 交易界面 (紧凑布局版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app { width: 100%; max-width: 100%; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; }
         
-        /* 头部区域：整合了 Logo、品种和标签 */
-        .header { display: flex; align-items: center; padding: 0 30px; height: 50px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
-        .header-left { display: flex; align-items: center; gap: 15px; font-size: 18px; font-weight: bold; }
-        .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 5px 10px; border-radius: 4px; }
-        .header-left .base-asset { font-size: 12px; color: #848e9c; font-weight: normal; margin-right: 20px; }
+        /* 进一步压缩头部高度 */
+        .header { display: flex; align-items: center; padding: 0 20px; height: 38px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
+        .header-left { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: bold; }
+        .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 2px 6px; border-radius: 4px; }
+        .header-left .base-asset { font-size: 11px; color: #848e9c; font-weight: normal; margin-right: 15px; }
         
-        /* 将 Tabs 移入 Header 中的样式 */
-        .header-tabs { display: flex; align-items: center; height: 100%; gap: 25px; }
-        .header-tab { color: #848e9c; font-size: 14px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; transition: color 0.2s; }
-        .header-tab:hover { color: #eaecef; }
+        .header-tabs { display: flex; align-items: center; height: 100%; gap: 20px; }
+        .header-tab { color: #848e9c; font-size: 13px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; }
         .header-tab.active { color: #eaecef; font-weight: bold; }
         .header-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #f0b90b; }
 
-        .header-icons { margin-left: auto; display: flex; gap: 20px; font-size: 18px; color: #848e9c; }
+        .header-icons { margin-left: auto; display: flex; gap: 15px; font-size: 15px; color: #848e9c; }
         
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        /* 移除旧的 tabs 区域，调整间距 */
-        .quote-section { display: flex; justify-content: space-between; padding: 15px 30px; flex-shrink: 0; }
-        .price-main { font-size: 32px; font-weight: bold; }
-        .price-sub { font-size: 14px; color: #848e9c; margin-top: 5px; }
+        /* 核心修改 1：大幅压缩报价区的高度和间距 */
+        .quote-section { display: flex; justify-content: space-between; padding: 5px 20px 5px; flex-shrink: 0; }
+        .price-main { font-size: 24px; font-weight: bold; }
+        .price-sub { font-size: 12px; color: #848e9c; margin-top: 2px; }
         .price-sub span.green { color: #0ecb81; }
         .price-sub span.red { color: #f6465d; }
-        .quote-details { font-size: 12px; color: #848e9c; text-align: right; line-height: 1.8; display: flex; gap: 40px; }
+        .quote-details { font-size: 11px; color: #848e9c; text-align: right; line-height: 1.4; display: flex; gap: 25px; }
         .quote-details div { display: flex; flex-direction: column; }
-        .quote-details b { color: #eaecef; font-weight: normal; font-size: 14px; margin-top: 2px; }
+        .quote-details b { color: #eaecef; font-weight: normal; font-size: 12px; margin-top: 1px; }
         
-        .timeframes { display: flex; gap: 20px; padding: 0 30px 10px; font-size: 13px; color: #848e9c; flex-shrink: 0; align-items: center; }
-        .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 4px; }
+        /* 核心修改 2：压缩时间周期按钮的上下留白 */
+        .timeframes { display: flex; gap: 15px; padding: 0 20px 5px; font-size: 12px; color: #848e9c; flex-shrink: 0; align-items: center; }
+        .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 2px; }
         .timeframes span { cursor: pointer; }
         
-        .chart-container { flex: 1; min-height: 400px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 10px; }
+        .chart-container { flex: 1; min-height: 300px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 5px; }
         #kline { width: 100%; flex: 1; }
         
-        .indicators { display: flex; gap: 20px; padding: 10px 30px; font-size: 12px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 20px; }
-        .indicators span { cursor: pointer; padding: 4px 10px; border-radius: 4px; transition: all 0.2s; }
+        .indicators { display: flex; gap: 15px; padding: 8px 20px; font-size: 11px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 10px; }
+        .indicators span { cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
 
-        .right-drawer { width: 320px; background: #1e2329; border-left: 1px solid #2b3139; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s ease; overflow: hidden; position: relative; }
+        .right-drawer { width: 300px; background: #1e2329; border-left: 1px solid #2b3139; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s ease; overflow: hidden; position: relative; }
         .right-drawer.collapsed { width: 0; border-left: none; }
-        .drawer-content { width: 320px; display: flex; flex-direction: column; height: 100%; }
+        .drawer-content { width: 300px; display: flex; flex-direction: column; height: 100%; }
         
-        /* 【核心修改】将切换按钮移到了右侧抽屉的顶部边缘，不再影响图表点击 */
-        .toggle-btn { position: absolute; right: 320px; top: 0; width: 24px; height: 40px; background: #1e2329; border: 1px solid #2b3139; border-top: none; border-right: none; border-radius: 0 0 0 6px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 12px; transition: right 0.3s ease; }
+        .toggle-btn { position: absolute; right: 300px; top: 0; width: 20px; height: 32px; background: #1e2329; border: 1px solid #2b3139; border-top: none; border-right: none; border-radius: 0 0 0 4px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 10px; transition: right 0.3s ease; }
         .toggle-btn:hover { background: #2b3139; color: #fff; }
 
-        .order-book-panel { padding: 20px 15px; display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto; }
-        .order-book-bar { display: flex; align-items: center; font-size: 13px; font-weight: bold; }
-        .sell-bar { width: 50%; background: rgba(246,70,93,0.2); color: #f6465d; text-align: left; padding: 10px 15px; border-radius: 4px 0 0 4px; border: 1px solid #f6465d; border-right: none; }
-        .buy-bar { width: 50%; background: rgba(14,203,129,0.2); color: #0ecb81; text-align: right; padding: 10px 15px; border-radius: 0 4px 4px 0; border: 1px solid #0ecb81; border-left: none; }
+        .order-book-panel { padding: 10px 10px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
+        .order-book-bar { display: flex; align-items: center; font-size: 11px; font-weight: bold; }
+        .sell-bar { width: 50%; background: rgba(246,70,93,0.2); color: #f6465d; text-align: left; padding: 6px 10px; border-radius: 4px 0 0 4px; border: 1px solid #f6465d; border-right: none; }
+        .buy-bar { width: 50%; background: rgba(14,203,129,0.2); color: #0ecb81; text-align: right; padding: 6px 10px; border-radius: 0 4px 4px 0; border: 1px solid #0ecb81; border-left: none; }
 
-        .order-tabs { display: flex; gap: 20px; font-size: 13px; color: #848e9c; border-bottom: 1px solid #2b3139; padding-bottom: 10px; }
-        .order-tabs span { cursor: pointer; padding: 5px 0; border-bottom: 2px solid transparent; }
+        .order-tabs { display: flex; gap: 15px; font-size: 11px; color: #848e9c; border-bottom: 1px solid #2b3139; padding-bottom: 5px; }
+        .order-tabs span { cursor: pointer; padding: 2px 0; border-bottom: 2px solid transparent; }
         .order-tabs span.active { color: #eaecef; border-bottom-color: #f0b90b; }
         
         .order-data-container { flex: 1; overflow-y: auto; }
-        .order-data-content { font-size: 12px; color: #aaa; }
+        .order-data-content { font-size: 11px; color: #aaa; }
 
-        .drawer-actions { padding: 15px; background: #181a20; border-top: 1px solid #2b3139; display: flex; gap: 10px; flex-shrink: 0; }
-        .drawer-actions button { flex: 1; padding: 12px 0; border-radius: 4px; font-size: 15px; font-weight: bold; color: #fff; cursor: pointer; border: none; }
+        .drawer-actions { padding: 10px; background: #181a20; border-top: 1px solid #2b3139; display: flex; gap: 8px; flex-shrink: 0; }
+        .drawer-actions button { flex: 1; padding: 8px 0; border-radius: 4px; font-size: 13px; font-weight: bold; color: #fff; cursor: pointer; border: none; }
         .drawer-actions .buy-btn { background: #0ecb81; }
         .drawer-actions .sell-btn { background: #f6465d; }
         
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; justify-content: center; align-items: center; }
         .modal-overlay.show { display: flex; }
-        .modal-content { background: #1e2329; border-radius: 8px; width: 90%; max-width: 400px; padding: 20px; border: 1px solid #2b3139; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-        .modal-title { font-size: 18px; font-weight: bold; color: #fff; }
-        .modal-close { cursor: pointer; color: #848e9c; font-size: 20px; }
-        .trade-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-        .trade-row label { width: 80px; font-size: 13px; color: #848e9c; }
-        .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 6px; padding: 10px 12px; color: #eaecef; font-size: 14px; outline: none; }
+        .modal-content { background: #1e2329; border-radius: 8px; width: 90%; max-width: 350px; padding: 15px; border: 1px solid #2b3139; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .modal-title { font-size: 16px; font-weight: bold; color: #fff; }
+        .modal-close { cursor: pointer; color: #848e9c; font-size: 18px; }
+        .trade-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .trade-row label { width: 70px; font-size: 12px; color: #848e9c; }
+        .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 4px; padding: 8px 10px; color: #eaecef; font-size: 13px; outline: none; }
     </style>
 </head>
 <body>
 <div class="app">
-    <!-- 头部区域，包含所有导航 -->
     <div class="header">
         <div class="header-left">
-            <span style="color:#f0b90b; font-size:22px;">Gate</span>
+            <span style="color:#f0b90b; font-size:18px;">Gate</span>
             <span class="pair-selector">XAUUSD ▾</span>
             <span class="base-asset">黄金 Gold</span>
-            <!-- 平移到 Header 的 Tabs -->
             <div class="header-tabs">
                 <div class="header-tab active">图表</div>
                 <div class="header-tab">合约信息</div>
@@ -105,8 +101,6 @@
 
     <div class="main-content">
         <div class="trade-panel">
-            <!-- 移除了旧的 tabs 区块 -->
-            
             <div class="quote-section">
                 <div>
                     <div class="price-main" id="last-price">--</div>
@@ -151,7 +145,6 @@
                 </div>
             </div>
         </div>
-        <!-- 抽屉按钮，现在悬浮在右侧顶端 -->
         <div class="toggle-btn" onclick="toggleDrawer()" id="drawerToggleBtn">▶</div>
     </div>
 
@@ -161,20 +154,18 @@
             <div class="trade-row"><label>订单类型</label><select id="tradeOrderType"><option value="market">市价单</option><option value="limit">限价单</option></select></div>
             <div class="trade-row" id="tradePriceRow" style="display:none;"><label>价格</label><input type="number" id="tradePrice" placeholder="限价 (美元)" step="0.01"></div>
             <div class="trade-row"><label>手数</label><input type="number" id="tradeAmount" placeholder="最小 0.01 手" step="0.01" min="0.01"></div>
-            <div style="display:flex;gap:10px;margin-top:20px;">
-                <button class="sell-btn" onclick="closeTradeModal()" style="background:#2a2a3a;">取消</button>
-                <button class="buy-btn" onclick="confirmTrade()" style="background:#f0b90b;color:#181a20;">确认下单</button>
+            <div style="display:flex;gap:10px;margin-top:15px;">
+                <button class="sell-btn" onclick="closeTradeModal()" style="background:#2a2a3a;flex:1;padding:8px 0;border-radius:4px;color:#fff;border:none;">取消</button>
+                <button class="buy-btn" onclick="confirmTrade()" style="background:#f0b90b;color:#181a20;flex:1;padding:8px 0;border-radius:4px;border:none;font-weight:bold;">确认下单</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // ⚠️ 这里填你真实的 API 域名
     const API_BASE = 'https://cfd.heimi888.com'; 
     const WS_URL = 'wss://cfd.heimi888.com';
 
-    // =================== 全局状态 ===================
     let currentInterval = '15m';
     let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
@@ -184,7 +175,6 @@
     let zoomEndIndex = 0;
     let wsConnection = null;
 
-    // =================== 技术指标计算库 ===================
     class Indicators {
         static SMA(data, period) { const result = new Array(data.length).fill(null); for (let i = period - 1; i < data.length; i++) { let sum = 0; for (let j = i - period + 1; j <= i; j++) sum += data[j]; result[i] = sum / period; } return result; }
         static EMA(data, period) { const result = new Array(data.length).fill(null); if (data.length === 0) return result; const multiplier = 2 / (period + 1); result[0] = data[0]; for (let i = 1; i < data.length; i++) result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1]; return result; }
@@ -192,7 +182,6 @@
         static MACD(data, fast = 12, slow = 26, signal = 9) { const emaFast = this.EMA(data, fast); const emaSlow = this.EMA(data, slow); const dif = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i]; const validDif = dif.filter(v => v !== null); const deaValid = this.EMA(validDif, signal); const dea = new Array(data.length).fill(null); const offset = dif.length - deaValid.length; for (let i = 0; i < deaValid.length; i++) dea[offset + i] = deaValid[i]; const macd = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2; return { dif, dea, macd }; }
     }
 
-    // =================== 工具函数 ===================
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
     
     function formatKlineDate(timestamp, interval) {
@@ -207,7 +196,6 @@
         return `${hours}:${minutes}`; 
     }
 
-    // =================== 数据加载与图表渲染 ===================
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
@@ -329,7 +317,7 @@
         
         const padding = (maxHigh - minLow) * 0.08 || 5;
         const yMin = minLow - padding, yMax = maxHigh + padding;
-        const yInterval = (yMax - yMin) / 23; // 固定23根线
+        const yInterval = (yMax - yMin) / 23;
 
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
@@ -339,10 +327,11 @@
         if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
-        let currentTop = 5;
+        // 【核心修复】把图表的顶部起始位置调低，让整体往上提，消除多余的顶部空白
+        let currentTop = 2; // 从 5% 改为 2%
         const rightMargin = '8%'; 
 
-        grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
+        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
         
@@ -365,11 +354,11 @@
             } 
         });
 
-        grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
+        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
         xAxes.push({ 
             type: 'category', data: dates, gridIndex: 1, 
             axisLine: { show: false }, axisTick: { show: false }, 
-            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 10, hideOverlap: true, position: 'bottom' } 
+            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 8, hideOverlap: true, position: 'bottom' } 
         });
         yAxes.push({ scale: true, min: yMin, max: yMax, interval: yInterval, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
@@ -420,7 +409,7 @@
 
         if (showVol) {
             currentTop += mainHeight + gap;
-            grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: true });
+            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => k[1] !== '-' && k[1] >= k[0] ? '#0ecb81' : '#f6465d');
@@ -432,7 +421,7 @@
         if (showMacd && closes.length > 26) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
-            grids.push({ left: 15, right: rightMargin, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
+            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closes);
@@ -512,12 +501,11 @@
         });
     }
 
-    // =================== 交互 ===================
     function toggleDrawer() {
         isDrawerOpen = !isDrawerOpen;
         const drawer = document.getElementById('rightDrawer');
         const btn = document.getElementById('drawerToggleBtn');
-        if (isDrawerOpen) { drawer.classList.remove('collapsed'); btn.innerText = '▶'; btn.style.right = '320px'; }
+        if (isDrawerOpen) { drawer.classList.remove('collapsed'); btn.innerText = '▶'; btn.style.right = '300px'; }
         else { drawer.classList.add('collapsed'); btn.innerText = '◀'; btn.style.right = '0px'; }
         setTimeout(() => myChart.resize(), 350);
     }
