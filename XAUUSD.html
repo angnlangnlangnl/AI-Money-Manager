@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (实时动态K线完美版)</title>
+    <title>XAUUSD 交易界面 (指标校准完美版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -150,15 +150,8 @@
     const WS_URL = 'wss://cfd.heimi888.com';
 
     let currentInterval = '15m';
-    // 原始K线数据（不含填充）
-    let rawKlines = [];     // { t, o, h, l, c }
-    // 图表展示数据（含填充占位，由 rawKlines 派生）
-    let chartData = {
-        dates: [],
-        klines: [],
-        volumes: [],
-        timestamps: []
-    };
+    let rawKlines = [];     // { t, o, h, l, c, v }
+    let chartData = { dates: [], klines: [], volumes: [], timestamps: [], alignedCloses: [] };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
     let isDrawerOpen = true;
@@ -167,57 +160,110 @@
     let wsConnection = null;
     let chartInitialized = false;
 
-    // 填充占位数量
     const PADDING_BARS = 15;
 
+    // ========== 标准指标计算 ==========
     class Indicators {
-        static SMA(data, period) { const result = new Array(data.length).fill(null); for (let i = period - 1; i < data.length; i++) { let sum = 0; for (let j = i - period + 1; j <= i; j++) sum += data[j]; result[i] = sum / period; } return result; }
-        static EMA(data, period) { const result = new Array(data.length).fill(null); if (data.length === 0) return result; const multiplier = 2 / (period + 1); result[0] = data[0]; for (let i = 1; i < data.length; i++) result[i] = (data[i] - result[i - 1]) * multiplier + result[i - 1]; return result; }
-        static BOLL(data, period = 20, stdDev = 2) { const middle = this.SMA(data, period); const upper = new Array(data.length).fill(null); const lower = new Array(data.length).fill(null); for (let i = period - 1; i < data.length; i++) { let sum = 0; for (let j = i - period + 1; j <= i; j++) sum += Math.pow(data[j] - middle[i], 2); const std = Math.sqrt(sum / period); upper[i] = middle[i] + stdDev * std; lower[i] = middle[i] - stdDev * std; } return { upper, middle, lower }; }
-        static MACD(data, fast = 12, slow = 26, signal = 9) { const emaFast = this.EMA(data, fast); const emaSlow = this.EMA(data, slow); const dif = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i]; const validDif = dif.filter(v => v !== null); const deaValid = this.EMA(validDif, signal); const dea = new Array(data.length).fill(null); const offset = dif.length - deaValid.length; for (let i = 0; i < deaValid.length; i++) dea[offset + i] = deaValid[i]; const macd = new Array(data.length).fill(null); for (let i = 0; i < data.length; i++) if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2; return { dif, dea, macd }; }
+        // SMA：标准简单移动平均，前 period-1 为 null
+        static SMA(data, period) {
+            const result = new Array(data.length).fill(null);
+            for (let i = period - 1; i < data.length; i++) {
+                let sum = 0, cnt = 0, valid = true;
+                for (let j = i - period + 1; j <= i; j++) {
+                    if (data[j] === null) { valid = false; break; }
+                    sum += data[j]; cnt++;
+                }
+                result[i] = (valid && cnt === period) ? sum / period : null;
+            }
+            return result;
+        }
+        // EMA：标准实现，前 period 个用 SMA 作为种子，之后递推
+        static EMA(data, period) {
+            const result = new Array(data.length).fill(null);
+            const seed = this.SMA(data, period);
+            let started = false;
+            for (let i = 0; i < data.length; i++) {
+                if (data[i] === null) { result[i] = null; continue; }
+                if (!started) {
+                    if (seed[i] !== null) { result[i] = seed[i]; started = true; }
+                    else result[i] = null;
+                } else {
+                    const prev = result[i - 1];
+                    if (prev === null) result[i] = data[i];
+                    else {
+                        const k = 2 / (period + 1);
+                        result[i] = data[i] * k + prev * (1 - k);
+                    }
+                }
+            }
+            return result;
+        }
+        // BOLL：标准布林带（总体标准差）
+        static BOLL(data, period = 20, stdDev = 2) {
+            const middle = this.SMA(data, period);
+            const upper = new Array(data.length).fill(null);
+            const lower = new Array(data.length).fill(null);
+            for (let i = period - 1; i < data.length; i++) {
+                if (middle[i] === null) continue;
+                let sum = 0, valid = true;
+                for (let j = i - period + 1; j <= i; j++) {
+                    if (data[j] === null) { valid = false; break; }
+                    sum += Math.pow(data[j] - middle[i], 2);
+                }
+                if (!valid) continue;
+                const std = Math.sqrt(sum / period);
+                upper[i] = middle[i] + stdDev * std;
+                lower[i] = middle[i] - stdDev * std;
+            }
+            return { upper, middle, lower };
+        }
+        // MACD：DIF = EMA12 - EMA26, DEA = EMA(DIF, 9), MACD = (DIF - DEA) * 2
+        static MACD(data, fast = 12, slow = 26, signal = 9) {
+            const emaFast = this.EMA(data, fast);
+            const emaSlow = this.EMA(data, slow);
+            const dif = new Array(data.length).fill(null);
+            for (let i = 0; i < data.length; i++) {
+                if (emaFast[i] !== null && emaSlow[i] !== null) dif[i] = emaFast[i] - emaSlow[i];
+            }
+            const dea = this.EMA(dif, signal);
+            const macd = new Array(data.length).fill(null);
+            for (let i = 0; i < data.length; i++) {
+                if (dif[i] !== null && dea[i] !== null) macd[i] = (dif[i] - dea[i]) * 2;
+            }
+            return { dif, dea, macd };
+        }
     }
 
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
-    
     function formatKlineDate(timestamp, interval) {
-        const d = new Date(timestamp); 
-        const month = (d.getMonth() + 1).toString().padStart(2, '0'); 
+        const d = new Date(timestamp);
+        const month = (d.getMonth() + 1).toString().padStart(2, '0');
         const date = d.getDate().toString().padStart(2, '0');
-        const hours = d.getHours().toString().padStart(2, '0'); 
+        const hours = d.getHours().toString().padStart(2, '0');
         const minutes = d.getMinutes().toString().padStart(2, '0');
         if (interval === '1d') return `${month}-${date}`;
         if (interval === '4h') return `${month}-${date} ${hours}:00`;
-        return `${hours}:${minutes}`; 
+        return `${hours}:${minutes}`;
     }
-
     function getIntervalMs(interval) {
-        const map = {
-            '1m': 60 * 1000, '5m': 5 * 60 * 1000, '15m': 15 * 60 * 1000,
-            '30m': 30 * 60 * 1000, '1h': 60 * 60 * 1000, '4h': 4 * 60 * 60 * 1000,
-            '1d': 24 * 60 * 60 * 1000
-        };
-        return map[interval] || 15 * 60 * 1000;
+        const map = { '1m': 60000, '5m': 300000, '15m': 900000, '30m': 1800000, '1h': 3600000, '4h': 14400000, '1d': 86400000 };
+        return map[interval] || 900000;
     }
 
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
-    // 从 rawKlines 重建 chartData（含填充占位）
+    // 重建图表数据（含填充占位），并生成对齐的 closes 数组
     function rebuildChartDataFromRaw() {
         const intervalMs = getIntervalMs(currentInterval);
-        const dates = [];
-        const klines = [];
-        const volumes = [];
-        const timestamps = [];
-
+        const dates = [], klines = [], volumes = [], timestamps = [], alignedCloses = [];
         rawKlines.forEach(item => {
             timestamps.push(item.t);
             dates.push(formatKlineDate(item.t, currentInterval));
             klines.push([item.o, item.c, item.l, item.h]);
-            volumes.push(1000); // 模拟成交量
+            volumes.push(item.v != null ? item.v : 1000);
+            alignedCloses.push(item.c);
         });
-
-        // 追加填充占位
         if (timestamps.length > 0) {
             const lastTs = timestamps[timestamps.length - 1];
             for (let i = 1; i <= PADDING_BARS; i++) {
@@ -226,52 +272,33 @@
                 dates.push(formatKlineDate(ts, currentInterval));
                 klines.push(['-', '-', '-', '-']);
                 volumes.push('-');
+                alignedCloses.push(null);
             }
         }
-
-        chartData = { dates, klines, volumes, timestamps };
-        // 视窗范围默认最后70根真实K线 + 填充
+        chartData = { dates, klines, volumes, timestamps, alignedCloses };
         const realLen = rawKlines.length;
         const visibleCount = Math.min(70, realLen);
         zoomStartIndex = Math.max(0, realLen - visibleCount);
         zoomEndIndex = chartData.dates.length - 1;
     }
 
-    // 从WebSocket tick更新K线（增量更新rawKlines，然后重建chartData并重绘）
     function updateKlineFromTick(price, tickTimestamp) {
         if (rawKlines.length === 0) return;
-
         const intervalMs = getIntervalMs(currentInterval);
         const lastItem = rawKlines[rawKlines.length - 1];
         const lastBarStartTs = Math.floor(lastItem.t / intervalMs) * intervalMs;
         const currentBarStartTs = Math.floor(tickTimestamp / intervalMs) * intervalMs;
-
         if (currentBarStartTs === lastBarStartTs) {
-            // 同一根K线：更新 high, low, close
             lastItem.c = price;
             if (price > lastItem.h) lastItem.h = price;
             if (price < lastItem.l) lastItem.l = price;
+            if (lastItem.v != null) lastItem.v += 1;
         } else if (currentBarStartTs > lastBarStartTs) {
-            // 新K线：追加一根，开盘价=当前价，高=低=收=当前价
-            const newTs = currentBarStartTs;
-            rawKlines.push({
-                t: newTs,
-                o: price,
-                h: price,
-                l: price,
-                c: price
-            });
-        } else {
-            // tickTimestamp 落后，忽略
-            return;
-        }
-
-        // 重建 chartData 并重新计算视窗
+            rawKlines.push({ t: currentBarStartTs, o: price, h: price, l: price, c: price, v: 1 });
+        } else return;
         rebuildChartDataFromRaw();
         updateTickerUI();
-        if (chartInitialized) {
-            updateChart();
-        }
+        if (chartInitialized) updateChart();
     }
 
     async function loadRealData(interval) {
@@ -279,20 +306,16 @@
             const res = await fetch(`${API_BASE}/api/kline?interval=${interval}&limit=500`);
             const json = await res.json();
             if (!json.success || !json.data) throw new Error('K线获取失败');
-
-            // 转换为 rawKlines
             rawKlines = json.data.map(item => ({
                 t: item.t,
                 o: parseFloat(item.o),
                 h: parseFloat(item.h),
                 l: parseFloat(item.l),
-                c: parseFloat(item.c)
+                c: parseFloat(item.c),
+                v: item.v != null ? parseFloat(item.v) : null
             }));
-
             currentPrice = rawKlines[rawKlines.length - 1].c;
-
             rebuildChartDataFromRaw();
-
             chartInitialized = true;
             updateTickerUI();
             updateChart();
@@ -305,16 +328,13 @@
     function initWebSocket() {
         if (wsConnection) wsConnection.close();
         wsConnection = new WebSocket(WS_URL);
-
         wsConnection.onmessage = (event) => {
             const msg = JSON.parse(event.data);
             if (msg.type === 'ticker') {
                 const tick = msg.data;
                 const price = parseFloat(tick.last);
-                const change = parseFloat(tick.change); 
+                const change = parseFloat(tick.change);
                 const tickTimestamp = msg.timestamp || Date.now();
-
-                // 更新头部
                 document.getElementById('last-price').innerText = formatNum(price);
                 document.getElementById('high-24').innerText = formatNum(tick.high);
                 document.getElementById('low-24').innerText = formatNum(tick.low);
@@ -322,11 +342,7 @@
                 document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
                 document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
                 document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
-
-                // 更新K线
-                if (chartInitialized && rawKlines.length > 0) {
-                    updateKlineFromTick(price, tickTimestamp);
-                }
+                if (chartInitialized && rawKlines.length > 0) updateKlineFromTick(price, tickTimestamp);
                 currentPrice = price;
             }
         };
@@ -338,10 +354,8 @@
         const last = rawKlines[rawKlines.length - 1];
         const open = last.o, close = last.c;
         const change = ((close - open) / open) * 100;
-
         document.getElementById('last-price').innerText = formatNum(close);
         document.getElementById('open-price').innerText = formatNum(open);
-        
         const recent = rawKlines.slice(Math.max(0, rawKlines.length - 24));
         if (recent.length) {
             document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k.h)));
@@ -352,21 +366,14 @@
 
     function updateChart() {
         if (!chartInitialized || !chartData.dates.length) return;
-        
-        const { dates, klines, volumes } = chartData;
-        const validKlines = klines.filter(k => k[0] !== '-');
-        const closes = validKlines.map(k => k[1]);
-        const highs = validKlines.map(k => k[3]);
-        const lows = validKlines.map(k => k[2]);
-
+        const { dates, klines, volumes, alignedCloses } = chartData;
         const totalLen = dates.length;
 
-        // 计算可视区域y轴范围
         let minLow = Infinity, maxHigh = -Infinity;
-        for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
+        for (let i = zoomStartIndex; i <= zoomEndIndex; i++) {
             if (klines[i][0] === '-') continue;
-            if (lows[i] < minLow) minLow = lows[i];
-            if (highs[i] > maxHigh) maxHigh = highs[i];
+            if (klines[i][2] < minLow) minLow = klines[i][2];
+            if (klines[i][3] > maxHigh) maxHigh = klines[i][3];
         }
         if (currentPrice) { minLow = Math.min(minLow, currentPrice); maxHigh = Math.max(maxHigh, currentPrice); }
         if (!isFinite(minLow)) minLow = 0;
@@ -375,131 +382,114 @@
         const yMin = minLow - padding, yMax = maxHigh + padding;
         const yInterval = (yMax - yMin) / 23;
 
-        const series = []; const grids = []; const xAxes = []; const yAxes = [];
+        const series = [], grids = [], xAxes = [], yAxes = [];
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
         let mainHeight = 100, volHeight = 0, macdHeight = 0;
-        const gap = 6; 
-
+        const gap = 6;
         if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
-        let currentTop = 2; 
-        const rightMargin = '8%'; 
-
+        let currentTop = 2;
+        const rightMargin = '8%';
         grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
-        
+
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
-        
-        xAxes.push({ 
-            type: 'category', data: dates, gridIndex: 0, 
-            axisLine: { show: false }, axisTick: { show: false }, 
-            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
-            axisLabel: { show: false }, 
-            interval: xSplitInterval 
+        xAxes.push({
+            type: 'category', data: dates, gridIndex: 0,
+            axisLine: { show: false }, axisTick: { show: false },
+            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } },
+            axisLabel: { show: false }, interval: xSplitInterval
         });
-        
-        yAxes.push({ 
-            scale: true, min: yMin, max: yMax, interval: yInterval,
-            position: 'right', gridIndex: 0, 
-            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } }, 
-            axisLabel: { 
-                color: '#848e9c', fontSize: 10, inside: false, margin: 6, 
-                formatter: v => formatNum(v, 1),
-                showMinLabel: true, showMaxLabel: true
-            } 
+        yAxes.push({
+            scale: true, min: yMin, max: yMax, interval: yInterval, position: 'right', gridIndex: 0,
+            splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } },
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 6, formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
         });
 
         grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
-        xAxes.push({ 
-            type: 'category', data: dates, gridIndex: 1, 
-            axisLine: { show: false }, axisTick: { show: false }, 
-            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 6, hideOverlap: true, position: 'bottom' } 
+        xAxes.push({
+            type: 'category', data: dates, gridIndex: 1,
+            axisLine: { show: false }, axisTick: { show: false },
+            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 6, hideOverlap: true, position: 'bottom' }
         });
         yAxes.push({ scale: true, min: yMin, max: yMax, interval: yInterval, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
+        // K线主图
         const klineSeries = {
-            id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
+            id: 'klineMain', name: 'K线', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             barMaxWidth: 18,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
-        
         if (currentPrice) {
-            klineSeries.markLine.data.push({ 
-                yAxis: currentPrice, 
-                lineStyle: { color: '#0ecb81', type: 'dashed', width: 1 }, 
-                label: { 
-                    formatter: formatNum(currentPrice), 
-                    color: '#181a20', 
-                    backgroundColor: '#0ecb81', 
-                    padding: [2, 4], 
-                    borderRadius: 2, 
-                    fontSize: 11,
-                    distance: 0 
-                } 
+            klineSeries.markLine.data.push({
+                yAxis: currentPrice, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1 },
+                label: { formatter: formatNum(currentPrice), color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 0 }
             });
         }
         series.push(klineSeries);
 
-        const cleanData = (arr) => arr.map(v => v === null ? '-' : v);
+        const closesForIndicator = alignedCloses;
+        const validCloseCount = closesForIndicator.filter(v => v !== null).length;
 
-        if (indicatorState.MA && closes.length > 20) {
-            series.push({ type: 'line', data: cleanData(Indicators.SMA(closes, 5)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: cleanData(Indicators.SMA(closes, 10)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: cleanData(Indicators.SMA(closes, 20)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+        // MA
+        if (indicatorState.MA && validCloseCount > 20) {
+            const ma5 = Indicators.SMA(closesForIndicator, 5);
+            const ma10 = Indicators.SMA(closesForIndicator, 10);
+            const ma20 = Indicators.SMA(closesForIndicator, 20);
+            series.push({ name: 'MA5', type: 'line', data: ma5, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
+            series.push({ name: 'MA10', type: 'line', data: ma10, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
+            series.push({ name: 'MA20', type: 'line', data: ma20, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
         }
-        if (indicatorState.EMA && closes.length > 26) {
-            series.push({ type: 'line', data: cleanData(Indicators.EMA(closes, 12)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: cleanData(Indicators.EMA(closes, 26)), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+        // EMA
+        if (indicatorState.EMA && validCloseCount > 26) {
+            const ema12 = Indicators.EMA(closesForIndicator, 12);
+            const ema26 = Indicators.EMA(closesForIndicator, 26);
+            series.push({ name: 'EMA12', type: 'line', data: ema12, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
+            series.push({ name: 'EMA26', type: 'line', data: ema26, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
         }
-        if (indicatorState.BOLL && closes.length > 20) {
-            const boll = Indicators.BOLL(closes, 20, 2);
-            series.push({ type: 'line', data: cleanData(boll.upper), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f6465d', width: 0.8, type: 'dashed' }, symbol: 'none', z: 20 });
-            series.push({ type: 'line', data: cleanData(boll.middle), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f0b90b', width: 0.8 }, symbol: 'none', z: 20 });
-            series.push({ type: 'line', data: cleanData(boll.lower), xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none', z: 20 });
+        // BOLL
+        if (indicatorState.BOLL && validCloseCount > 20) {
+            const boll = Indicators.BOLL(closesForIndicator, 20, 2);
+            series.push({ name: 'BOLL上轨', type: 'line', data: boll.upper, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#e879f9', width: 0.8, type: 'dashed' }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
+            series.push({ name: 'BOLL中轨', type: 'line', data: boll.middle, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#848e9c', width: 0.8 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
+            series.push({ name: 'BOLL下轨', type: 'line', data: boll.lower, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#0ecb81', width: 0.8, type: 'dashed' }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
         }
 
         let currentSeriesIndex = 2;
         const zoomAxes = [1];
 
+        // VOL
         if (showVol) {
             currentTop += mainHeight + gap;
             grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => k[1] !== '-' && k[1] >= k[0] ? '#0ecb81' : '#f6465d');
-            series.push({ type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
+            series.push({ name: 'VOL', type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
             zoomAxes.push(currentSeriesIndex);
             currentSeriesIndex++;
         }
 
-        if (showMacd && closes.length > 26) {
+        // MACD
+        if (showMacd && validCloseCount > 26) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
             grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
-            const macdResult = Indicators.MACD(closes);
+            const macdResult = Indicators.MACD(closesForIndicator);
             const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
-            series.push({ type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
-            series.push({ type: 'line', data: cleanData(macdResult.dif), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: true, z: 20 });
-            series.push({ type: 'line', data: cleanData(macdResult.dea), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: true, z: 20 });
+            series.push({ name: 'MACD柱', type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
+            series.push({ name: 'DIF', type: 'line', data: macdResult.dif, xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
+            series.push({ name: 'DEA', type: 'line', data: macdResult.dea, xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
             zoomAxes.push(currentSeriesIndex);
         }
 
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
-            dataZoom: [
-                { 
-                    type: 'inside', 
-                    xAxisIndex: zoomAxes, 
-                    start: (zoomStartIndex / totalLen) * 100, 
-                    end: (zoomEndIndex / totalLen) * 100, 
-                    minValueSpan: 10,
-                    moveOnMouseMove: true,
-                    moveOnMouseWheel: false
-                }
-            ],
+            legend: { show: false },
+            dataZoom: [{ type: 'inside', xAxisIndex: zoomAxes, start: (zoomStartIndex / totalLen) * 100, end: (zoomEndIndex / totalLen) * 100, minValueSpan: 10, moveOnMouseMove: true, moveOnMouseWheel: false }],
             tooltip: {
                 trigger: 'axis', triggerOn: 'mousemove|click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
@@ -509,10 +499,13 @@
                     const idx = params[0].dataIndex;
                     if (idx == null || idx >= dates.length) return '';
                     const kline = klines[idx];
-                    if (kline[0] === '-') return ''; 
+                    if (kline[0] === '-') return '';
                     const d = dates[idx], o = kline[0], c = kline[1], l = kline[2], h = kline[3];
                     const chg = c - o, pct = o !== 0 ? (chg / o) * 100 : 0, col = chg >= 0 ? '#0ecb81' : '#f6465d';
-                    return `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div></div>`;
+                    let html = `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>`;
+                    if (volumes[idx] !== '-') html += `<div>成交量：${volumes[idx]}</div>`;
+                    html += `</div>`;
+                    return html;
                 }
             }
         }, true);
@@ -523,37 +516,23 @@
             const dz = params.batch[0];
             const startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
             const endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
-            
-            zoomStartIndex = startIdx;
-            zoomEndIndex = endIdx;
-
+            zoomStartIndex = startIdx; zoomEndIndex = endIdx;
             let minL = Infinity, maxH = -Infinity;
-            for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
+            for (let i = zoomStartIndex; i <= zoomEndIndex; i++) {
                 if (klines[i][0] === '-') continue;
-                if (lows[i] < minL) minL = lows[i];
-                if (highs[i] > maxH) maxH = highs[i];
+                if (klines[i][2] < minL) minL = klines[i][2];
+                if (klines[i][3] > maxH) maxH = klines[i][3];
             }
-            if (currentPrice) {
-                minL = Math.min(minL, currentPrice);
-                maxH = Math.max(maxH, currentPrice);
-            }
+            if (currentPrice) { minL = Math.min(minL, currentPrice); maxH = Math.max(maxH, currentPrice); }
             if (!isFinite(minL)) minL = 0;
             if (!isFinite(maxH)) maxH = 100;
             const pad = (maxH - minL) * 0.08 || 5;
-            const newYMin = minL - pad;
-            const newYMax = maxH + pad;
+            const newYMin = minL - pad, newYMax = maxH + pad;
             const newYInterval = (newYMax - newYMin) / 23;
             const newXSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
-
             myChart.setOption({
-                yAxis: [
-                    { min: newYMin, max: newYMax, interval: newYInterval },
-                    { min: newYMin, max: newYMax, interval: newYInterval }
-                ],
-                xAxis: [
-                    { interval: newXSplitInterval }, 
-                    { axisLabel: { hideOverlap: true } }
-                ]
+                yAxis: [{ min: newYMin, max: newYMax, interval: newYInterval }, { min: newYMin, max: newYMax, interval: newYInterval }],
+                xAxis: [{ interval: newXSplitInterval }, { axisLabel: { hideOverlap: true } }]
             });
         });
     }
@@ -566,14 +545,12 @@
         else { drawer.classList.add('collapsed'); btn.innerText = '◀'; btn.style.right = '0px'; }
         setTimeout(() => myChart.resize(), 350);
     }
-
     function switchOrderTab(tab) {
         document.querySelectorAll('.order-tabs span').forEach(s => s.classList.toggle('active', s.innerText.includes(tab === 'depth' ? '深度' : '成交')));
         document.getElementById('orderDataContent').innerHTML = tab === 'depth'
             ? '<div style="color:#888;padding:20px;text-align:center;">盘口深度（演示占位）</div>'
             : '<div style="color:#888;padding:20px;text-align:center;">最新成交（演示占位）</div>';
     }
-
     function openTradeModal(side) {
         document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' XAUUSD';
         document.getElementById('tradeModalOverlay').classList.add('show');
@@ -599,7 +576,6 @@
         loadRealData(currentInterval);
     });
 
-    // 启动
     loadRealData(currentInterval);
     initWebSocket();
     window.addEventListener('resize', () => myChart.resize());
