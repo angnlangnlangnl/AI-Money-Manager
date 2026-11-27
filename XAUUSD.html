@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (指标校准完美版)</title>
+    <title>XAUUSD 交易界面 (全量缩放版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -160,11 +160,12 @@
     let wsConnection = null;
     let chartInitialized = false;
 
-    const PADDING_BARS = 15;
+    // ★ 修复：最大可视数量 = 全部数据（动态），不再用固定 MAX_VISIBLE_BARS
+    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数
+    const MIN_VISIBLE_BARS = 10;       // 缩放最少显示根数
+    const PADDING_BARS = 15;           // 右侧填充占位（不算真实K线）
 
-    // ========== 标准指标计算 ==========
     class Indicators {
-        // SMA：标准简单移动平均，前 period-1 为 null
         static SMA(data, period) {
             const result = new Array(data.length).fill(null);
             for (let i = period - 1; i < data.length; i++) {
@@ -177,7 +178,6 @@
             }
             return result;
         }
-        // EMA：标准实现，前 period 个用 SMA 作为种子，之后递推
         static EMA(data, period) {
             const result = new Array(data.length).fill(null);
             const seed = this.SMA(data, period);
@@ -198,7 +198,6 @@
             }
             return result;
         }
-        // BOLL：标准布林带（总体标准差）
         static BOLL(data, period = 20, stdDev = 2) {
             const middle = this.SMA(data, period);
             const upper = new Array(data.length).fill(null);
@@ -217,7 +216,6 @@
             }
             return { upper, middle, lower };
         }
-        // MACD：DIF = EMA12 - EMA26, DEA = EMA(DIF, 9), MACD = (DIF - DEA) * 2
         static MACD(data, fast = 12, slow = 26, signal = 9) {
             const emaFast = this.EMA(data, fast);
             const emaSlow = this.EMA(data, slow);
@@ -253,7 +251,6 @@
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
-    // 重建图表数据（含填充占位），并生成对齐的 closes 数组
     function rebuildChartDataFromRaw() {
         const intervalMs = getIntervalMs(currentInterval);
         const dates = [], klines = [], volumes = [], timestamps = [], alignedCloses = [];
@@ -276,9 +273,11 @@
             }
         }
         chartData = { dates, klines, volumes, timestamps, alignedCloses };
+
+        // 默认显示 DEFAULT_VISIBLE_BARS 根真实K线 + 填充
         const realLen = rawKlines.length;
-        const visibleCount = Math.min(70, realLen);
-        zoomStartIndex = Math.max(0, realLen - visibleCount);
+        const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
+        zoomStartIndex = Math.max(0, realLen - visible);
         zoomEndIndex = chartData.dates.length - 1;
     }
 
@@ -297,6 +296,11 @@
             rawKlines.push({ t: currentBarStartTs, o: price, h: price, l: price, c: price, v: 1 });
         } else return;
         rebuildChartDataFromRaw();
+        // 实时追加后视窗跟随，始终显示最后 DEFAULT_VISIBLE_BARS 根
+        const realLen = rawKlines.length;
+        const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
+        zoomStartIndex = Math.max(0, realLen - visible);
+        zoomEndIndex = chartData.dates.length - 1;
         updateTickerUI();
         if (chartInitialized) updateChart();
     }
@@ -369,6 +373,13 @@
         const { dates, klines, volumes, alignedCloses } = chartData;
         const totalLen = dates.length;
 
+        // 视窗范围校正（不限制最大数量，只保证不越界、不少于最小数量）
+        if (zoomEndIndex >= totalLen) zoomEndIndex = totalLen - 1;
+        if (zoomStartIndex < 0) zoomStartIndex = 0;
+        if (zoomEndIndex - zoomStartIndex + 1 < MIN_VISIBLE_BARS) {
+            zoomStartIndex = Math.max(0, zoomEndIndex - MIN_VISIBLE_BARS + 1);
+        }
+
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) {
             if (klines[i][0] === '-') continue;
@@ -414,7 +425,6 @@
         });
         yAxes.push({ scale: true, min: yMin, max: yMax, interval: yInterval, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
-        // K线主图
         const klineSeries = {
             id: 'klineMain', name: 'K线', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             barMaxWidth: 18,
@@ -432,7 +442,6 @@
         const closesForIndicator = alignedCloses;
         const validCloseCount = closesForIndicator.filter(v => v !== null).length;
 
-        // MA
         if (indicatorState.MA && validCloseCount > 20) {
             const ma5 = Indicators.SMA(closesForIndicator, 5);
             const ma10 = Indicators.SMA(closesForIndicator, 10);
@@ -441,14 +450,12 @@
             series.push({ name: 'MA10', type: 'line', data: ma10, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#f7931a', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
             series.push({ name: 'MA20', type: 'line', data: ma20, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#00d4aa', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
         }
-        // EMA
         if (indicatorState.EMA && validCloseCount > 26) {
             const ema12 = Indicators.EMA(closesForIndicator, 12);
             const ema26 = Indicators.EMA(closesForIndicator, 26);
             series.push({ name: 'EMA12', type: 'line', data: ema12, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
             series.push({ name: 'EMA26', type: 'line', data: ema26, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#a78bfa', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
         }
-        // BOLL
         if (indicatorState.BOLL && validCloseCount > 20) {
             const boll = Indicators.BOLL(closesForIndicator, 20, 2);
             series.push({ name: 'BOLL上轨', type: 'line', data: boll.upper, xAxisIndex: 1, yAxisIndex: 1, lineStyle: { color: '#e879f9', width: 0.8, type: 'dashed' }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
@@ -459,7 +466,6 @@
         let currentSeriesIndex = 2;
         const zoomAxes = [1];
 
-        // VOL
         if (showVol) {
             currentTop += mainHeight + gap;
             grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: true });
@@ -471,7 +477,6 @@
             currentSeriesIndex++;
         }
 
-        // MACD
         if (showMacd && validCloseCount > 26) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
@@ -489,7 +494,18 @@
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
             legend: { show: false },
-            dataZoom: [{ type: 'inside', xAxisIndex: zoomAxes, start: (zoomStartIndex / totalLen) * 100, end: (zoomEndIndex / totalLen) * 100, minValueSpan: 10, moveOnMouseMove: true, moveOnMouseWheel: false }],
+            dataZoom: [
+                {
+                    type: 'inside',
+                    xAxisIndex: zoomAxes,
+                    start: (zoomStartIndex / totalLen) * 100,
+                    end: (zoomEndIndex / totalLen) * 100,
+                    // ★ 修复：不再设置 maxValueSpan，允许缩放到全部数据；只保留 minValueSpan
+                    minValueSpan: MIN_VISIBLE_BARS,
+                    moveOnMouseMove: true,
+                    moveOnMouseWheel: false
+                }
+            ],
             tooltip: {
                 trigger: 'axis', triggerOn: 'mousemove|click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
@@ -514,9 +530,21 @@
         myChart.on('dataZoom', function(params) {
             if (!params.batch) return;
             const dz = params.batch[0];
-            const startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
-            const endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
-            zoomStartIndex = startIdx; zoomEndIndex = endIdx;
+            let startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
+            let endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
+
+            // ★ 修复：不再限制最大可视数量，只限制最小
+            let span = endIdx - startIdx + 1;
+            if (span < MIN_VISIBLE_BARS) {
+                endIdx = Math.min(totalLen - 1, startIdx + MIN_VISIBLE_BARS - 1);
+                span = endIdx - startIdx + 1;
+            }
+            if (startIdx < 0) startIdx = 0;
+            if (endIdx >= totalLen) endIdx = totalLen - 1;
+
+            zoomStartIndex = startIdx;
+            zoomEndIndex = endIdx;
+
             let minL = Infinity, maxH = -Infinity;
             for (let i = zoomStartIndex; i <= zoomEndIndex; i++) {
                 if (klines[i][0] === '-') continue;
@@ -530,6 +558,7 @@
             const newYMin = minL - pad, newYMax = maxH + pad;
             const newYInterval = (newYMax - newYMin) / 23;
             const newXSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
+
             myChart.setOption({
                 yAxis: [{ min: newYMin, max: newYMax, interval: newYInterval }, { min: newYMin, max: newYMax, interval: newYInterval }],
                 xAxis: [{ interval: newXSplitInterval }, { axisLabel: { hideOverlap: true } }]
