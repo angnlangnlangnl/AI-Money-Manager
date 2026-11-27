@@ -287,10 +287,9 @@
         if (realLen === 0) return;
 
         if (!isUserZoomed) {
-            // 默认显示最后 70 根真实数据，因为现在允许显示 padding，所以 end 可以设置到 realLen + PADDING_BARS - 1
             const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
             userZoomStartIdx = Math.max(0, realLen - visible);
-            userZoomEndIdx = realLen + PADDING_BARS - 1; // 把 end 设置到空白末尾
+            userZoomEndIdx = realLen + PADDING_BARS - 1;
             followLatest = true;
         } else if (followLatest) {
             const visibleCount = userZoomEndIdx - userZoomStartIdx + 1;
@@ -418,7 +417,6 @@
         const realLen = rawKlines.length;
         const totalLen = dates.length;
 
-        // ★ 关键：让 end 允许包含 padding 数据，这样后面就会出现空白
         let zoomStartIdx = Math.max(0, Math.min(userZoomStartIdx, totalLen - 1));
         let zoomEndIdx = Math.max(0, Math.min(userZoomEndIdx, totalLen - 1)); 
         if (zoomEndIdx - zoomStartIdx + 1 < MIN_VISIBLE_BARS) {
@@ -437,9 +435,8 @@
         const grids = [], xAxes = [], yAxes = [], series = [];
         let currentTop = 2;
         
-        // ★ 终极修复：将 rightMargin 设置为一个非常小的固定像素值 (10px)，
-        // 让图表网格直接接触到最右侧边框，然后通过 dataZoom 的 padding 来产生蜡烛图的空白。
-        const rightMarginPx = 10; 
+        // ★ 给右侧留出 65px 的固定像素，这正好能容纳数字标签，且不会产生被截断的现象
+        const rightMarginPx = 65; 
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIdx - zoomStartIdx) / 25));
 
         // 主图 grid0
@@ -453,8 +450,8 @@
         yAxes.push({
             scale: true, position: 'right', gridIndex: 0,
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } },
-            // ★ 关键：标签靠右对齐 (align: 'right')，右侧留 4px 间距防止贴死
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 4, width: 70, align: 'right', formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
+            // ★ 关键修改：刻度标签靠左对齐 (align: 'left')，margin 为 0，紧贴 grid 边界
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 0, width: 70, align: 'left', formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
         });
 
         // 主图 grid1
@@ -473,15 +470,15 @@
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { 
                 symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
-                // ★ 价格标签靠右紧贴边框
-                label: { position: 'end', distance: 0, color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
+                // ★ 关键修改：标签放在刻度线的右侧 (position: 'end')，并使用 padding 撑开
+                label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
                 data: [] 
             }
         };
         if (currentPrice) {
             klineSeries.markLine.data.push({
                 yAxis: currentPrice, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1 },
-                label: { formatter: formatNum(currentPrice, 2), color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 0 }
+                label: { formatter: formatNum(currentPrice, 2), color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 2 }
             });
         }
         series.push(klineSeries);
