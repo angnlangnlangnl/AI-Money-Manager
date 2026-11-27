@@ -160,57 +160,61 @@
     let wsConnection = null;
     let chartInitialized = false;
 
-    // ===== 缩放状态管理（核心修复）=====
-    // 是否已经初始化过视窗（首次展示用默认根数）
+    // ===== 缩放状态管理 =====
     let dzInitialized = false;
-    // 用户当前视窗是否贴在最右端（跟随最新K线）
     let followLatest = true;
-    // 用户当前缩放窗口的“比例” (0~1)，用于数据增长时保持相对视窗
-    let userZoomStartPct = 0;   // 0~100
-    let userZoomEndPct = 100;   // 0~100
+    let userZoomStartPct = 0;
+    let userZoomEndPct = 100;
+    // ✅ 用于检测指标开关导致的 xAxis 数量变化
+    let lastZoomAxesLen = 0;
 
-    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数（仅在首次初始化和"跟随最新"时使用）
-    const MIN_VISIBLE_BARS = 10;       // 缩放最少显示根数
-    const PADDING_BARS = 15;           // 右侧填充占位（不算真实K线）
+    const DEFAULT_VISIBLE_BARS = 70;
+    const MIN_VISIBLE_BARS = 10;
+    const PADDING_BARS = 15;
 
+    // ===== 修复后的 Indicators 类 =====
     class Indicators {
         static SMA(data, period) {
             const result = new Array(data.length).fill(null);
             for (let i = period - 1; i < data.length; i++) {
-                let sum = 0, cnt = 0, valid = true;
+                let sum = 0, valid = true;
                 for (let j = i - period + 1; j <= i; j++) {
                     if (data[j] === null) { valid = false; break; }
-                    sum += data[j]; cnt++;
+                    sum += data[j];
                 }
-                result[i] = (valid && cnt === period) ? sum / period : null;
+                result[i] = valid ? sum / period : null;
             }
             return result;
         }
+        // ✅ 修复：EMA 用第一个有效值作为种子，前 period 个点用累积平均
         static EMA(data, period) {
             const result = new Array(data.length).fill(null);
-            const seed = this.SMA(data, period);
-            let started = false;
+            let prev = null, count = 0;
+            const k = 2 / (period + 1);
             for (let i = 0; i < data.length; i++) {
                 if (data[i] === null) { result[i] = null; continue; }
-                if (!started) {
-                    if (seed[i] !== null) { result[i] = seed[i]; started = true; }
-                    else result[i] = null;
+                if (prev === null) {
+                    result[i] = data[i];
+                    prev = data[i];
+                    count = 1;
                 } else {
-                    const prev = result[i - 1];
-                    if (prev === null) result[i] = data[i];
-                    else {
-                        const k = 2 / (period + 1);
-                        result[i] = data[i] * k + prev * (1 - k);
+                    count++;
+                    if (count <= period) {
+                        prev = prev + (data[i] - prev) / count;
+                    } else {
+                        prev = data[i] * k + prev * (1 - k);
                     }
+                    result[i] = prev;
                 }
             }
             return result;
         }
+        // ✅ 修复：BOLL 从 0 开始遍历，null 位置与 middle 严格对齐
         static BOLL(data, period = 20, stdDev = 2) {
             const middle = this.SMA(data, period);
             const upper = new Array(data.length).fill(null);
             const lower = new Array(data.length).fill(null);
-            for (let i = period - 1; i < data.length; i++) {
+            for (let i = 0; i < data.length; i++) {
                 if (middle[i] === null) continue;
                 let sum = 0, valid = true;
                 for (let j = i - period + 1; j <= i; j++) {
@@ -259,7 +263,6 @@
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
-    // ===== 重建数据：不再强制重置用户视窗 =====
     function rebuildChartDataFromRaw() {
         const intervalMs = getIntervalMs(currentInterval);
         const dates = [], klines = [], volumes = [], timestamps = [], alignedCloses = [];
@@ -286,23 +289,19 @@
         const totalLen = chartData.dates.length;
         const realLen = rawKlines.length;
 
-        // ★ 关键修复：不在数据重建时动用户视窗，只有以下几种情况才重新定位：
         if (!dzInitialized) {
-            // 首次展示：显示最后 DEFAULT_VISIBLE_BARS 根
             const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
             zoomStartIndex = Math.max(0, realLen - visible);
             zoomEndIndex = totalLen - 1;
             userZoomStartPct = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
             userZoomEndPct = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
         } else if (followLatest) {
-            // 用户贴在最右端，跟随最新数据
             const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
             zoomStartIndex = Math.max(0, realLen - visible);
             zoomEndIndex = totalLen - 1;
             userZoomStartPct = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
             userZoomEndPct = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
         } else {
-            // ★ 用户正在查看历史数据：按保存的百分比比例还原视窗，绝不回退到默认根数
             if (totalLen > 1) {
                 zoomStartIndex = Math.floor((userZoomStartPct / 100) * (totalLen - 1));
                 zoomEndIndex = Math.ceil((userZoomEndPct / 100) * (totalLen - 1));
@@ -330,8 +329,6 @@
             rawKlines.push({ t: currentBarStartTs, o: price, h: price, l: price, c: price, v: 1 });
         } else return;
 
-        // ★ 修复：tick 更新时不再强制重置 zoomStartIndex/zoomEndIndex
-        // 由 rebuildChartDataFromRaw 内部根据 followLatest 决定
         rebuildChartDataFromRaw();
         updateTickerUI();
         if (chartInitialized) updateChart();
@@ -352,13 +349,13 @@
             }));
             currentPrice = rawKlines[rawKlines.length - 1].c;
 
-            // 切换周期或首次加载：重置缩放状态，允许重新初始化
             dzInitialized = false;
             followLatest = true;
             userZoomStartPct = 0;
             userZoomEndPct = 100;
             zoomStartIndex = 0;
             zoomEndIndex = 0;
+            lastZoomAxesLen = 0;
 
             rebuildChartDataFromRaw();
             chartInitialized = true;
@@ -414,7 +411,6 @@
         const { dates, klines, volumes, alignedCloses } = chartData;
         const totalLen = dates.length;
 
-        // 视窗范围校正
         if (zoomEndIndex >= totalLen) zoomEndIndex = totalLen - 1;
         if (zoomStartIndex < 0) zoomStartIndex = 0;
         if (zoomEndIndex - zoomStartIndex + 1 < MIN_VISIBLE_BARS) {
@@ -505,7 +501,8 @@
         }
 
         let currentSeriesIndex = 2;
-        const zoomAxes = [1];
+        // ✅ 修复：主图两个 xAxis 都要联动
+        const zoomAxes = [0, 1];
 
         if (showVol) {
             currentTop += mainHeight + gap;
@@ -513,7 +510,7 @@
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => k[1] !== '-' && k[1] >= k[0] ? '#0ecb81' : '#f6465d');
-            series.push({ name: 'VOL', type: 'bar', data: volumes.map((v, i) => ({ value: v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
+            series.push({ name: 'VOL', type: 'bar', data: volumes.map((v, i) => ({ value: v == null ? '-' : v, itemStyle: { color: volColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
             zoomAxes.push(currentSeriesIndex);
             currentSeriesIndex++;
         }
@@ -525,14 +522,21 @@
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, splitLine: { show: false }, axisLabel: { show: false } });
             const macdResult = Indicators.MACD(closesForIndicator);
-            const macdColors = macdResult.macd.map(v => v === null ? 'transparent' : v >= 0 ? '#0ecb81' : '#f6465d');
-            series.push({ name: 'MACD柱', type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v, itemStyle: { color: macdColors[i] } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
+            // ✅ 修复：null 用 '-' 表示，ECharts 自动跳过
+            series.push({ name: 'MACD柱', type: 'bar', data: macdResult.macd.map((v, i) => ({ value: v == null ? '-' : v, itemStyle: { color: v == null ? 'transparent' : (v >= 0 ? '#0ecb81' : '#f6465d') } })), xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, z: 20, barMinWidth: 1 });
             series.push({ name: 'DIF', type: 'line', data: macdResult.dif, xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#f0b90b', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
             series.push({ name: 'DEA', type: 'line', data: macdResult.dea, xAxisIndex: currentSeriesIndex, yAxisIndex: currentSeriesIndex, lineStyle: { color: '#e879f9', width: 1 }, symbol: 'none', smooth: false, z: 20, connectNulls: false });
+            // ✅ 修复：MACD 的 xAxis 也要 push 到 zoomAxes
             zoomAxes.push(currentSeriesIndex);
+            currentSeriesIndex++;
         }
 
-        // ===== 核心修复：dataZoom 初始化策略 =====
+        // ✅ 修复：检测 zoomAxes 数量变化，重置 dzInitialized（但保留百分比）
+        if (zoomAxes.length !== lastZoomAxesLen) {
+            dzInitialized = false;
+            lastZoomAxesLen = zoomAxes.length;
+        }
+
         const dzConfig = {
             type: 'inside',
             xAxisIndex: zoomAxes,
@@ -540,17 +544,14 @@
             moveOnMouseMove: true,
             moveOnMouseWheel: false,
         };
-        // 只有首次初始化时才传入 start/end；之后如果用户在看历史，不传，完全交给 ECharts 保留
         if (!dzInitialized) {
             dzConfig.start = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
             dzConfig.end = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
             dzInitialized = true;
         } else if (followLatest) {
-            // 跟随最新时，主动把视窗右端贴到末尾
             dzConfig.start = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
             dzConfig.end = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
         } else {
-            // ★ 用户在看历史：用保存的百分比恢复视窗，绝不回退默认根数
             dzConfig.start = userZoomStartPct;
             dzConfig.end = userZoomEndPct;
         }
@@ -586,7 +587,6 @@
             let startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
             let endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
 
-            // 限制最小可视根数
             let span = endIdx - startIdx + 1;
             if (span < MIN_VISIBLE_BARS) {
                 endIdx = Math.min(totalLen - 1, startIdx + MIN_VISIBLE_BARS - 1);
@@ -598,14 +598,10 @@
             zoomStartIndex = startIdx;
             zoomEndIndex = endIdx;
 
-            // ★ 保存用户视窗的百分比范围，用于数据增长时保持相对视窗
             userZoomStartPct = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
             userZoomEndPct = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
 
-            // 判断用户是否把视窗拖到了最右端（用于决定 tick 到来时是否跟随最新）
             followLatest = (totalLen - 1 - zoomEndIndex) <= 2;
-
-            // 记住：用户主动缩放过，后续 updateChart 不再强制重置 dataZoom 的 start/end
             dzInitialized = true;
 
             let minL = Infinity, maxH = -Infinity;
@@ -622,10 +618,16 @@
             const newYInterval = (newYMax - newYMin) / 23;
             const newXSplitInterval = Math.max(1, Math.floor((zoomEndIndex - zoomStartIndex) / 25));
 
-            myChart.setOption({
-                yAxis: [{ min: newYMin, max: newYMax, interval: newYInterval }, { min: newYMin, max: newYMax, interval: newYInterval }],
-                xAxis: [{ interval: newXSplitInterval }, { axisLabel: { hideOverlap: true } }]
+            // ✅ 修复：yAxis/xAxis 用完整数组
+            const newYAxes = yAxes.map((ax, i) => {
+                if (i === 0 || i === 1) return { min: newYMin, max: newYMax, interval: newYInterval };
+                return {};
             });
+            const newXAxes = xAxes.map((ax, i) => {
+                if (i === 0 || i === 1) return { interval: newXSplitInterval, axisLabel: i === 1 ? { hideOverlap: true } : {} };
+                return {};
+            });
+            myChart.setOption({ yAxis: newYAxes, xAxis: newXAxes });
         });
     }
 
