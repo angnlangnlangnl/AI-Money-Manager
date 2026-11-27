@@ -20,15 +20,18 @@
         .header-icons { margin-left: auto; display: flex; gap: 15px; font-size: 15px; color: #848e9c; }
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
-        .quote-section { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 20px; flex-shrink: 0; }
+        
+        /* 头部行情区域调整 */
+        .quote-section { display: flex; justify-content: space-between; align-items: flex-start; padding: 15px 20px; flex-shrink: 0; }
         .quote-left { display: flex; flex-direction: column; }
-        .price-main { font-size: 26px; font-weight: bold; line-height: 1.1; }
-        .price-sub { font-size: 12px; color: #848e9c; margin-top: 4px; }
+        .price-main { font-size: 28px; font-weight: bold; line-height: 1.1; color: #fff; }
+        .price-sub { font-size: 13px; color: #848e9c; margin-top: 6px; display: flex; gap: 8px; }
         .price-sub span.green { color: #0ecb81; }
         .price-sub span.red { color: #f6465d; }
         .quote-details { font-size: 11px; color: #848e9c; text-align: right; display: flex; gap: 25px; padding-top: 4px; }
         .quote-details div { display: flex; flex-direction: column; align-items: flex-end; }
-        .quote-details b { color: #eaecef; font-weight: normal; font-size: 12px; margin-top: 2px; }
+        .quote-details b { color: #eaecef; font-weight: normal; font-size: 13px; margin-top: 4px; }
+        
         .timeframes { display: flex; gap: 15px; padding: 0 20px 8px; font-size: 12px; color: #848e9c; flex-shrink: 0; align-items: center; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 2px; }
         .timeframes span { cursor: pointer; }
@@ -86,13 +89,17 @@
         <div class="trade-panel">
             <div class="quote-section">
                 <div class="quote-left">
+                    <!-- 价格主显示 -->
                     <div class="price-main" id="last-price">--</div>
+                    <!-- 涨跌幅及昨收价显示 -->
                     <div class="price-sub" id="cn-price">-- <span class="green">+0.00%</span></div>
                 </div>
                 <div class="quote-details">
                     <div>今日最高价 <b id="high-24">--</b></div>
                     <div>今日最低价 <b id="low-24">--</b></div>
                     <div>今日开盘价 <b id="open-price">--</b></div>
+                    <!-- 补充昨日收盘价 -->
+                    <div>昨日收盘价 <b id="prev-close">--</b></div>
                 </div>
             </div>
 
@@ -166,7 +173,6 @@
 
     const DEFAULT_VISIBLE_BARS = 70;
     const MIN_VISIBLE_BARS = 10;
-    // 总共 15 个 padding，这里控制右侧留白，设置为 10 即可满足“预留 10 根蜡烛的空白”
     const PADDING_BARS = 10; 
 
     // ===== 指标计算 =====
@@ -269,7 +275,7 @@
             alignedCloses.push(item.c);
         });
         
-        // 追加空白占位 K 线（用于视觉留白）
+        // 追加空白占位 K 线
         if (timestamps.length > 0) {
             const lastTs = timestamps[timestamps.length - 1];
             for (let i = 1; i <= PADDING_BARS; i++) {
@@ -364,13 +370,41 @@
                 const price = parseFloat(tick.last);
                 const change = parseFloat(tick.change);
                 const tickTimestamp = msg.timestamp || Date.now();
+                
+                // WS 推送直接更新价格
                 document.getElementById('last-price').innerText = formatNum(price);
-                document.getElementById('high-24').innerText = formatNum(tick.high);
-                document.getElementById('low-24').innerText = formatNum(tick.low);
-                document.getElementById('open-price').innerText = formatNum(tick.open);
+                // 百分比更新
                 document.getElementById('cn-price').innerHTML = `$${formatNum(price)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
-                document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
-                document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
+                
+                // 获取今日最高/最低的准确值
+                const todayStart = new Date();
+                todayStart.setHours(0, 0, 0, 0);
+                let todayHigh = -Infinity, todayLow = Infinity, todayOpen = null;
+                
+                // 遍历找到今天的 K 线，确保数据准确
+                for (let i = rawKlines.length - 1; i >= 0; i--) {
+                    if (rawKlines[i].t >= todayStart.getTime()) {
+                        if (rawKlines[i].h > todayHigh) todayHigh = rawKlines[i].h;
+                        if (rawKlines[i].l < todayLow) todayLow = rawKlines[i].l;
+                        if (todayOpen === null) todayOpen = rawKlines[i].o; // 今天的开盘价在最早的一根
+                    } else {
+                        break;
+                    }
+                }
+                
+                if (todayHigh > -Infinity) document.getElementById('high-24').innerText = formatNum(todayHigh);
+                if (todayLow < Infinity) document.getElementById('low-24').innerText = formatNum(todayLow);
+                if (todayOpen !== null) document.getElementById('open-price').innerText = formatNum(todayOpen);
+                
+                // 昨收价可以通过今天的开盘价推算，或者直接取更早的 K 线
+                const firstTodayIndex = rawKlines.findIndex(k => k.t >= todayStart.getTime());
+                if (firstTodayIndex > 0) {
+                    const prevClose = rawKlines[firstTodayIndex - 1].c;
+                    document.getElementById('prev-close').innerText = formatNum(prevClose);
+                } else if (rawKlines.length > 0) {
+                    document.getElementById('prev-close').innerText = formatNum(rawKlines[0].o); // 兜底
+                }
+
                 if (chartInitialized && rawKlines.length > 0) updateKlineFromTick(price, tickTimestamp);
                 currentPrice = price;
             }
@@ -381,15 +415,43 @@
     function updateTickerUI() {
         if (!rawKlines.length) return;
         const last = rawKlines[rawKlines.length - 1];
-        const open = last.o, close = last.c;
-        const change = ((close - open) / open) * 100;
-        document.getElementById('last-price').innerText = formatNum(close);
-        document.getElementById('open-price').innerText = formatNum(open);
-        const recent = rawKlines.slice(Math.max(0, rawKlines.length - 24));
-        if (recent.length) {
-            document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k.h)));
-            document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k.l)));
+        
+        // ★ 修正逻辑：涨跌幅必须以今日开盘价为基准，而不是当前 K 线的开盘价
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        
+        let todayOpen = last.o; // 兜底
+        let todayHigh = last.h;
+        let todayLow = last.l;
+        
+        // 找到今天的 K 线范围
+        for (let i = rawKlines.length - 1; i >= 0; i--) {
+            if (rawKlines[i].t >= todayStart.getTime()) {
+                if (rawKlines[i].h > todayHigh) todayHigh = rawKlines[i].h;
+                if (rawKlines[i].l < todayLow) todayLow = rawKlines[i].l;
+                todayOpen = rawKlines[i].o; // 今日开盘价（第一根今天的 K 线）
+            } else {
+                break;
+            }
         }
+
+        const close = last.c;
+        const change = ((close - todayOpen) / todayOpen) * 100;
+        
+        document.getElementById('last-price').innerText = formatNum(close);
+        document.getElementById('open-price').innerText = formatNum(todayOpen);
+        document.getElementById('high-24').innerText = formatNum(todayHigh);
+        document.getElementById('low-24').innerText = formatNum(todayLow);
+        
+        // 更新昨收
+        const firstTodayIndex = rawKlines.findIndex(k => k.t >= todayStart.getTime());
+        if (firstTodayIndex > 0) {
+            document.getElementById('prev-close').innerText = formatNum(rawKlines[firstTodayIndex - 1].c);
+        } else if (rawKlines.length > 0) {
+            document.getElementById('prev-close').innerText = formatNum(rawKlines[0].o);
+        }
+        
+        // 更新涨跌幅颜色
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
     }
 
@@ -435,7 +497,6 @@
         const grids = [], xAxes = [], yAxes = [], series = [];
         let currentTop = 2;
         
-        // ★ 给右侧留出 65px 的固定像素，这正好能容纳数字标签，且不会产生被截断的现象
         const rightMarginPx = 65; 
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIdx - zoomStartIdx) / 25));
 
@@ -450,7 +511,6 @@
         yAxes.push({
             scale: true, position: 'right', gridIndex: 0,
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } },
-            // ★ 关键修改：刻度标签靠左对齐 (align: 'left')，margin 为 0，紧贴 grid 边界
             axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 0, width: 70, align: 'left', formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
         });
 
@@ -470,7 +530,6 @@
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { 
                 symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
-                // ★ 关键修改：标签放在刻度线的右侧 (position: 'end')，并使用 padding 撑开
                 label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
                 data: [] 
             }
@@ -540,7 +599,7 @@
             currentSeriesIndex++;
         }
 
-        // 主图 y 轴范围（纳入 K 线和主图 line 系列）
+        // 主图 y 轴范围
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIdx; i <= zoomEndIdx; i++) {
             if (klines[i][0] === '-') continue;
