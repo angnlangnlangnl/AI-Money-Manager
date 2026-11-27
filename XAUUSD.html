@@ -3,75 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (实时动态K线版)</title>
+    <title>XAUUSD 交易界面 (实时动态K线完美版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
-        /* 样式完全不变，保证视觉一致 */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app { width: 100%; max-width: 100%; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; }
-        
         .header { display: flex; align-items: center; padding: 0 20px; height: 38px; flex-shrink: 0; background: #1e2329; border-bottom: 1px solid #2b3139; }
         .header-left { display: flex; align-items: center; gap: 12px; font-size: 15px; font-weight: bold; }
         .header-left .pair-selector { cursor: pointer; color: #eaecef; padding: 2px 6px; border-radius: 4px; }
         .header-left .base-asset { font-size: 11px; color: #848e9c; font-weight: normal; margin-right: 15px; }
-        
         .header-tabs { display: flex; align-items: center; height: 100%; gap: 20px; }
         .header-tab { color: #848e9c; font-size: 13px; height: 100%; display: flex; align-items: center; cursor: pointer; position: relative; }
         .header-tab.active { color: #eaecef; font-weight: bold; }
         .header-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 2px; background: #f0b90b; }
-
         .header-icons { margin-left: auto; display: flex; gap: 15px; font-size: 15px; color: #848e9c; }
-        
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
-        
         .quote-section { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 20px; flex-shrink: 0; }
         .quote-left { display: flex; flex-direction: column; }
         .price-main { font-size: 26px; font-weight: bold; line-height: 1.1; }
         .price-sub { font-size: 12px; color: #848e9c; margin-top: 4px; }
         .price-sub span.green { color: #0ecb81; }
         .price-sub span.red { color: #f6465d; }
-        
         .quote-details { font-size: 11px; color: #848e9c; text-align: right; display: flex; gap: 25px; padding-top: 4px; }
         .quote-details div { display: flex; flex-direction: column; align-items: flex-end; }
         .quote-details b { color: #eaecef; font-weight: normal; font-size: 12px; margin-top: 2px; }
-        
         .timeframes { display: flex; gap: 15px; padding: 0 20px 8px; font-size: 12px; color: #848e9c; flex-shrink: 0; align-items: center; }
         .timeframes span.active { color: #eaecef; font-weight: bold; border-bottom: 2px solid #eaecef; padding-bottom: 2px; }
         .timeframes span { cursor: pointer; }
-        
         .chart-container { flex: 1; min-height: 300px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 5px; }
         #kline { width: 100%; flex: 1; }
-        
         .indicators { display: flex; gap: 15px; padding: 8px 20px; font-size: 11px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 10px; }
         .indicators span { cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
-
         .right-drawer { width: 300px; background: #1e2329; border-left: 1px solid #2b3139; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s ease; overflow: hidden; position: relative; }
         .right-drawer.collapsed { width: 0; border-left: none; }
         .drawer-content { width: 300px; display: flex; flex-direction: column; height: 100%; }
-        
         .toggle-btn { position: absolute; right: 300px; top: 0; width: 20px; height: 32px; background: #1e2329; border: 1px solid #2b3139; border-top: none; border-right: none; border-radius: 0 0 0 4px; color: #848e9c; display: flex; justify-content: center; align-items: center; cursor: pointer; z-index: 20; font-size: 10px; transition: right 0.3s ease; }
         .toggle-btn:hover { background: #2b3139; color: #fff; }
-
         .order-book-panel { padding: 10px 10px; display: flex; flex-direction: column; gap: 10px; flex: 1; overflow-y: auto; }
         .order-book-bar { display: flex; align-items: center; font-size: 11px; font-weight: bold; }
         .sell-bar { width: 50%; background: rgba(246,70,93,0.2); color: #f6465d; text-align: left; padding: 6px 10px; border-radius: 4px 0 0 4px; border: 1px solid #f6465d; border-right: none; }
         .buy-bar { width: 50%; background: rgba(14,203,129,0.2); color: #0ecb81; text-align: right; padding: 6px 10px; border-radius: 0 4px 4px 0; border: 1px solid #0ecb81; border-left: none; }
-
         .order-tabs { display: flex; gap: 15px; font-size: 11px; color: #848e9c; border-bottom: 1px solid #2b3139; padding-bottom: 5px; }
         .order-tabs span { cursor: pointer; padding: 2px 0; border-bottom: 2px solid transparent; }
         .order-tabs span.active { color: #eaecef; border-bottom-color: #f0b90b; }
-        
         .order-data-container { flex: 1; overflow-y: auto; }
         .order-data-content { font-size: 11px; color: #aaa; }
-
         .drawer-actions { padding: 10px; background: #181a20; border-top: 1px solid #2b3139; display: flex; gap: 8px; flex-shrink: 0; }
         .drawer-actions button { flex: 1; padding: 8px 0; border-radius: 4px; font-size: 13px; font-weight: bold; color: #fff; cursor: pointer; border: none; }
         .drawer-actions .buy-btn { background: #0ecb81; }
         .drawer-actions .sell-btn { background: #f6465d; }
-        
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 50; display: none; justify-content: center; align-items: center; }
         .modal-overlay.show { display: flex; }
         .modal-content { background: #1e2329; border-radius: 8px; width: 90%; max-width: 350px; padding: 15px; border: 1px solid #2b3139; }
@@ -167,12 +150,14 @@
     const WS_URL = 'wss://cfd.heimi888.com';
 
     let currentInterval = '15m';
-    // 核心数据结构：保留原始每根K线的时间戳和OHLC，用于实时更新和增量
+    // 原始K线数据（不含填充）
+    let rawKlines = [];     // { t, o, h, l, c }
+    // 图表展示数据（含填充占位，由 rawKlines 派生）
     let chartData = {
-        timestamps: [],     // 每根K线的时间戳(ms)
-        dates: [],          // 显示用的日期字符串
-        klines: [],         // [open, close, low, high] 原始真实数据（不含填充）
-        volumes: []         // 模拟成交量
+        dates: [],
+        klines: [],
+        volumes: [],
+        timestamps: []
     };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
@@ -182,7 +167,7 @@
     let wsConnection = null;
     let chartInitialized = false;
 
-    // K线填充占位符（用于延伸图表右侧空间）
+    // 填充占位数量
     const PADDING_BARS = 15;
 
     class Indicators {
@@ -200,142 +185,113 @@
         const date = d.getDate().toString().padStart(2, '0');
         const hours = d.getHours().toString().padStart(2, '0'); 
         const minutes = d.getMinutes().toString().padStart(2, '0');
-        
         if (interval === '1d') return `${month}-${date}`;
         if (interval === '4h') return `${month}-${date} ${hours}:00`;
         return `${hours}:${minutes}`; 
     }
 
-    const chartDom = document.getElementById('kline');
-    const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
-
-    // ----- 重新构建用于ECharts的完整系列（含填充占位）-----
-    function buildChartSeriesData() {
-        const realLen = chartData.timestamps.length;
-        const lastTs = realLen > 0 ? chartData.timestamps[realLen - 1] : Date.now();
-
-        // 构造包含填充的完整数组
-        const fullDates = [...chartData.dates];
-        const fullKlines = chartData.klines.map(k => [...k]);
-        const fullVolumes = [...chartData.volumes];
-        const fullTimestamps = [...chartData.timestamps];
-
-        // 根据当前周期计算每根K线的毫秒数
-        const intervalMs = getIntervalMs(currentInterval);
-
-        for (let i = 1; i <= PADDING_BARS; i++) {
-            const ts = lastTs + i * intervalMs;
-            fullTimestamps.push(ts);
-            fullDates.push(formatKlineDate(ts, currentInterval));
-            // 占位K线用特殊标记 '-'，并在updateChart中跳过
-            fullKlines.push(['-', '-', '-', '-']);
-            fullVolumes.push('-');
-        }
-        return { fullDates, fullKlines, fullVolumes, fullTimestamps };
-    }
-
-    // 周期转毫秒
     function getIntervalMs(interval) {
         const map = {
-            '1m': 60 * 1000,
-            '5m': 5 * 60 * 1000,
-            '15m': 15 * 60 * 1000,
-            '30m': 30 * 60 * 1000,
-            '1h': 60 * 60 * 1000,
-            '4h': 4 * 60 * 60 * 1000,
+            '1m': 60 * 1000, '5m': 5 * 60 * 1000, '15m': 15 * 60 * 1000,
+            '30m': 30 * 60 * 1000, '1h': 60 * 60 * 1000, '4h': 4 * 60 * 60 * 1000,
             '1d': 24 * 60 * 60 * 1000
         };
         return map[interval] || 15 * 60 * 1000;
     }
 
-    // ----- 核心：增量更新当前K线或追加新K线（用于WebSocket推送）-----
-    function updateCurrentKlineFromTick(price, tickTimestamp) {
-        if (!chartData.timestamps.length) return;
+    const chartDom = document.getElementById('kline');
+    const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
+
+    // 从 rawKlines 重建 chartData（含填充占位）
+    function rebuildChartDataFromRaw() {
+        const intervalMs = getIntervalMs(currentInterval);
+        const dates = [];
+        const klines = [];
+        const volumes = [];
+        const timestamps = [];
+
+        rawKlines.forEach(item => {
+            timestamps.push(item.t);
+            dates.push(formatKlineDate(item.t, currentInterval));
+            klines.push([item.o, item.c, item.l, item.h]);
+            volumes.push(1000); // 模拟成交量
+        });
+
+        // 追加填充占位
+        if (timestamps.length > 0) {
+            const lastTs = timestamps[timestamps.length - 1];
+            for (let i = 1; i <= PADDING_BARS; i++) {
+                const ts = lastTs + i * intervalMs;
+                timestamps.push(ts);
+                dates.push(formatKlineDate(ts, currentInterval));
+                klines.push(['-', '-', '-', '-']);
+                volumes.push('-');
+            }
+        }
+
+        chartData = { dates, klines, volumes, timestamps };
+        // 视窗范围默认最后70根真实K线 + 填充
+        const realLen = rawKlines.length;
+        const visibleCount = Math.min(70, realLen);
+        zoomStartIndex = Math.max(0, realLen - visibleCount);
+        zoomEndIndex = chartData.dates.length - 1;
+    }
+
+    // 从WebSocket tick更新K线（增量更新rawKlines，然后重建chartData并重绘）
+    function updateKlineFromTick(price, tickTimestamp) {
+        if (rawKlines.length === 0) return;
 
         const intervalMs = getIntervalMs(currentInterval);
-        const lastTs = chartData.timestamps[chartData.timestamps.length - 1];
-        
-        // 计算当前K线应该属于哪个时间区间（对齐到区间起始时间）
+        const lastItem = rawKlines[rawKlines.length - 1];
+        const lastBarStartTs = Math.floor(lastItem.t / intervalMs) * intervalMs;
         const currentBarStartTs = Math.floor(tickTimestamp / intervalMs) * intervalMs;
-        const lastBarStartTs = Math.floor(lastTs / intervalMs) * intervalMs;
 
-        // 情况1：还在同一根K线内 -> 更新高低收
         if (currentBarStartTs === lastBarStartTs) {
-            const idx = chartData.timestamps.length - 1;
-            const kline = chartData.klines[idx];
-            // 更新收盘价
-            kline[1] = price;
-            // 更新最高价
-            if (price > kline[3]) kline[3] = price;
-            // 更新最低价
-            if (price < kline[2]) kline[2] = price;
-            // 成交量模拟增加
-            chartData.volumes[idx] = (chartData.volumes[idx] || 0) + 1;
-        } 
-        // 情况2：进入新K线 -> 追加一根新K线
-        else if (currentBarStartTs > lastBarStartTs) {
-            // 有可能一次跨越多个周期，但简化处理：如果跨越多根，只补最后两根？实际行情不会突然跨多根，但为了健壮
-            // 这里简单处理：如果新K线起始时间大于最后一根，则追加一根新的，开盘价=当前价，高=低=收=当前价
-            // 但为了不遗漏，如果时间差超过一个周期，我们可以循环补充空K线？但实时行情通常不会。
-            // 为了不破坏图表，我们只追加一根新的K线（如果跨多个周期，中间缺失会导致图表不连续，但这种情况极少）
+            // 同一根K线：更新 high, low, close
+            lastItem.c = price;
+            if (price > lastItem.h) lastItem.h = price;
+            if (price < lastItem.l) lastItem.l = price;
+        } else if (currentBarStartTs > lastBarStartTs) {
+            // 新K线：追加一根，开盘价=当前价，高=低=收=当前价
             const newTs = currentBarStartTs;
-            const dateStr = formatKlineDate(newTs, currentInterval);
-            chartData.timestamps.push(newTs);
-            chartData.dates.push(dateStr);
-            chartData.klines.push([price, price, price, price]);
-            chartData.volumes.push(1);
-            // 可选：由于新K线加入，需要重新计算视窗索引
+            rawKlines.push({
+                t: newTs,
+                o: price,
+                h: price,
+                l: price,
+                c: price
+            });
+        } else {
+            // tickTimestamp 落后，忽略
+            return;
         }
-        // 如果tickTimestamp小于lastBarStartTs？忽略
 
-        // 更新UI价格、最高最低等
+        // 重建 chartData 并重新计算视窗
+        rebuildChartDataFromRaw();
         updateTickerUI();
-
-        // 重新计算图表（因为数据变了，需要重建）
-        // 为了性能，可用增量，但这里直接重建视图更简单可靠，因为K线数量不多
         if (chartInitialized) {
             updateChart();
         }
     }
 
-    // ----- 加载历史K线（原逻辑增强：保证数据完整性）-----
     async function loadRealData(interval) {
         try {
             const res = await fetch(`${API_BASE}/api/kline?interval=${interval}&limit=500`);
             const json = await res.json();
             if (!json.success || !json.data) throw new Error('K线获取失败');
 
-            const rawData = json.data; 
-            const timestamps = [], dates = [], klines = [], volumes = [];
+            // 转换为 rawKlines
+            rawKlines = json.data.map(item => ({
+                t: item.t,
+                o: parseFloat(item.o),
+                h: parseFloat(item.h),
+                l: parseFloat(item.l),
+                c: parseFloat(item.c)
+            }));
 
-            rawData.forEach(item => {
-                const ts = item.t; 
-                const open = parseFloat(item.o);
-                const high = parseFloat(item.h);
-                const low = parseFloat(item.l);
-                const close = parseFloat(item.c);
+            currentPrice = rawKlines[rawKlines.length - 1].c;
 
-                timestamps.push(ts);
-                dates.push(formatKlineDate(ts, interval));
-                klines.push([open, close, low, high]); 
-                volumes.push(1000); 
-            });
-
-            // 替换 chartData 中的真实部分（不包含填充）
-            chartData = { timestamps, dates, klines, volumes };
-
-            currentPrice = parseFloat(rawData[rawData.length - 1].c);
-
-            // 构建完整视图（带填充）并计算缩放
-            const { fullDates, fullKlines, fullVolumes, fullTimestamps } = buildChartSeriesData();
-            const totalLen = fullDates.length;
-
-            // 默认显示最后70根（包含填充？显示最后70根实体即可，填充部分自动显示在右侧）
-            // 为了让可视区域看到最新的K线并留出填充空间，调整 zoomStartIndex
-            const visibleRealBars = Math.min(70, chartData.timestamps.length);
-            // 计算起始索引（基于完整数组）
-            zoomStartIndex = Math.max(0, chartData.timestamps.length - visibleRealBars);
-            zoomEndIndex = totalLen - 1;
+            rebuildChartDataFromRaw();
 
             chartInitialized = true;
             updateTickerUI();
@@ -356,9 +312,9 @@
                 const tick = msg.data;
                 const price = parseFloat(tick.last);
                 const change = parseFloat(tick.change); 
-                const tickTimestamp = msg.timestamp || Date.now(); // 如果服务器时间，优先使用
+                const tickTimestamp = msg.timestamp || Date.now();
 
-                // 更新头部价格显示
+                // 更新头部
                 document.getElementById('last-price').innerText = formatNum(price);
                 document.getElementById('high-24').innerText = formatNum(tick.high);
                 document.getElementById('low-24').innerText = formatNum(tick.low);
@@ -367,11 +323,9 @@
                 document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
                 document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
 
-                // 核心：更新K线数据
-                if (chartInitialized && chartData.klines.length > 0) {
-                    // 如果价格变化足够（避免微小波动重绘），但为了实时性我们直接更新
-                    // 使用tickTimestamp更新K线
-                    updateCurrentKlineFromTick(price, tickTimestamp);
+                // 更新K线
+                if (chartInitialized && rawKlines.length > 0) {
+                    updateKlineFromTick(price, tickTimestamp);
                 }
                 currentPrice = price;
             }
@@ -380,33 +334,26 @@
     }
 
     function updateTickerUI() {
-        if (!chartData.klines.length) return;
-        const lastRealIdx = chartData.klines.length - 1;
-        const last = chartData.klines[lastRealIdx];
-        const open = last[0], close = last[1];
+        if (!rawKlines.length) return;
+        const last = rawKlines[rawKlines.length - 1];
+        const open = last.o, close = last.c;
         const change = ((close - open) / open) * 100;
 
         document.getElementById('last-price').innerText = formatNum(close);
         document.getElementById('open-price').innerText = formatNum(open);
         
-        const recent = chartData.klines.slice(Math.max(0, lastRealIdx - 23), lastRealIdx + 1);
-        const validRecent = recent.filter(k => k[3] !== '-');
-        if (validRecent.length > 0) {
-            document.getElementById('high-24').innerText = formatNum(Math.max(...validRecent.map(k => k[3])));
-            document.getElementById('low-24').innerText = formatNum(Math.min(...validRecent.map(k => k[2])));
+        const recent = rawKlines.slice(Math.max(0, rawKlines.length - 24));
+        if (recent.length) {
+            document.getElementById('high-24').innerText = formatNum(Math.max(...recent.map(k => k.h)));
+            document.getElementById('low-24').innerText = formatNum(Math.min(...recent.map(k => k.l)));
         }
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
     }
 
     function updateChart() {
-        if (!chartInitialized) return;
+        if (!chartInitialized || !chartData.dates.length) return;
         
-        // 每次重绘都基于完整数据构建（包含填充占位）
-        const { fullDates, fullKlines, fullVolumes } = buildChartSeriesData();
-        const dates = fullDates;
-        const klines = fullKlines;
-        const volumes = fullVolumes;
-        
+        const { dates, klines, volumes } = chartData;
         const validKlines = klines.filter(k => k[0] !== '-');
         const closes = validKlines.map(k => k[1]);
         const highs = validKlines.map(k => k[3]);
@@ -414,7 +361,7 @@
 
         const totalLen = dates.length;
 
-        // 计算y轴范围基于可视区域
+        // 计算可视区域y轴范围
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (klines[i][0] === '-') continue;
@@ -422,7 +369,8 @@
             if (highs[i] > maxHigh) maxHigh = highs[i];
         }
         if (currentPrice) { minLow = Math.min(minLow, currentPrice); maxHigh = Math.max(maxHigh, currentPrice); }
-        
+        if (!isFinite(minLow)) minLow = 0;
+        if (!isFinite(maxHigh)) maxHigh = 100;
         const padding = (maxHigh - minLow) * 0.08 || 5;
         const yMin = minLow - padding, yMax = maxHigh + padding;
         const yInterval = (yMax - yMin) / 23;
@@ -430,9 +378,8 @@
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
         let mainHeight = 100, volHeight = 0, macdHeight = 0;
-        
         const gap = 6; 
-        
+
         if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
 
@@ -590,6 +537,8 @@
                 minL = Math.min(minL, currentPrice);
                 maxH = Math.max(maxH, currentPrice);
             }
+            if (!isFinite(minL)) minL = 0;
+            if (!isFinite(maxH)) maxH = 100;
             const pad = (maxH - minL) * 0.08 || 5;
             const newYMin = minL - pad;
             const newYMax = maxH + pad;
@@ -646,7 +595,7 @@
         document.querySelectorAll('#timeframes span[data-interval]').forEach(s => s.classList.remove('active'));
         span.classList.add('active');
         currentInterval = span.dataset.interval;
-        chartInitialized = false; // 重新加载后初始化
+        chartInitialized = false;
         loadRealData(currentInterval);
     });
 
