@@ -160,8 +160,14 @@
     let wsConnection = null;
     let chartInitialized = false;
 
-    // ★ 关键修复：删除 MAX_VISIBLE_BARS 概念，只保留最小显示根数
-    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数（仅用于初始窗口，不影响最大缩放）
+    // ===== 缩放状态管理（核心修复）=====
+    // 是否已由用户或首次初始化设定过 dataZoom 视窗
+    let dzInitialized = false;
+    // 用户当前视窗是否贴在最右端（跟随最新K线）。如果贴右端，新数据到来时跟随滚动；
+    // 否则保持用户选定的历史区间不被 tick 重置。
+    let followLatest = true;
+
+    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数（仅用于初始窗口）
     const MIN_VISIBLE_BARS = 10;       // 缩放最少显示根数
     const PADDING_BARS = 15;           // 右侧填充占位（不算真实K线）
 
@@ -251,6 +257,7 @@
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
+    // ===== 修复：重建数据时不再强制重置视窗 =====
     function rebuildChartDataFromRaw() {
         const intervalMs = getIntervalMs(currentInterval);
         const dates = [], klines = [], volumes = [], timestamps = [], alignedCloses = [];
@@ -274,11 +281,27 @@
         }
         chartData = { dates, klines, volumes, timestamps, alignedCloses };
 
-        // 默认显示 DEFAULT_VISIBLE_BARS 根真实K线 + 填充
+        const totalLen = chartData.dates.length;
         const realLen = rawKlines.length;
-        const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
-        zoomStartIndex = Math.max(0, realLen - visible);
-        zoomEndIndex = chartData.dates.length - 1;
+
+        // 仅在“从未初始化”或“用户处于跟随最新”状态下，才把视窗定位到末尾
+        if (!dzInitialized) {
+            const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
+            zoomStartIndex = Math.max(0, realLen - visible);
+            zoomEndIndex = totalLen - 1;
+        } else if (followLatest) {
+            // 用户贴右端：跟随最新，保持相同跨度的相对位置（简单起见仍按默认根数显示）
+            const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
+            zoomStartIndex = Math.max(0, realLen - visible);
+            zoomEndIndex = totalLen - 1;
+        } else {
+            // 用户正在查看历史：保持原视窗索引不变，只做边界保护
+            if (zoomEndIndex >= totalLen) zoomEndIndex = totalLen - 1;
+            if (zoomStartIndex < 0) zoomStartIndex = 0;
+            if (zoomEndIndex - zoomStartIndex + 1 < MIN_VISIBLE_BARS) {
+                zoomStartIndex = Math.max(0, zoomEndIndex - MIN_VISIBLE_BARS + 1);
+            }
+        }
     }
 
     function updateKlineFromTick(price, tickTimestamp) {
@@ -295,12 +318,10 @@
         } else if (currentBarStartTs > lastBarStartTs) {
             rawKlines.push({ t: currentBarStartTs, o: price, h: price, l: price, c: price, v: 1 });
         } else return;
+
+        // ===== 修复：tick 更新时不再强制重置 zoomStartIndex/zoomEndIndex =====
+        // 由 rebuildChartDataFromRaw 内部根据 followLatest / dzInitialized 决定是否跟随
         rebuildChartDataFromRaw();
-        // 实时追加后视窗跟随，始终显示最后 DEFAULT_VISIBLE_BARS 根（但允许用户缩放看全量）
-        const realLen = rawKlines.length;
-        const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
-        zoomStartIndex = Math.max(0, realLen - visible);
-        zoomEndIndex = chartData.dates.length - 1;
         updateTickerUI();
         if (chartInitialized) updateChart();
     }
@@ -319,6 +340,13 @@
                 v: item.v != null ? parseFloat(item.v) : null
             }));
             currentPrice = rawKlines[rawKlines.length - 1].c;
+
+            // 切换周期或首次加载：重置缩放状态，允许重新初始化
+            dzInitialized = false;
+            followLatest = true;
+            zoomStartIndex = 0;
+            zoomEndIndex = 0;
+
             rebuildChartDataFromRaw();
             chartInitialized = true;
             updateTickerUI();
@@ -373,7 +401,7 @@
         const { dates, klines, volumes, alignedCloses } = chartData;
         const totalLen = dates.length;
 
-        // 视窗范围校正（允许看到全部数据，只保证不越界和不少于MIN_VISIBLE_BARS）
+        // 视窗范围校正
         if (zoomEndIndex >= totalLen) zoomEndIndex = totalLen - 1;
         if (zoomStartIndex < 0) zoomStartIndex = 0;
         if (zoomEndIndex - zoomStartIndex + 1 < MIN_VISIBLE_BARS) {
@@ -491,21 +519,35 @@
             zoomAxes.push(currentSeriesIndex);
         }
 
+        // ===== 核心修复：dataZoom 初始化策略 =====
+        const dzConfig = {
+            type: 'inside',
+            xAxisIndex: zoomAxes,
+            minValueSpan: MIN_VISIBLE_BARS,
+            moveOnMouseMove: true,
+            moveOnMouseWheel: false,
+            // zoomLock: false,
+        };
+        // 只有当尚未初始化时，才传入 start/end 定位；之后交给 ECharts 内部状态保留
+        if (!dzInitialized) {
+            dzConfig.start = (zoomStartIndex / totalLen) * 100;
+            dzConfig.end = (zoomEndIndex / totalLen) * 100;
+            dzInitialized = true;
+        } else if (followLatest) {
+            // 跟随最新时，主动把视窗右端贴到末尾（保持默认显示根数）
+            const visible = Math.min(DEFAULT_VISIBLE_BARS, rawKlines.length);
+            const startPct = Math.max(0, (zoomStartIndex / totalLen) * 100);
+            const endPct = (zoomEndIndex / totalLen) * 100;
+            dzConfig.start = startPct;
+            dzConfig.end = endPct;
+        } else {
+            // 用户在看历史：不传 start/end，让 ECharts 保留用户当前的缩放窗口
+        }
+
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
             legend: { show: false },
-            dataZoom: [
-                {
-                    type: 'inside',
-                    xAxisIndex: zoomAxes,
-                    start: (zoomStartIndex / totalLen) * 100,
-                    end: (zoomEndIndex / totalLen) * 100,
-                    // ★ 核心修复：移除 maxValueSpan，不再限制最大缩放范围，允许看到全部历史K线
-                    minValueSpan: MIN_VISIBLE_BARS,
-                    moveOnMouseMove: true,
-                    moveOnMouseWheel: false
-                }
-            ],
+            dataZoom: [dzConfig],
             tooltip: {
                 trigger: 'axis', triggerOn: 'mousemove|click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
@@ -524,7 +566,7 @@
                     return html;
                 }
             }
-        }, true);
+        }, false); // ★ 改为 merge 模式，保留 ECharts 内部状态（之前为 true 导致每次全量重置）
 
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
@@ -533,7 +575,7 @@
             let startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
             let endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
 
-            // ★ 修复：不再限制最大可视数量，只限制最小；允许缩放到全部数据
+            // 限制最小可视根数
             let span = endIdx - startIdx + 1;
             if (span < MIN_VISIBLE_BARS) {
                 endIdx = Math.min(totalLen - 1, startIdx + MIN_VISIBLE_BARS - 1);
@@ -544,6 +586,13 @@
 
             zoomStartIndex = startIdx;
             zoomEndIndex = endIdx;
+
+            // 判断用户是否把视窗拖到了最右端（用于决定 tick 到来时是否跟随最新）
+            // 判定阈值：右端距离最后索引 <= 2 根
+            followLatest = (totalLen - 1 - zoomEndIndex) <= 2;
+
+            // 记住：用户主动缩放过，后续 updateChart 不再强制重置 dataZoom 的 start/end
+            dzInitialized = true;
 
             let minL = Infinity, maxH = -Infinity;
             for (let i = zoomStartIndex; i <= zoomEndIndex; i++) {
