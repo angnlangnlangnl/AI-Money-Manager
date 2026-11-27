@@ -161,13 +161,15 @@
     let chartInitialized = false;
 
     // ===== 缩放状态管理（核心修复）=====
-    // 是否已由用户或首次初始化设定过 dataZoom 视窗
+    // 是否已经初始化过视窗（首次展示用默认根数）
     let dzInitialized = false;
-    // 用户当前视窗是否贴在最右端（跟随最新K线）。如果贴右端，新数据到来时跟随滚动；
-    // 否则保持用户选定的历史区间不被 tick 重置。
+    // 用户当前视窗是否贴在最右端（跟随最新K线）
     let followLatest = true;
+    // 用户当前缩放窗口的“比例” (0~1)，用于数据增长时保持相对视窗
+    let userZoomStartPct = 0;   // 0~100
+    let userZoomEndPct = 100;   // 0~100
 
-    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数（仅用于初始窗口）
+    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数（仅在首次初始化和"跟随最新"时使用）
     const MIN_VISIBLE_BARS = 10;       // 缩放最少显示根数
     const PADDING_BARS = 15;           // 右侧填充占位（不算真实K线）
 
@@ -257,7 +259,7 @@
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
-    // ===== 修复：重建数据时不再强制重置视窗 =====
+    // ===== 重建数据：不再强制重置用户视窗 =====
     function rebuildChartDataFromRaw() {
         const intervalMs = getIntervalMs(currentInterval);
         const dates = [], klines = [], volumes = [], timestamps = [], alignedCloses = [];
@@ -284,20 +286,29 @@
         const totalLen = chartData.dates.length;
         const realLen = rawKlines.length;
 
-        // 仅在“从未初始化”或“用户处于跟随最新”状态下，才把视窗定位到末尾
+        // ★ 关键修复：不在数据重建时动用户视窗，只有以下几种情况才重新定位：
         if (!dzInitialized) {
+            // 首次展示：显示最后 DEFAULT_VISIBLE_BARS 根
             const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
             zoomStartIndex = Math.max(0, realLen - visible);
             zoomEndIndex = totalLen - 1;
+            userZoomStartPct = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
+            userZoomEndPct = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
         } else if (followLatest) {
-            // 用户贴右端：跟随最新，保持相同跨度的相对位置（简单起见仍按默认根数显示）
+            // 用户贴在最右端，跟随最新数据
             const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
             zoomStartIndex = Math.max(0, realLen - visible);
             zoomEndIndex = totalLen - 1;
+            userZoomStartPct = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
+            userZoomEndPct = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
         } else {
-            // 用户正在查看历史：保持原视窗索引不变，只做边界保护
-            if (zoomEndIndex >= totalLen) zoomEndIndex = totalLen - 1;
+            // ★ 用户正在查看历史数据：按保存的百分比比例还原视窗，绝不回退到默认根数
+            if (totalLen > 1) {
+                zoomStartIndex = Math.floor((userZoomStartPct / 100) * (totalLen - 1));
+                zoomEndIndex = Math.ceil((userZoomEndPct / 100) * (totalLen - 1));
+            }
             if (zoomStartIndex < 0) zoomStartIndex = 0;
+            if (zoomEndIndex >= totalLen) zoomEndIndex = totalLen - 1;
             if (zoomEndIndex - zoomStartIndex + 1 < MIN_VISIBLE_BARS) {
                 zoomStartIndex = Math.max(0, zoomEndIndex - MIN_VISIBLE_BARS + 1);
             }
@@ -319,8 +330,8 @@
             rawKlines.push({ t: currentBarStartTs, o: price, h: price, l: price, c: price, v: 1 });
         } else return;
 
-        // ===== 修复：tick 更新时不再强制重置 zoomStartIndex/zoomEndIndex =====
-        // 由 rebuildChartDataFromRaw 内部根据 followLatest / dzInitialized 决定是否跟随
+        // ★ 修复：tick 更新时不再强制重置 zoomStartIndex/zoomEndIndex
+        // 由 rebuildChartDataFromRaw 内部根据 followLatest 决定
         rebuildChartDataFromRaw();
         updateTickerUI();
         if (chartInitialized) updateChart();
@@ -344,6 +355,8 @@
             // 切换周期或首次加载：重置缩放状态，允许重新初始化
             dzInitialized = false;
             followLatest = true;
+            userZoomStartPct = 0;
+            userZoomEndPct = 100;
             zoomStartIndex = 0;
             zoomEndIndex = 0;
 
@@ -526,22 +539,20 @@
             minValueSpan: MIN_VISIBLE_BARS,
             moveOnMouseMove: true,
             moveOnMouseWheel: false,
-            // zoomLock: false,
         };
-        // 只有当尚未初始化时，才传入 start/end 定位；之后交给 ECharts 内部状态保留
+        // 只有首次初始化时才传入 start/end；之后如果用户在看历史，不传，完全交给 ECharts 保留
         if (!dzInitialized) {
-            dzConfig.start = (zoomStartIndex / totalLen) * 100;
-            dzConfig.end = (zoomEndIndex / totalLen) * 100;
+            dzConfig.start = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
+            dzConfig.end = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
             dzInitialized = true;
         } else if (followLatest) {
-            // 跟随最新时，主动把视窗右端贴到末尾（保持默认显示根数）
-            const visible = Math.min(DEFAULT_VISIBLE_BARS, rawKlines.length);
-            const startPct = Math.max(0, (zoomStartIndex / totalLen) * 100);
-            const endPct = (zoomEndIndex / totalLen) * 100;
-            dzConfig.start = startPct;
-            dzConfig.end = endPct;
+            // 跟随最新时，主动把视窗右端贴到末尾
+            dzConfig.start = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
+            dzConfig.end = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
         } else {
-            // 用户在看历史：不传 start/end，让 ECharts 保留用户当前的缩放窗口
+            // ★ 用户在看历史：用保存的百分比恢复视窗，绝不回退默认根数
+            dzConfig.start = userZoomStartPct;
+            dzConfig.end = userZoomEndPct;
         }
 
         myChart.setOption({
@@ -566,7 +577,7 @@
                     return html;
                 }
             }
-        }, false); // ★ 改为 merge 模式，保留 ECharts 内部状态（之前为 true 导致每次全量重置）
+        }, false);
 
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
@@ -587,8 +598,11 @@
             zoomStartIndex = startIdx;
             zoomEndIndex = endIdx;
 
+            // ★ 保存用户视窗的百分比范围，用于数据增长时保持相对视窗
+            userZoomStartPct = (zoomStartIndex / Math.max(1, totalLen - 1)) * 100;
+            userZoomEndPct = (zoomEndIndex / Math.max(1, totalLen - 1)) * 100;
+
             // 判断用户是否把视窗拖到了最右端（用于决定 tick 到来时是否跟随最新）
-            // 判定阈值：右端距离最后索引 <= 2 根
             followLatest = (totalLen - 1 - zoomEndIndex) <= 2;
 
             // 记住：用户主动缩放过，后续 updateChart 不再强制重置 dataZoom 的 start/end
