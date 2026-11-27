@@ -437,12 +437,13 @@
         const grids = [], xAxes = [], yAxes = [], series = [];
         let currentTop = 2;
         
-        // ★ 恢复 rightMargin 为 15%，配合 padding 在视觉上正好留出 10 根蜡柱
-        const rightMargin = '15%'; 
+        // ★ 终极修复：将 rightMargin 设置为一个非常小的固定像素值 (10px)，
+        // 让图表网格直接接触到最右侧边框，然后通过 dataZoom 的 padding 来产生蜡烛图的空白。
+        const rightMarginPx = 10; 
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIdx - zoomStartIdx) / 25));
 
         // 主图 grid0
-        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
+        grids.push({ left: 10, right: rightMarginPx, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
         xAxes.push({
             type: 'category', data: dates, gridIndex: 0,
             axisLine: { show: false }, axisTick: { show: false },
@@ -452,11 +453,12 @@
         yAxes.push({
             scale: true, position: 'right', gridIndex: 0,
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } },
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 8, width: 60, align: 'left', formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
+            // ★ 关键：标签靠右对齐 (align: 'right')，右侧留 4px 间距防止贴死
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 4, width: 70, align: 'right', formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
         });
 
         // 主图 grid1
-        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
+        grids.push({ left: 10, right: rightMarginPx, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
         xAxes.push({
             type: 'category', data: dates, gridIndex: 1,
             axisLine: { show: false }, axisTick: { show: false },
@@ -471,6 +473,7 @@
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { 
                 symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
+                // ★ 价格标签靠右紧贴边框
                 label: { position: 'end', distance: 0, color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
                 data: [] 
             }
@@ -507,7 +510,7 @@
 
         if (showVol) {
             currentTop += mainHeight + gap;
-            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: false });
+            grids.push({ left: 10, right: rightMarginPx, top: currentTop + '%', height: volHeight + '%', containLabel: false });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, scale: true, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => {
@@ -522,7 +525,7 @@
         if (showMacd) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
-            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: macdHeight + '%', containLabel: false });
+            grids.push({ left: 10, right: rightMarginPx, top: currentTop + '%', height: macdHeight + '%', containLabel: false });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, scale: true, splitLine: { show: false }, axisLabel: { show: false } });
 
