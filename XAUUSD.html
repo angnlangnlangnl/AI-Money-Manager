@@ -158,20 +158,17 @@
     let wsConnection = null;
     let chartInitialized = false;
 
-    // ===== 缩放状态：绝对索引（相对 rawKlines），彻底解耦"显示根数"与"跟随最新" =====
-    // 用户视窗左端/右端的 rawKlines 索引
+    // ===== 缩放状态：绝对索引 =====
     let userZoomStartIdx = 0;
     let userZoomEndIdx = 0;
-    // 用户是否手动缩放过（未缩放过则用默认显示最后N根）
     let isUserZoomed = false;
-    // 右端是否贴在最右（数据增长时是否跟随右移）。只控制"右端是否自动跟随"，绝不控制"显示根数"
     let followLatest = true;
 
     const DEFAULT_VISIBLE_BARS = 70;
     const MIN_VISIBLE_BARS = 10;
     const PADDING_BARS = 15;
 
-    // ===== 指标计算（行业标准）=====
+    // ===== 指标计算 =====
     class Indicators {
         static SMA(data, period) {
             const result = new Array(data.length).fill(null);
@@ -259,7 +256,7 @@
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
-    // ===== 重建数据：绝对索引，数据增长时旧索引天然不变 =====
+    // ===== 重建数据 =====
     function rebuildChartDataFromRaw() {
         const intervalMs = getIntervalMs(currentInterval);
         const dates = [], klines = [], volumes = [], timestamps = [], alignedCloses = [];
@@ -270,6 +267,7 @@
             volumes.push(item.v != null ? item.v : 1000);
             alignedCloses.push(item.c);
         });
+        // padding 始终追加（用于默认视觉距离和跟随最新）
         if (timestamps.length > 0) {
             const lastTs = timestamps[timestamps.length - 1];
             for (let i = 1; i <= PADDING_BARS; i++) {
@@ -284,20 +282,18 @@
         chartData = { dates, klines, volumes, timestamps, alignedCloses };
 
         const realLen = rawKlines.length;
+        if (realLen === 0) return;
 
         if (!isUserZoomed) {
-            // 首次初始化：显示最后 DEFAULT_VISIBLE_BARS 根真实K线
             const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
             userZoomStartIdx = Math.max(0, realLen - visible);
             userZoomEndIdx = realLen - 1;
             followLatest = true;
         } else if (followLatest) {
-            // ✅ 用户贴在最右端：右端跟最新，左端保持"显示根数"不变
             const visibleCount = userZoomEndIdx - userZoomStartIdx + 1;
             userZoomEndIdx = realLen - 1;
             userZoomStartIdx = Math.max(0, userZoomEndIdx - visibleCount + 1);
         } else {
-            // ✅ 用户在看历史：索引完全不动（新数据追加在末尾，不影响前面的索引）
             if (userZoomEndIdx >= realLen) userZoomEndIdx = realLen - 1;
             if (userZoomStartIdx < 0) userZoomStartIdx = 0;
             if (userZoomEndIdx - userZoomStartIdx + 1 < MIN_VISIBLE_BARS) {
@@ -341,7 +337,6 @@
             }));
             currentPrice = rawKlines[rawKlines.length - 1].c;
 
-            // 切换周期：重置缩放状态，允许重新初始化
             isUserZoomed = false;
             followLatest = true;
             userZoomStartIdx = 0;
@@ -420,16 +415,12 @@
         const realLen = rawKlines.length;
         const totalLen = dates.length;
 
-        // ===== 关键：把绝对索引映射到含 padding 的 category 轴索引 =====
-        // 用户在 rawKlines 上的视窗 [userZoomStartIdx, userZoomEndIdx]
-        // 在 category 轴（含 padding）上仍然是 [userZoomStartIdx, userZoomEndIdx]（因为 padding 在后面）
         let zoomStartIdx = Math.max(0, Math.min(userZoomStartIdx, totalLen - 1));
-        let zoomEndIdx = Math.max(0, Math.min(userZoomEndIdx, totalLen - 1));
+        let zoomEndIdx = Math.max(0, Math.min(userZoomEndIdx, realLen - 1));   
         if (zoomEndIdx - zoomStartIdx + 1 < MIN_VISIBLE_BARS) {
-            zoomEndIdx = Math.min(totalLen - 1, zoomStartIdx + MIN_VISIBLE_BARS - 1);
+            zoomEndIdx = Math.min(realLen - 1, zoomStartIdx + MIN_VISIBLE_BARS - 1);
         }
 
-        // ★ 百分比 = 索引 / (totalLen - 1)，保证 ECharts 在含 padding 的轴上定位正确
         const startPct = (zoomStartIdx / Math.max(1, totalLen - 1)) * 100;
         const endPct = (zoomEndIdx / Math.max(1, totalLen - 1)) * 100;
 
@@ -441,11 +432,13 @@
 
         const grids = [], xAxes = [], yAxes = [], series = [];
         let currentTop = 2;
-        const rightMargin = '8%';
+        
+        // ★ 关键修改：改为百分比，留出 12% 的空白区域给右侧（约等于 3 个网格间距）
+        const rightMargin = '12%'; 
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIdx - zoomStartIdx) / 25));
 
         // 主图 grid0
-        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
+        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
         xAxes.push({
             type: 'category', data: dates, gridIndex: 0,
             axisLine: { show: false }, axisTick: { show: false },
@@ -455,11 +448,12 @@
         yAxes.push({
             scale: true, position: 'right', gridIndex: 0,
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } },
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 6, formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
+            // ★ 关键修改：移除 offset，margin 设为 8，固定宽度防止跳动
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 8, width: 60, align: 'left', formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
         });
 
         // 主图 grid1
-        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: true });
+        grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
         xAxes.push({
             type: 'category', data: dates, gridIndex: 1,
             axisLine: { show: false }, axisTick: { show: false },
@@ -472,12 +466,16 @@
             id: 'klineMain', name: 'K线', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             barMaxWidth: 18,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
-            markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
+            markLine: { 
+                symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
+                label: { position: 'end', distance: 0, color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
+                data: [] 
+            }
         };
         if (currentPrice) {
             klineSeries.markLine.data.push({
                 yAxis: currentPrice, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1 },
-                label: { formatter: formatNum(currentPrice), color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 0 }
+                label: { formatter: formatNum(currentPrice, 2), color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 0 }
             });
         }
         series.push(klineSeries);
@@ -506,7 +504,7 @@
 
         if (showVol) {
             currentTop += mainHeight + gap;
-            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: true });
+            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: volHeight + '%', containLabel: false });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, scale: true, splitLine: { show: false }, axisLabel: { show: false } });
             const volColors = klines.map(k => {
@@ -521,7 +519,7 @@
         if (showMacd) {
             if (!showVol) currentTop += mainHeight + gap;
             if (showVol) currentTop += volHeight + gap;
-            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: macdHeight + '%', containLabel: true });
+            grids.push({ left: 10, right: rightMargin, top: currentTop + '%', height: macdHeight + '%', containLabel: false });
             xAxes.push({ type: 'category', data: dates, gridIndex: currentSeriesIndex, axisLine: { show: false }, axisTick: { show: false }, axisLabel: { show: false } });
             yAxes.push({ gridIndex: currentSeriesIndex, scale: true, splitLine: { show: false }, axisLabel: { show: false } });
 
@@ -567,7 +565,6 @@
         yAxes[0].min = yMin; yAxes[0].max = yMax; yAxes[0].interval = yInterval;
         yAxes[1].min = yMin; yAxes[1].max = yMax; yAxes[1].interval = yInterval;
 
-        // ★ 关键修复：dataZoom 的 start/end 用索引换算的百分比（含 padding 的 totalLen 基准）
         const dzConfig = {
             type: 'inside',
             xAxisIndex: zoomAxes,
@@ -578,11 +575,19 @@
             end: endPct
         };
 
-        // ★ notMerge=true 全量重绘，彻底清除旧结构（指标关闭时能真正消失）
+        const dzYConfig = {
+            type: 'inside',
+            yAxisIndex: [0, 1],
+            moveOnMouseMove: true,
+            moveOnMouseWheel: false,
+            startValue: yMin,
+            endValue: yMax
+        };
+
         myChart.setOption({
             animation: false, grid: grids, xAxis: xAxes, yAxis: yAxes, series: series,
             legend: { show: false },
-            dataZoom: [dzConfig],
+            dataZoom: [dzConfig, dzYConfig],
             tooltip: {
                 trigger: 'axis', triggerOn: 'mousemove|click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
@@ -603,11 +608,13 @@
             }
         }, true);
 
-        // ★ 关键修复：dataZoom 事件里直接保存绝对索引，不再用百分比
         myChart.off('dataZoom');
         myChart.on('dataZoom', function(params) {
-            if (!params.batch) return;
+            if (!params.batch || !params.batch[0]) return;
             const dz = params.batch[0];
+            if (dz.startValue !== undefined && dz.endValue !== undefined) {
+                return;
+            }
             let startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
             let endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
             if (startIdx < 0) startIdx = 0;
@@ -616,19 +623,16 @@
                 startIdx = Math.max(0, endIdx - MIN_VISIBLE_BARS + 1);
             }
 
-            // ★ 关键：索引直接映射到 rawKlines（因为 padding 在后面，索引对应关系不变）
             userZoomStartIdx = startIdx;
-            userZoomEndIdx = Math.min(endIdx, realLen - 1);   // 右端不超过最后真实K线
+            userZoomEndIdx = Math.min(endIdx, realLen - 1);
             if (userZoomEndIdx < userZoomStartIdx) userZoomEndIdx = userZoomStartIdx;
             if (userZoomEndIdx - userZoomStartIdx + 1 < MIN_VISIBLE_BARS) {
                 userZoomStartIdx = Math.max(0, userZoomEndIdx - MIN_VISIBLE_BARS + 1);
             }
 
             isUserZoomed = true;
-            // followLatest 只表示"右端是否贴最后真实K线"
             followLatest = (realLen - 1 - userZoomEndIdx) <= 2;
 
-            // 只更新 y 轴范围，不改视窗
             let minL = Infinity, maxH = -Infinity;
             for (let i = startIdx; i <= endIdx; i++) {
                 if (klines[i][0] === '-') continue;
