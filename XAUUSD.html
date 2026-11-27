@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (专业级紧凑布局)</title>
+    <title>XAUUSD 交易界面 (实时动态K线版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
+        /* 样式完全不变，保证视觉一致 */
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
         .app { width: 100%; max-width: 100%; height: 100vh; background-color: #181a20; color: #eaecef; position: relative; overflow: hidden; display: flex; flex-direction: column; }
@@ -25,7 +26,6 @@
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        /* 修复：报价区布局，让文字垂直对齐更美观 */
         .quote-section { display: flex; justify-content: space-between; align-items: flex-start; padding: 10px 20px; flex-shrink: 0; }
         .quote-left { display: flex; flex-direction: column; }
         .price-main { font-size: 26px; font-weight: bold; line-height: 1.1; }
@@ -101,7 +101,6 @@
 
     <div class="main-content">
         <div class="trade-panel">
-            <!-- 优化了布局结构 -->
             <div class="quote-section">
                 <div class="quote-left">
                     <div class="price-main" id="last-price">--</div>
@@ -168,13 +167,23 @@
     const WS_URL = 'wss://cfd.heimi888.com';
 
     let currentInterval = '15m';
-    let chartData = { dates: [], klines: [], volumes: [], timestamps: [] };
+    // 核心数据结构：保留原始每根K线的时间戳和OHLC，用于实时更新和增量
+    let chartData = {
+        timestamps: [],     // 每根K线的时间戳(ms)
+        dates: [],          // 显示用的日期字符串
+        klines: [],         // [open, close, low, high] 原始真实数据（不含填充）
+        volumes: []         // 模拟成交量
+    };
     const indicatorState = { MA: true, EMA: false, BOLL: false, VOL: false, MACD: false };
     let currentPrice = 0;
     let isDrawerOpen = true;
     let zoomStartIndex = 0;
     let zoomEndIndex = 0;
     let wsConnection = null;
+    let chartInitialized = false;
+
+    // K线填充占位符（用于延伸图表右侧空间）
+    const PADDING_BARS = 15;
 
     class Indicators {
         static SMA(data, period) { const result = new Array(data.length).fill(null); for (let i = period - 1; i < data.length; i++) { let sum = 0; for (let j = i - period + 1; j <= i; j++) sum += data[j]; result[i] = sum / period; } return result; }
@@ -200,6 +209,96 @@
     const chartDom = document.getElementById('kline');
     const myChart = echarts.init(chartDom, null, { renderer: 'canvas' });
 
+    // ----- 重新构建用于ECharts的完整系列（含填充占位）-----
+    function buildChartSeriesData() {
+        const realLen = chartData.timestamps.length;
+        const lastTs = realLen > 0 ? chartData.timestamps[realLen - 1] : Date.now();
+
+        // 构造包含填充的完整数组
+        const fullDates = [...chartData.dates];
+        const fullKlines = chartData.klines.map(k => [...k]);
+        const fullVolumes = [...chartData.volumes];
+        const fullTimestamps = [...chartData.timestamps];
+
+        // 根据当前周期计算每根K线的毫秒数
+        const intervalMs = getIntervalMs(currentInterval);
+
+        for (let i = 1; i <= PADDING_BARS; i++) {
+            const ts = lastTs + i * intervalMs;
+            fullTimestamps.push(ts);
+            fullDates.push(formatKlineDate(ts, currentInterval));
+            // 占位K线用特殊标记 '-'，并在updateChart中跳过
+            fullKlines.push(['-', '-', '-', '-']);
+            fullVolumes.push('-');
+        }
+        return { fullDates, fullKlines, fullVolumes, fullTimestamps };
+    }
+
+    // 周期转毫秒
+    function getIntervalMs(interval) {
+        const map = {
+            '1m': 60 * 1000,
+            '5m': 5 * 60 * 1000,
+            '15m': 15 * 60 * 1000,
+            '30m': 30 * 60 * 1000,
+            '1h': 60 * 60 * 1000,
+            '4h': 4 * 60 * 60 * 1000,
+            '1d': 24 * 60 * 60 * 1000
+        };
+        return map[interval] || 15 * 60 * 1000;
+    }
+
+    // ----- 核心：增量更新当前K线或追加新K线（用于WebSocket推送）-----
+    function updateCurrentKlineFromTick(price, tickTimestamp) {
+        if (!chartData.timestamps.length) return;
+
+        const intervalMs = getIntervalMs(currentInterval);
+        const lastTs = chartData.timestamps[chartData.timestamps.length - 1];
+        
+        // 计算当前K线应该属于哪个时间区间（对齐到区间起始时间）
+        const currentBarStartTs = Math.floor(tickTimestamp / intervalMs) * intervalMs;
+        const lastBarStartTs = Math.floor(lastTs / intervalMs) * intervalMs;
+
+        // 情况1：还在同一根K线内 -> 更新高低收
+        if (currentBarStartTs === lastBarStartTs) {
+            const idx = chartData.timestamps.length - 1;
+            const kline = chartData.klines[idx];
+            // 更新收盘价
+            kline[1] = price;
+            // 更新最高价
+            if (price > kline[3]) kline[3] = price;
+            // 更新最低价
+            if (price < kline[2]) kline[2] = price;
+            // 成交量模拟增加
+            chartData.volumes[idx] = (chartData.volumes[idx] || 0) + 1;
+        } 
+        // 情况2：进入新K线 -> 追加一根新K线
+        else if (currentBarStartTs > lastBarStartTs) {
+            // 有可能一次跨越多个周期，但简化处理：如果跨越多根，只补最后两根？实际行情不会突然跨多根，但为了健壮
+            // 这里简单处理：如果新K线起始时间大于最后一根，则追加一根新的，开盘价=当前价，高=低=收=当前价
+            // 但为了不遗漏，如果时间差超过一个周期，我们可以循环补充空K线？但实时行情通常不会。
+            // 为了不破坏图表，我们只追加一根新的K线（如果跨多个周期，中间缺失会导致图表不连续，但这种情况极少）
+            const newTs = currentBarStartTs;
+            const dateStr = formatKlineDate(newTs, currentInterval);
+            chartData.timestamps.push(newTs);
+            chartData.dates.push(dateStr);
+            chartData.klines.push([price, price, price, price]);
+            chartData.volumes.push(1);
+            // 可选：由于新K线加入，需要重新计算视窗索引
+        }
+        // 如果tickTimestamp小于lastBarStartTs？忽略
+
+        // 更新UI价格、最高最低等
+        updateTickerUI();
+
+        // 重新计算图表（因为数据变了，需要重建）
+        // 为了性能，可用增量，但这里直接重建视图更简单可靠，因为K线数量不多
+        if (chartInitialized) {
+            updateChart();
+        }
+    }
+
+    // ----- 加载历史K线（原逻辑增强：保证数据完整性）-----
     async function loadRealData(interval) {
         try {
             const res = await fetch(`${API_BASE}/api/kline?interval=${interval}&limit=500`);
@@ -207,37 +306,38 @@
             if (!json.success || !json.data) throw new Error('K线获取失败');
 
             const rawData = json.data; 
-            const dates = [], klines = [], volumes = [], timestamps = [];
+            const timestamps = [], dates = [], klines = [], volumes = [];
 
             rawData.forEach(item => {
                 const ts = item.t; 
-                const open = item.o;
-                const high = item.h;
-                const low = item.l;
-                const close = item.c;
+                const open = parseFloat(item.o);
+                const high = parseFloat(item.h);
+                const low = parseFloat(item.l);
+                const close = parseFloat(item.c);
 
                 timestamps.push(ts);
                 dates.push(formatKlineDate(ts, interval));
-                klines.push([open, close, low, high]);
+                klines.push([open, close, low, high]); 
                 volumes.push(1000); 
             });
 
-            const PADDING_BARS = 30; 
-            for (let i = 1; i <= PADDING_BARS; i++) {
-                const lastTs = timestamps[timestamps.length - 1];
-                const ts = lastTs + i * 15 * 60 * 1000; 
-                timestamps.push(ts);
-                dates.push(formatKlineDate(ts, interval));
-                klines.push(['-', '-', '-', '-']); 
-                volumes.push('-');
-            }
+            // 替换 chartData 中的真实部分（不包含填充）
+            chartData = { timestamps, dates, klines, volumes };
 
-            chartData = { dates, klines, volumes, timestamps };
             currentPrice = parseFloat(rawData[rawData.length - 1].c);
 
-            zoomStartIndex = Math.max(0, dates.length - 120 - PADDING_BARS);
-            zoomEndIndex = dates.length - 1; 
+            // 构建完整视图（带填充）并计算缩放
+            const { fullDates, fullKlines, fullVolumes, fullTimestamps } = buildChartSeriesData();
+            const totalLen = fullDates.length;
 
+            // 默认显示最后70根（包含填充？显示最后70根实体即可，填充部分自动显示在右侧）
+            // 为了让可视区域看到最新的K线并留出填充空间，调整 zoomStartIndex
+            const visibleRealBars = Math.min(70, chartData.timestamps.length);
+            // 计算起始索引（基于完整数组）
+            zoomStartIndex = Math.max(0, chartData.timestamps.length - visibleRealBars);
+            zoomEndIndex = totalLen - 1;
+
+            chartInitialized = true;
             updateTickerUI();
             updateChart();
         } catch (e) {
@@ -255,10 +355,10 @@
             if (msg.type === 'ticker') {
                 const tick = msg.data;
                 const price = parseFloat(tick.last);
-                
-                // 【核心修复】Gate API 返回的 change 已经是百分比格式（例如 -0.61 代表 -0.61%），不需要再乘以 100
                 const change = parseFloat(tick.change); 
+                const tickTimestamp = msg.timestamp || Date.now(); // 如果服务器时间，优先使用
 
+                // 更新头部价格显示
                 document.getElementById('last-price').innerText = formatNum(price);
                 document.getElementById('high-24').innerText = formatNum(tick.high);
                 document.getElementById('low-24').innerText = formatNum(tick.low);
@@ -267,15 +367,13 @@
                 document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
                 document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
 
-                if (chartData.klines.length > 0 && Math.abs(price - currentPrice) > 0.001) {
-                    currentPrice = price;
-                    const PADDING_BARS = 30;
-                    const lastRealIdx = chartData.klines.length - PADDING_BARS - 1;
-                    chartData.klines[lastRealIdx][1] = price; 
-                    if (price > chartData.klines[lastRealIdx][3]) chartData.klines[lastRealIdx][3] = price; 
-                    if (price < chartData.klines[lastRealIdx][2]) chartData.klines[lastRealIdx][2] = price; 
-                    updateChart();
+                // 核心：更新K线数据
+                if (chartInitialized && chartData.klines.length > 0) {
+                    // 如果价格变化足够（避免微小波动重绘），但为了实时性我们直接更新
+                    // 使用tickTimestamp更新K线
+                    updateCurrentKlineFromTick(price, tickTimestamp);
                 }
+                currentPrice = price;
             }
         };
         wsConnection.onclose = () => setTimeout(initWebSocket, 5000);
@@ -283,11 +381,9 @@
 
     function updateTickerUI() {
         if (!chartData.klines.length) return;
-        const PADDING_BARS = 30;
-        const lastRealIdx = chartData.klines.length - PADDING_BARS - 1;
+        const lastRealIdx = chartData.klines.length - 1;
         const last = chartData.klines[lastRealIdx];
         const open = last[0], close = last[1];
-        // 这里只是 K 线的内部收益率计算，用于初始显示，后续会由 WebSocket 接管
         const change = ((close - open) / open) * 100;
 
         document.getElementById('last-price').innerText = formatNum(close);
@@ -295,14 +391,21 @@
         
         const recent = chartData.klines.slice(Math.max(0, lastRealIdx - 23), lastRealIdx + 1);
         const validRecent = recent.filter(k => k[3] !== '-');
-        document.getElementById('high-24').innerText = formatNum(Math.max(...validRecent.map(k => k[3])));
-        document.getElementById('low-24').innerText = formatNum(Math.min(...validRecent.map(k => k[2])));
+        if (validRecent.length > 0) {
+            document.getElementById('high-24').innerText = formatNum(Math.max(...validRecent.map(k => k[3])));
+            document.getElementById('low-24').innerText = formatNum(Math.min(...validRecent.map(k => k[2])));
+        }
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} <span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
     }
 
     function updateChart() {
-        if (!chartData.klines.length) return;
-        const { dates, klines, volumes } = chartData;
+        if (!chartInitialized) return;
+        
+        // 每次重绘都基于完整数据构建（包含填充占位）
+        const { fullDates, fullKlines, fullVolumes } = buildChartSeriesData();
+        const dates = fullDates;
+        const klines = fullKlines;
+        const volumes = fullVolumes;
         
         const validKlines = klines.filter(k => k[0] !== '-');
         const closes = validKlines.map(k => k[1]);
@@ -311,6 +414,7 @@
 
         const totalLen = dates.length;
 
+        // 计算y轴范围基于可视区域
         let minLow = Infinity, maxHigh = -Infinity;
         for (let i = zoomStartIndex; i <= zoomEndIndex; i++) { 
             if (klines[i][0] === '-') continue;
@@ -326,7 +430,8 @@
         const series = []; const grids = []; const xAxes = []; const yAxes = [];
         const showVol = indicatorState.VOL, showMacd = indicatorState.MACD;
         let mainHeight = 100, volHeight = 0, macdHeight = 0;
-        const gap = 5;
+        
+        const gap = 6; 
         
         if (showVol && showMacd) { mainHeight = 60; volHeight = 15; macdHeight = 15; }
         else if (showVol || showMacd) { mainHeight = 75; volHeight = showVol ? 20 : 0; macdHeight = showMacd ? 20 : 0; }
@@ -361,13 +466,13 @@
         xAxes.push({ 
             type: 'category', data: dates, gridIndex: 1, 
             axisLine: { show: false }, axisTick: { show: false }, 
-            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 8, hideOverlap: true, position: 'bottom' } 
+            axisLabel: { show: true, color: '#848e9c', fontSize: 10, margin: 6, hideOverlap: true, position: 'bottom' } 
         });
         yAxes.push({ scale: true, min: yMin, max: yMax, interval: yInterval, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
         const klineSeries = {
             id: 'klineMain', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
-            barMinWidth: 1, 
+            barMaxWidth: 18,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, label: { position: 'end', distance: 2, color: '#848e9c', fontSize: 10, formatter: '{c}' }, data: [] }
         };
@@ -442,7 +547,7 @@
                     type: 'inside', 
                     xAxisIndex: zoomAxes, 
                     start: (zoomStartIndex / totalLen) * 100, 
-                    end: 100, 
+                    end: (zoomEndIndex / totalLen) * 100, 
                     minValueSpan: 10,
                     moveOnMouseMove: true,
                     moveOnMouseWheel: false
@@ -455,10 +560,10 @@
                 formatter: function(params) {
                     if (!params || params.length === 0) return '';
                     const idx = params[0].dataIndex;
-                    if (idx == null || idx >= chartData.dates.length) return '';
-                    const kline = chartData.klines[idx];
+                    if (idx == null || idx >= dates.length) return '';
+                    const kline = klines[idx];
                     if (kline[0] === '-') return ''; 
-                    const d = chartData.dates[idx], o = kline[0], c = kline[1], l = kline[2], h = kline[3];
+                    const d = dates[idx], o = kline[0], c = kline[1], l = kline[2], h = kline[3];
                     const chg = c - o, pct = o !== 0 ? (chg / o) * 100 : 0, col = chg >= 0 ? '#0ecb81' : '#f6465d';
                     return `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div></div>`;
                 }
@@ -541,6 +646,7 @@
         document.querySelectorAll('#timeframes span[data-interval]').forEach(s => s.classList.remove('active'));
         span.classList.add('active');
         currentInterval = span.dataset.interval;
+        chartInitialized = false; // 重新加载后初始化
         loadRealData(currentInterval);
     });
 
