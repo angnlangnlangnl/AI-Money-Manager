@@ -160,8 +160,8 @@
     let wsConnection = null;
     let chartInitialized = false;
 
-    // ★ 修复：最大可视数量 = 全部数据（动态），不再用固定 MAX_VISIBLE_BARS
-    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数
+    // ★ 关键修复：删除 MAX_VISIBLE_BARS 概念，只保留最小显示根数
+    const DEFAULT_VISIBLE_BARS = 70;   // 默认显示根数（仅用于初始窗口，不影响最大缩放）
     const MIN_VISIBLE_BARS = 10;       // 缩放最少显示根数
     const PADDING_BARS = 15;           // 右侧填充占位（不算真实K线）
 
@@ -296,7 +296,7 @@
             rawKlines.push({ t: currentBarStartTs, o: price, h: price, l: price, c: price, v: 1 });
         } else return;
         rebuildChartDataFromRaw();
-        // 实时追加后视窗跟随，始终显示最后 DEFAULT_VISIBLE_BARS 根
+        // 实时追加后视窗跟随，始终显示最后 DEFAULT_VISIBLE_BARS 根（但允许用户缩放看全量）
         const realLen = rawKlines.length;
         const visible = Math.min(DEFAULT_VISIBLE_BARS, realLen);
         zoomStartIndex = Math.max(0, realLen - visible);
@@ -373,7 +373,7 @@
         const { dates, klines, volumes, alignedCloses } = chartData;
         const totalLen = dates.length;
 
-        // 视窗范围校正（不限制最大数量，只保证不越界、不少于最小数量）
+        // 视窗范围校正（允许看到全部数据，只保证不越界和不少于MIN_VISIBLE_BARS）
         if (zoomEndIndex >= totalLen) zoomEndIndex = totalLen - 1;
         if (zoomStartIndex < 0) zoomStartIndex = 0;
         if (zoomEndIndex - zoomStartIndex + 1 < MIN_VISIBLE_BARS) {
@@ -500,7 +500,7 @@
                     xAxisIndex: zoomAxes,
                     start: (zoomStartIndex / totalLen) * 100,
                     end: (zoomEndIndex / totalLen) * 100,
-                    // ★ 修复：不再设置 maxValueSpan，允许缩放到全部数据；只保留 minValueSpan
+                    // ★ 核心修复：移除 maxValueSpan，不再限制最大缩放范围，允许看到全部历史K线
                     minValueSpan: MIN_VISIBLE_BARS,
                     moveOnMouseMove: true,
                     moveOnMouseWheel: false
@@ -533,7 +533,7 @@
             let startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
             let endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
 
-            // ★ 修复：不再限制最大可视数量，只限制最小
+            // ★ 修复：不再限制最大可视数量，只限制最小；允许缩放到全部数据
             let span = endIdx - startIdx + 1;
             if (span < MIN_VISIBLE_BARS) {
                 endIdx = Math.min(totalLen - 1, startIdx + MIN_VISIBLE_BARS - 1);
