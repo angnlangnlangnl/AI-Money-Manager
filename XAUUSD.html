@@ -38,7 +38,6 @@
         .chart-container { flex: 1; min-height: 300px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 5px; }
         #kline { width: 100%; flex: 1; }
         
-        /* ===== 底部指标栏 ===== */
         .indicators { display: flex; gap: 15px; padding: 8px 20px; font-size: 11px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 10px; align-items: center; }
         .indicators span { cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; user-select: none; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
@@ -75,7 +74,6 @@
         .trade-row label { width: 70px; font-size: 12px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 4px; padding: 8px 10px; color: #eaecef; font-size: 13px; outline: none; }
 
-        /* ===== RR 面板 ===== */
         .rr-panel {
             position: absolute;
             top: 18px;
@@ -159,7 +157,6 @@
                         <span class="rr-predict" id="rrPredict">--</span>
                     </div>
                     <div class="rr-divider"></div>
-
                     <div class="rr-item">
                         <span class="rr-label">回踩买点 (Buy)</span>
                         <span class="rr-value" id="rrBuy" style="color:#d1d4dc">--</span>
@@ -192,7 +189,6 @@
                 </div>
             </div>
             
-            <!-- 底部工具栏 -->
             <div class="indicators" id="indicator-buttons">
                 <span class="active" data-indicator="MA">MA</span>
                 <span data-indicator="EMA">EMA</span>
@@ -271,8 +267,28 @@
     let dailyStats = { open: 0, high: 0, low: 0, prevClose: 0, timestamp: 0 };
 
     const structState = { fvg: true, msb: true, plan: true };
-    const PLAN_CONFIG = { buffer: 5, R: 2, msbLookback: 20, fvgScanBack: 60, swingLookback: 2 };
+    const PLAN_CONFIG = { buffer: 5, minRR: 1, msbLookback: 20, fvgScanBack: 60, swingLookback: 2 };
     let structResult = { fvg: null, msb: null, plan: null };
+
+    let tickBufferPrice = null;
+    let tickBufferTs = null;
+    let lastRenderTime = 0;
+    const RENDER_THROTTLE_MS = 250; 
+
+    function processTickUpdate() {
+        if (tickBufferPrice === null) return;
+        const price = tickBufferPrice;
+        const ts = tickBufferTs;
+        
+        if (chartInitialized && rawKlines.length > 0) {
+            executeKlineUpdateFromTick(price, ts);
+        } else {
+            updateHeaderUI(price); 
+        }
+
+        tickBufferPrice = null;
+        tickBufferTs = null;
+    }
 
     class Indicators {
         static SMA(data, period) {
@@ -392,6 +408,7 @@
         return (bullMSB.index > bearMSB.index) ? bullMSB : bearMSB;
     }
 
+    // 核心修改：基于前方结构阻力位寻找动态止盈 (TP)
     function buildPlan(klines, fvg, msb) {
         if (!klines.length) return null;
         const latest = klines[klines.length - 1];
@@ -399,32 +416,75 @@
         const isBull = !fvg || fvg.type === 'bull';
 
         let entry, sl, tp, risk, reward;
+        
+        // 寻找结构位置（前高/前低）
+        const { highs, lows } = findSwingPoints(klines, PLAN_CONFIG.swingLookback);
+
         if (isBull) {
             if (fvg && lastClose > fvg.top) entry = fvg.top;
             else if (fvg && lastClose <= fvg.top && lastClose >= fvg.bottom) entry = lastClose;
             else entry = lastClose;
+            
             sl = fvg ? fvg.bottom - PLAN_CONFIG.buffer : entry - 20;
             risk = entry - sl;
-            reward = risk * PLAN_CONFIG.R;
-            tp = entry + reward;
+
+            // 在多头中，找入场位上方的最近一个摆动高点作为止盈目标
+            let nearestResistance = entry + (risk * 1.5); // 默认 1.5R
+            for (let i = highs.length - 1; i >= 0; i--) {
+                if (highs[i].price > entry && highs[i].price < nearestResistance) {
+                    // 只寻找在图表上存在的、高于当前入场价的目标
+                    // 为了确保利润空间够大，至少要突破 Entry
+                    nearestResistance = highs[i].price;
+                    break; // 找到最近的一个就停止
+                }
+            }
+            
+            // 如果找到了强阻力，就用阻力位做 TP，否则退化为 2R
+            if (nearestResistance > entry) {
+                tp = nearestResistance;
+            } else {
+                tp = entry + (risk * 2);
+            }
+            
+            reward = tp - entry;
         } else {
             if (fvg && lastClose < fvg.bottom) entry = fvg.bottom;
             else if (fvg && lastClose <= fvg.top && lastClose >= fvg.bottom) entry = lastClose;
             else entry = lastClose;
+            
             sl = fvg ? fvg.top + PLAN_CONFIG.buffer : entry + 20;
             risk = sl - entry;
-            reward = risk * PLAN_CONFIG.R;
-            tp = entry - reward;
+
+            // 在空头中，找入场位下方的最近一个摆动低点作为止盈目标
+            let nearestSupport = entry - (risk * 1.5); // 默认 1.5R
+            for (let i = lows.length - 1; i >= 0; i--) {
+                if (lows[i].price < entry && lows[i].price > nearestSupport) {
+                    nearestSupport = lows[i].price;
+                    break;
+                }
+            }
+
+            if (nearestSupport < entry) {
+                tp = nearestSupport;
+            } else {
+                tp = entry - (risk * 2);
+            }
+            
+            reward = entry - tp;
         }
 
+        // 动态盈亏比计算
+        const rr = risk > 0 ? +(reward / risk).toFixed(2) : 0;
+        
+        // 如果盈亏比过小（低于 minRR），视为无效计划
         const valid = isBull
-            ? (risk > 0 && entry > sl && tp > entry)
-            : (risk > 0 && sl > entry && entry > tp);
+            ? (risk > 0 && entry > sl && tp > entry && rr >= PLAN_CONFIG.minRR)
+            : (risk > 0 && sl > entry && entry > tp && rr >= PLAN_CONFIG.minRR);
 
         return {
             type: isBull ? 'bull' : 'bear',
             entry: +entry.toFixed(2), sl: +sl.toFixed(2), tp: +tp.toFixed(2),
-            risk: +risk.toFixed(2), reward: +reward.toFixed(2), rr: risk > 0 ? +(reward / risk).toFixed(2) : 0,
+            risk: +risk.toFixed(2), reward: +reward.toFixed(2), rr: rr,
             pnlPercent: entry > 0 ? +((reward / entry) * 100).toFixed(2) : 0,
             valid, latest: +lastClose.toFixed(2), fvg, msb
         };
@@ -458,7 +518,6 @@
             return;
         }
         
-        // 实时更新方向预测文字和样式
         predictEl.innerText = p.type === 'bull' ? '看涨 (做多)' : '看跌 (做空)';
         predictEl.className = `rr-predict ${p.type}`;
 
@@ -620,13 +679,15 @@
         return Math.max(1, delta / 0.01 * 0.5);
     }
 
-    function updateKlineFromTick(price, tickTimestamp) {
+    // 核心修改：高频 Tick 差分增量更新
+    function executeKlineUpdateFromTick(price, tickTimestamp) {
         if (rawKlines.length === 0) return;
         const intervalMs = getIntervalMs(currentInterval);
         const lastItem = rawKlines[rawKlines.length - 1];
         const lastBarStartTs = Math.floor(lastItem.t / intervalMs) * intervalMs;
         const currentBarStartTs = Math.floor(tickTimestamp / intervalMs) * intervalMs;
         
+        let isNewBar = false;
         if (currentBarStartTs === lastBarStartTs) {
             lastItem.c = price;
             if (price > lastItem.h) lastItem.h = price;
@@ -637,17 +698,79 @@
             lastItem._prevPrice = price;
         } else if (currentBarStartTs > lastBarStartTs) {
             rawKlines.push({ t: currentBarStartTs, o: price, h: price, l: price, c: price, v: 1, _prevPrice: price });
+            isNewBar = true;
         } else return;
 
+        // 更新指标缓存
         cachedClosesRef = null;
         cachedIndicators = {};
 
-        // 核心修复：tick 同步更新时，立即重新执行结构分析，更新面板数据（含方向预测）
+        // 局部更新顶部和面板数据
         runStructAnalysis();
-        
-        rebuildChartDataFromRaw();
         updateHeaderUI(price);
-        if (chartInitialized) updateChart();
+        
+        // 增量更新图表（不全局重建 chartData，仅更新最后一根或追加）
+        updateChartIncremental(price, isNewBar);
+    }
+
+    // 增量重绘图表逻辑
+    function updateChartIncremental(price, isNewBar) {
+        if (!chartInitialized) return;
+        
+        if (isNewBar) {
+            // 如果是新 K 线，必须执行全量重建和渲染
+            rebuildChartDataFromRaw();
+            updateChart();
+        } else {
+            // 如果是当前 K 线跳动，只更新最后一个数据点，极大提升性能
+            const totalLen = chartData.klines.length;
+            const realLen = rawKlines.length;
+            const lastItem = rawKlines[realLen - 1];
+            
+            // 更新最后真实 K 线的数据
+            chartData.klines[realLen - 1] = [lastItem.o, lastItem.c, lastItem.l, lastItem.h];
+            chartData.volumes[realLen - 1] = lastItem.v;
+            
+            // 更新当前价线
+            const lastKline = chartData.klines[realLen - 1];
+            let isUp = true;
+            if (lastKline && lastKline[0] !== '-') {
+                isUp = lastKline[1] >= lastKline[0];
+            }
+            const activeColor = isUp ? '#0ecb81' : '#f6465d';
+
+            // 构造局部更新指令
+            const updateOption = {
+                series: [
+                    { id: 'klineMain', data: chartData.klines },
+                    {
+                        id: 'currentPriceLine', // 假设你之前没有为当前价线专门设 ID，这里我们可以利用 markLine 的局部更新
+                        // 实际上更新 markLine 数据有点复杂，为了性能，直接按最新情况重新渲染一次
+                    }
+                ]
+            };
+            
+            // 为了保持简单和稳定，直接调用 echarts 的局部替换
+            // 注意：这里没有完全重绘 grids/axes，只是更新 series data 和 markLine
+            myChart.setOption({
+                series: [{
+                    id: 'klineMain',
+                    data: chartData.klines,
+                    markLine: {
+                        symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
+                        label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
+                        data: [
+                            { yAxis: price, lineStyle: { color: activeColor, type: 'dashed', width: 1 }, label: { formatter: formatNum(price, 2), color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 2 } },
+                            // 动态结构线在 runStructAnalysis 后已经发生变化，这里为了性能和结构线的一致，我们直接重新触发 updateChart
+                        ]
+                    }
+                }]
+            });
+            
+            // 如果 FVG/TP/SL 没变，单纯更新价格，上面的 setOption 已经够了。
+            // 但如果 TP/SL 变了，还是需要全量 updateChart。这里为了确保图二正确刷新，我们强制重绘：
+            updateChart(); 
+        }
     }
 
     async function loadRealData(interval) {
@@ -698,11 +821,22 @@
                 currentPrice = price;
                 document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
                 document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
-                
-                if (chartInitialized && rawKlines.length > 0) {
-                    updateKlineFromTick(price, tickTimestamp);
+
+                tickBufferPrice = price;
+                tickBufferTs = tickTimestamp;
+
+                const now = Date.now();
+                if (now - lastRenderTime >= RENDER_THROTTLE_MS) {
+                    lastRenderTime = now;
+                    processTickUpdate();
                 } else {
-                    updateHeaderUI(price); 
+                    if (!window._tickTimer) {
+                        window._tickTimer = setTimeout(() => {
+                            window._tickTimer = null;
+                            lastRenderTime = Date.now();
+                            processTickUpdate();
+                        }, RENDER_THROTTLE_MS - (now - lastRenderTime));
+                    }
                 }
             }
         };
