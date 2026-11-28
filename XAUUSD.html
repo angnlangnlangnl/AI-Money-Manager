@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (多区间完美版)</title>
+    <title>XAUUSD 交易界面 (小白辅助版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -38,6 +38,36 @@
         .chart-container { flex: 1; min-height: 300px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 5px; }
         #kline { width: 100%; flex: 1; }
         
+        /* 右下角小白看板样式 */
+        .guide-panel {
+            position: absolute;
+            right: 75px; /* 避开右侧坐标轴 */
+            bottom: 30px; /* 避开下方时间轴 */
+            background: rgba(30, 35, 41, 0.92);
+            border: 1px solid #434651;
+            border-radius: 8px;
+            padding: 12px 16px;
+            width: 260px;
+            z-index: 20;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.7);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none; /* 防止遮挡拖拽和缩放 */
+            transition: all 0.3s;
+        }
+        .guide-panel.ready-bull { border-color: #0ecb81; box-shadow: 0 0 15px rgba(14,203,129,0.4); }
+        .guide-panel.ready-bear { border-color: #f6465d; box-shadow: 0 0 15px rgba(246,70,93,0.4); }
+        .guide-panel.fail { border-color: #848e9c; opacity: 0.7; }
+        
+        .guide-title { font-size: 13px; font-weight: bold; color: #f0b90b; display: flex; align-items: center; gap: 6px; }
+        .guide-action { font-size: 16px; font-weight: bold; color: #eaecef; margin-top: 2px; }
+        .guide-desc { font-size: 12px; color: #848e9c; line-height: 1.4; }
+        .guide-price { font-family: monospace; font-size: 14px; font-weight: bold; color: #f0b90b; }
+        .guide-steps { font-size: 11px; color: #aaa; margin-top: 6px; border-top: 1px dashed #434651; padding-top: 6px; }
+        .guide-steps li { margin-left: 14px; margin-bottom: 4px; }
+
         .indicators { display: flex; gap: 15px; padding: 8px 20px; font-size: 11px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 10px; align-items: center; }
         .indicators span { cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; user-select: none; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
@@ -169,6 +199,16 @@
             
             <div class="chart-container">
                 <div id="kline"></div>
+                
+                <!-- 新增：右下角小白信号看板 -->
+                <div class="guide-panel" id="guidePanel">
+                    <div class="guide-title">
+                        <span>📝 小白智能提示</span>
+                    </div>
+                    <div class="guide-action" id="guideAction">等待数据结构...</div>
+                    <div class="guide-desc" id="guideDesc">正在识别 FVG 和 MSB 结构，请稍候。</div>
+                    <div class="guide-steps" id="guideSteps"></div>
+                </div>
             </div>
             
             <div class="indicators" id="indicator-buttons">
@@ -594,6 +634,7 @@
             structResult = { fvg: null, fvgs: [], msb: null, plan: null, support: null, resistance: null };
             updateRRPanel();
             updateOrderDataPanel();
+            updateGuidePanel(); // 更新小白看板
             return;
         }
         const fvgs = detectFVGs(rawKlines);
@@ -605,6 +646,56 @@
         structResult = { fvg, fvgs, msb, plan, support, resistance };
         updateRRPanel();
         updateOrderDataPanel();
+        updateGuidePanel(); // 更新小白看板
+    }
+
+    // 新增：更新右下角小白看板的内容
+    function updateGuidePanel() {
+        const panel = document.getElementById('guidePanel');
+        const actionEl = document.getElementById('guideAction');
+        const descEl = document.getElementById('guideDesc');
+        const stepsEl = document.getElementById('guideSteps');
+        const p = structResult.plan;
+
+        panel.className = 'guide-panel';
+
+        if (!p || p.status === 'invalid') {
+            actionEl.innerText = '⏳ 暂无交易计划';
+            actionEl.style.color = '#848e9c';
+            descEl.innerText = '当前市场没有符合高盈亏比的结构，请耐心等待。';
+            stepsEl.innerHTML = '<li>不要盲目进场</li><li>继续观察 FVG 缺口</li>';
+            return;
+        }
+
+        if (p.status === 'wait') {
+            panel.classList.add('wait');
+            actionEl.innerText = '🟡 等待回踩进场';
+            actionEl.style.color = '#f0b90b';
+            descEl.innerHTML = `价格目前在 <b>${p.latest.toFixed(2)}</b>，尚未进入入场区。<br>请在 <b>${p.entry.toFixed(2)}</b> 附近耐心等待。`;
+            stepsEl.innerHTML = `
+                <li>不要追高/追空</li>
+                <li>等待价格回落至黄色阴影区</li>
+                <li>准备好在这个区域找机会建仓</li>
+            `;
+        } else if (p.status === 'ready') {
+            panel.classList.add(p.type === 'bull' ? 'ready-bull' : 'ready-bear');
+            const dir = p.type === 'bull' ? '买涨 (做多)' : '买跌 (做空)';
+            const color = p.type === 'bull' ? '#0ecb81' : '#f6465d';
+            actionEl.innerText = p.type === 'bull' ? '🟢 马上买涨做多！' : '🔴 马上买跌做空！';
+            actionEl.style.color = color;
+            descEl.innerHTML = `价格已进入入场区 <b>${p.entry.toFixed(2)}</b>。<br>盈亏比 <b>1:${p.rr.toFixed(2)}</b>，非常合适！`;
+            stepsEl.innerHTML = `
+                <li>检查当前 K 线是否收盘站稳</li>
+                <li>确认 K 线收出长下影线(做多)或长上影线(做空)</li>
+                <li>点击右侧【${dir}】按钮下单</li>
+            `;
+        } else if (p.status === 'fail') {
+            panel.classList.add('fail');
+            actionEl.innerText = '🔴 计划已失效';
+            actionEl.style.color = '#848e9c';
+            descEl.innerText = '价格已跌破/突破结构线，原计划作废。';
+            stepsEl.innerHTML = '<li>禁止逆势扛单</li><li>等待下一个有效结构出现</li>';
+        }
     }
 
     function updateRRPanel() {
@@ -886,6 +977,7 @@
             cachedIndicators = {};
             updateRRPanel();
             updateOrderDataPanel();
+            updateGuidePanel();
 
             const res = await fetch(`${API_BASE}/api/kline?interval=${interval}&limit=500`);
             const json = await res.json();
@@ -972,12 +1064,10 @@
         return cachedIndicators;
     }
 
-    // ====== 核心修改区：多等待区 + 固定宽度 + 文字靠右 + 延伸至边缘 ======
     function buildStructMarks(klines, dates) {
         const marks = { markAreas: [], markLines: [], markPoints: [] };
         const p = structResult.plan;
         
-        // 1. 支撑阻力线
         if (structResult.support) {
             marks.markLines.push({
                 name: '支撑结构',
@@ -997,17 +1087,12 @@
 
         if (!p) return marks;
 
-        // 2. 绘制多个 FVG 和 等待区
         if (structState.fvg && structResult.fvgs.length) {
             structResult.fvgs.forEach((f, rank) => {
                 const isBull = f.type === 'bull';
                 const startX = dates[f.startIndex];
-                
-                // 需求1：统一固定 10 根 K 线的宽度
                 const endIdx = Math.min(klines.length - 1, f.startIndex + 9);
                 const endX = dates[endIdx];
-                
-                // 需求3：延伸至最右侧的坐标（图表数据总长度的最后一根）
                 const rightEdgeX = dates[dates.length - 1];
 
                 const isPrimary = rank === 0;
@@ -1015,19 +1100,16 @@
                 const fillAlpha = isPrimary ? 0.18 : 0.08;
                 const fillColor = isBull ? `rgba(38,166,154,${fillAlpha})` : `rgba(239,83,80,${fillAlpha})`;
 
-                // FVG 矩形
                 marks.markAreas.push([
                     {
                         name: `${isBull ? '看涨' : '看跌'} FVG #${rank + 1}`,
                         xAxis: startX, yAxis: f.bottom,
                         itemStyle: { color: fillColor, borderColor: baseColor, borderWidth: isPrimary ? 1.5 : 1, borderType: 'dashed', opacity: isPrimary ? 1 : 0.7 },
-                        // 需求2：文字靠右显示 (insideRight)
                         label: { show: true, position: 'insideRight', color: baseColor, fontSize: isPrimary ? 10 : 9, fontWeight: isPrimary ? 'bold' : 'normal', formatter: `${isPrimary ? '★ ' : ''}FVG${rank + 1} ${f.bottom.toFixed(1)}~${f.top.toFixed(1)}` }
                     },
                     { xAxis: endX, yAxis: f.top }
                 ]);
 
-                // 等待入场区阴影
                 const entryLevel = isBull ? f.top : f.bottom;
                 const buffer = (f.top - f.bottom) * 0.2;
                 
@@ -1037,16 +1119,13 @@
                         xAxis: startX, 
                         yAxis: entryLevel - buffer, 
                         itemStyle: { color: 'rgba(240,185,11,0.10)', borderColor: '#f0b90b', borderWidth: 1, borderType: 'dotted' },
-                        // 需求2：文字靠右显示 (insideRight)
                         label: { show: true, position: 'insideRight', color: '#f0b90b', fontSize: 10, fontWeight: 'bold', formatter: `等待区` } 
                     },
-                    // 需求3：右边界改为 rightEdgeX 延伸到价格刻度边缘
                     { xAxis: rightEdgeX, yAxis: entryLevel + buffer }
                 ]);
             });
         }
 
-        // 3. MSB 结构标记
         if (structState.msb && p.msb) {
             const m = p.msb;
             const isBull = m.type === 'bull';
@@ -1072,7 +1151,6 @@
             }
         }
 
-        // 4. 交易计划利润与止损区域
         if (structState.plan && p.valid) {
             const startIdx = p.fvg ? p.fvg.startIndex : Math.max(0, klines.length - 5);
             const endIdx = klines.length - 1;
