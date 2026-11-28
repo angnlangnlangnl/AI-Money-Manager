@@ -267,7 +267,7 @@
     let dailyStats = { open: 0, high: 0, low: 0, prevClose: 0, timestamp: 0 };
 
     const structState = { fvg: true, msb: true, plan: true };
-    const PLAN_CONFIG = { buffer: 5, minRR: 1, msbLookback: 20, fvgScanBack: 60, swingLookback: 2 };
+    const PLAN_CONFIG = { buffer: 5, minRR: 1, msbLookback: 20, fvgScanBack: 60, swingLookback: 2, atrPeriod: 14, atrMultiplier: 1.5 };
     let structResult = { fvg: null, msb: null, plan: null };
 
     let tickBufferPrice = null;
@@ -351,21 +351,46 @@
             }
             return { dif, dea, macd };
         }
+        static ATR(klines, period = 14) {
+            const result = new Array(klines.length).fill(null);
+            for (let i = 1; i < klines.length; i++) {
+                const high = klines[i].h;
+                const low = klines[i].l;
+                const prevClose = klines[i - 1].c;
+                const tr = Math.max(high - low, Math.abs(high - prevClose), Math.abs(low - prevClose));
+                if (i === 1) result[i] = tr;
+                else result[i] = (result[i - 1] * (period - 1) + tr) / period;
+            }
+            return result;
+        }
     }
 
     function detectFVG(klines) {
         const n = klines.length;
         if (n < 3) return null;
+        const latestPrice = klines[n - 1].c;
+        
+        const atrArr = Indicators.ATR(klines, PLAN_CONFIG.atrPeriod);
+        const currentAtr = atrArr[n - 1] || 1;
+
         const start = Math.max(2, n - PLAN_CONFIG.fvgScanBack);
         for (let i = n - 1; i >= start; i--) {
             const cur = klines[i];
             const prev2 = klines[i - 2];
             if (!prev2 || !cur) continue;
+
+            const displacementK = klines[i - 1];
+            const bodySize = Math.abs(displacementK.c - displacementK.o);
+
             if (cur.l > prev2.h) {
-                return { type: 'bull', top: cur.l, bottom: prev2.h, index: i, startIndex: i - 2 };
+                if (latestPrice >= prev2.h && bodySize > currentAtr * 0.5) {
+                    return { type: 'bull', top: cur.l, bottom: prev2.h, index: i, startIndex: i - 2 };
+                }
             }
             if (cur.h < prev2.l) {
-                return { type: 'bear', top: prev2.l, bottom: cur.h, index: i, startIndex: i - 2 };
+                if (latestPrice <= prev2.l && bodySize > currentAtr * 0.5) {
+                    return { type: 'bear', top: prev2.l, bottom: cur.h, index: i, startIndex: i - 2 };
+                }
             }
         }
         return null;
@@ -408,7 +433,6 @@
         return (bullMSB.index > bearMSB.index) ? bullMSB : bearMSB;
     }
 
-    // 核心修改：基于前方结构阻力位寻找动态止盈 (TP)
     function buildPlan(klines, fvg, msb) {
         if (!klines.length) return null;
         const latest = klines[klines.length - 1];
@@ -417,7 +441,9 @@
 
         let entry, sl, tp, risk, reward;
         
-        // 寻找结构位置（前高/前低）
+        const atrArr = Indicators.ATR(klines, PLAN_CONFIG.atrPeriod);
+        const currentAtr = atrArr[klines.length - 1] || 5; 
+        
         const { highs, lows } = findSwingPoints(klines, PLAN_CONFIG.swingLookback);
 
         if (isBull) {
@@ -425,21 +451,19 @@
             else if (fvg && lastClose <= fvg.top && lastClose >= fvg.bottom) entry = lastClose;
             else entry = lastClose;
             
-            sl = fvg ? fvg.bottom - PLAN_CONFIG.buffer : entry - 20;
+            let baseSL = fvg ? fvg.bottom - PLAN_CONFIG.buffer : entry - currentAtr * 2;
+            sl = Math.min(baseSL, entry - currentAtr * PLAN_CONFIG.atrMultiplier);
+            
             risk = entry - sl;
 
-            // 在多头中，找入场位上方的最近一个摆动高点作为止盈目标
-            let nearestResistance = entry + (risk * 1.5); // 默认 1.5R
+            let nearestResistance = entry + (risk * 1.5); 
             for (let i = highs.length - 1; i >= 0; i--) {
                 if (highs[i].price > entry && highs[i].price < nearestResistance) {
-                    // 只寻找在图表上存在的、高于当前入场价的目标
-                    // 为了确保利润空间够大，至少要突破 Entry
                     nearestResistance = highs[i].price;
-                    break; // 找到最近的一个就停止
+                    break; 
                 }
             }
             
-            // 如果找到了强阻力，就用阻力位做 TP，否则退化为 2R
             if (nearestResistance > entry) {
                 tp = nearestResistance;
             } else {
@@ -452,11 +476,12 @@
             else if (fvg && lastClose <= fvg.top && lastClose >= fvg.bottom) entry = lastClose;
             else entry = lastClose;
             
-            sl = fvg ? fvg.top + PLAN_CONFIG.buffer : entry + 20;
+            let baseSL = fvg ? fvg.top + PLAN_CONFIG.buffer : entry + currentAtr * 2;
+            sl = Math.max(baseSL, entry + currentAtr * PLAN_CONFIG.atrMultiplier);
+            
             risk = sl - entry;
 
-            // 在空头中，找入场位下方的最近一个摆动低点作为止盈目标
-            let nearestSupport = entry - (risk * 1.5); // 默认 1.5R
+            let nearestSupport = entry - (risk * 1.5); 
             for (let i = lows.length - 1; i >= 0; i--) {
                 if (lows[i].price < entry && lows[i].price > nearestSupport) {
                     nearestSupport = lows[i].price;
@@ -473,10 +498,8 @@
             reward = entry - tp;
         }
 
-        // 动态盈亏比计算
         const rr = risk > 0 ? +(reward / risk).toFixed(2) : 0;
         
-        // 如果盈亏比过小（低于 minRR），视为无效计划
         const valid = isBull
             ? (risk > 0 && entry > sl && tp > entry && rr >= PLAN_CONFIG.minRR)
             : (risk > 0 && sl > entry && entry > tp && rr >= PLAN_CONFIG.minRR);
@@ -679,7 +702,6 @@
         return Math.max(1, delta / 0.01 * 0.5);
     }
 
-    // 核心修改：高频 Tick 差分增量更新
     function executeKlineUpdateFromTick(price, tickTimestamp) {
         if (rawKlines.length === 0) return;
         const intervalMs = getIntervalMs(currentInterval);
@@ -701,37 +723,29 @@
             isNewBar = true;
         } else return;
 
-        // 更新指标缓存
         cachedClosesRef = null;
         cachedIndicators = {};
 
-        // 局部更新顶部和面板数据
         runStructAnalysis();
         updateHeaderUI(price);
         
-        // 增量更新图表（不全局重建 chartData，仅更新最后一根或追加）
         updateChartIncremental(price, isNewBar);
     }
 
-    // 增量重绘图表逻辑
     function updateChartIncremental(price, isNewBar) {
         if (!chartInitialized) return;
         
         if (isNewBar) {
-            // 如果是新 K 线，必须执行全量重建和渲染
             rebuildChartDataFromRaw();
             updateChart();
         } else {
-            // 如果是当前 K 线跳动，只更新最后一个数据点，极大提升性能
             const totalLen = chartData.klines.length;
             const realLen = rawKlines.length;
             const lastItem = rawKlines[realLen - 1];
             
-            // 更新最后真实 K 线的数据
             chartData.klines[realLen - 1] = [lastItem.o, lastItem.c, lastItem.l, lastItem.h];
             chartData.volumes[realLen - 1] = lastItem.v;
             
-            // 更新当前价线
             const lastKline = chartData.klines[realLen - 1];
             let isUp = true;
             if (lastKline && lastKline[0] !== '-') {
@@ -739,19 +753,6 @@
             }
             const activeColor = isUp ? '#0ecb81' : '#f6465d';
 
-            // 构造局部更新指令
-            const updateOption = {
-                series: [
-                    { id: 'klineMain', data: chartData.klines },
-                    {
-                        id: 'currentPriceLine', // 假设你之前没有为当前价线专门设 ID，这里我们可以利用 markLine 的局部更新
-                        // 实际上更新 markLine 数据有点复杂，为了性能，直接按最新情况重新渲染一次
-                    }
-                ]
-            };
-            
-            // 为了保持简单和稳定，直接调用 echarts 的局部替换
-            // 注意：这里没有完全重绘 grids/axes，只是更新 series data 和 markLine
             myChart.setOption({
                 series: [{
                     id: 'klineMain',
@@ -760,15 +761,12 @@
                         symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
                         label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
                         data: [
-                            { yAxis: price, lineStyle: { color: activeColor, type: 'dashed', width: 1 }, label: { formatter: formatNum(price, 2), color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 2 } },
-                            // 动态结构线在 runStructAnalysis 后已经发生变化，这里为了性能和结构线的一致，我们直接重新触发 updateChart
+                            { yAxis: price, lineStyle: { color: activeColor, type: 'dashed', width: 1 }, label: { formatter: formatNum(price, 2), color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 2 } }
                         ]
                     }
                 }]
             });
             
-            // 如果 FVG/TP/SL 没变，单纯更新价格，上面的 setOption 已经够了。
-            // 但如果 TP/SL 变了，还是需要全量 updateChart。这里为了确保图二正确刷新，我们强制重绘：
             updateChart(); 
         }
     }
@@ -861,6 +859,7 @@
         return cachedIndicators;
     }
 
+    // 核心修改：绘制贯穿式的宽幅交易区
     function buildStructMarks(klines, dates) {
         const marks = { markAreas: [], markLines: [] };
         const p = structResult.plan;
@@ -899,6 +898,21 @@
             const endX = dates[endIdx];
             const isBull = p.type === 'bull';
 
+            // 新增：宽幅交易区 (Trade Zone) —— 根据 Entry 和 TP 贯穿整个区域
+            const zoneColor = isBull ? 'rgba(14,203,129,0.04)' : 'rgba(246,70,93,0.04)';
+            const zoneBorderColor = isBull ? 'rgba(14,203,129,0.15)' : 'rgba(246,70,93,0.15)';
+            
+            marks.markAreas.push([
+                { 
+                    name: '交易区', 
+                    xAxis: startX, yAxis: p.entry, 
+                    itemStyle: { color: zoneColor, borderColor: zoneBorderColor, borderWidth: 1, borderType: 'solid' },
+                    label: { show: true, position: 'insideTopLeft', color: isBull ? '#0ecb81' : '#f6465d', fontSize: 11, fontWeight: 'bold', formatter: '交易区' }
+                },
+                { xAxis: endX, yAxis: p.tp }
+            ]);
+
+            // 保留原有的利润/风险区作为内层强调
             marks.markAreas.push([
                 { name: '利润空间', xAxis: startX, yAxis: p.entry, itemStyle: { color: 'rgba(14,203,129,0.10)' },
                   label: { show: true, position: 'insideTop', color: '#0ecb81', fontSize: 10, formatter: `利润 +${p.reward.toFixed(1)}` } },
