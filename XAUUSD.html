@@ -38,7 +38,7 @@
         .chart-container { flex: 1; min-height: 300px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 5px; }
         #kline { width: 100%; flex: 1; }
         
-        /* ===== 底部指标栏，融合结构开关 ===== */
+        /* ===== 底部指标栏 ===== */
         .indicators { display: flex; gap: 15px; padding: 8px 20px; font-size: 11px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 10px; align-items: center; }
         .indicators span { cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; user-select: none; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
@@ -75,7 +75,7 @@
         .trade-row label { width: 70px; font-size: 12px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 4px; padding: 8px 10px; color: #eaecef; font-size: 13px; outline: none; }
 
-        /* ===== RR 面板居中悬浮，兼容长文字排版 ===== */
+        /* ===== RR 面板 ===== */
         .rr-panel {
             position: absolute;
             top: 18px;
@@ -90,10 +90,10 @@
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 16px; /* 略微收紧间距 */
+            gap: 16px;
             z-index: 10;
             pointer-events: none;
-            white-space: nowrap; /* 强制不换行 */
+            white-space: nowrap;
         }
         .rr-panel.invalid { border-color: #f6465d; box-shadow: 0 0 12px rgba(246,70,93,0.6); }
         .rr-item { display: flex; flex-direction: column; align-items: center; justify-content: center; }
@@ -101,7 +101,6 @@
         .rr-value { font-size: 13px; font-family: monospace; font-weight: bold; white-space: nowrap; }
         .rr-divider { width: 1px; height: 22px; background: #434651; margin: 0 2px; }
         
-        /* 修复预测方向标签单行显示 */
         .rr-predict { 
             font-size: 13px; 
             padding: 2px 8px; 
@@ -155,7 +154,6 @@
                 
                 <!-- 悬浮 RR 面板 -->
                 <div class="rr-panel" id="rrPanel">
-                    <!-- 方向预测 -->
                     <div class="rr-item">
                         <span class="rr-label">预测方向</span>
                         <span class="rr-predict" id="rrPredict">--</span>
@@ -194,7 +192,7 @@
                 </div>
             </div>
             
-            <!-- 融合后的底部工具栏 -->
+            <!-- 底部工具栏 -->
             <div class="indicators" id="indicator-buttons">
                 <span class="active" data-indicator="MA">MA</span>
                 <span data-indicator="EMA">EMA</span>
@@ -202,7 +200,6 @@
                 <span data-indicator="VOL">VOL</span>
                 <span data-indicator="MACD">MACD</span>
                 
-                <!-- 结构开关移动到最后面 -->
                 <div class="struct-group">
                     <span class="struct-toggle active" id="toggleFVG">FVG 缺口</span>
                     <span class="struct-toggle active" id="toggleMSB">MSB 结构</span>
@@ -340,7 +337,6 @@
         }
     }
 
-    // FVG 双向检测
     function detectFVG(klines) {
         const n = klines.length;
         if (n < 3) return null;
@@ -359,7 +355,6 @@
         return null;
     }
 
-    // MSB 基于摆动点
     function findSwingPoints(klines, lookback = 2) {
         const highs = [], lows = [];
         for (let i = lookback; i < klines.length - lookback; i++) {
@@ -463,6 +458,7 @@
             return;
         }
         
+        // 实时更新方向预测文字和样式
         predictEl.innerText = p.type === 'bull' ? '看涨 (做多)' : '看跌 (做空)';
         predictEl.className = `rr-predict ${p.type}`;
 
@@ -630,6 +626,7 @@
         const lastItem = rawKlines[rawKlines.length - 1];
         const lastBarStartTs = Math.floor(lastItem.t / intervalMs) * intervalMs;
         const currentBarStartTs = Math.floor(tickTimestamp / intervalMs) * intervalMs;
+        
         if (currentBarStartTs === lastBarStartTs) {
             lastItem.c = price;
             if (price > lastItem.h) lastItem.h = price;
@@ -645,15 +642,16 @@
         cachedClosesRef = null;
         cachedIndicators = {};
 
-        rebuildChartDataFromRaw();
+        // 核心修复：tick 同步更新时，立即重新执行结构分析，更新面板数据（含方向预测）
         runStructAnalysis();
+        
+        rebuildChartDataFromRaw();
         updateHeaderUI(price);
         if (chartInitialized) updateChart();
     }
 
     async function loadRealData(interval) {
         try {
-            // 修复：切换周期时，先清空旧数据，防止旧结构在异步加载期间残留
             rawKlines = [];
             structResult = { fvg: null, msb: null, plan: null };
             cachedClosesRef = null;
@@ -677,8 +675,6 @@
             loadDailyStats().then(() => { updateHeaderUI(); });
             
             rebuildChartDataFromRaw();
-            
-            // 修复：严格基于新拉取的数据重新计算
             runStructAnalysis();
             chartInitialized = true;
             updateHeaderUI(); 
@@ -1120,7 +1116,6 @@
     function closeTradeModal() { document.getElementById('tradeModalOverlay').classList.remove('show'); }
     function confirmTrade() { alert('模拟下单已提交（演示环境）'); closeTradeModal(); }
 
-    // 指标开关（不含结构按钮）
     document.getElementById('indicator-buttons').addEventListener('click', function(e) {
         const span = e.target.closest('span[data-indicator]');
         if (!span) return;
@@ -1140,7 +1135,6 @@
         loadRealData(currentInterval);
     });
 
-    // 结构开关
     document.getElementById('toggleFVG').addEventListener('click', function() {
         structState.fvg = !structState.fvg;
         this.classList.toggle('active', structState.fvg);
