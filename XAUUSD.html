@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (结构分析专业版)</title>
+    <title>XAUUSD 交易界面 (小白信号版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -21,16 +21,7 @@
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        /* 修改点 1：给行情板块添加相对定位，作为定位基准 */
-        .quote-section { 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            padding: 12px 20px; 
-            flex-shrink: 0; 
-            border-bottom: 1px solid #2b3139; 
-            position: relative; 
-        }
+        .quote-section { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; flex-shrink: 0; border-bottom: 1px solid #2b3139; position: relative; }
         .quote-left { display: flex; flex-direction: row; align-items: baseline; gap: 15px; }
         .price-main { font-size: 30px; font-weight: bold; line-height: 1; color: #eaecef; }
         .price-sub { font-size: 14px; font-weight: bold; color: #848e9c; }
@@ -83,43 +74,30 @@
         .trade-row label { width: 70px; font-size: 12px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 4px; padding: 8px 10px; color: #eaecef; font-size: 13px; outline: none; }
 
-        /* 修改点 2：调整悬浮面板位置与样式，使其在 quote-section 居中 */
         .rr-panel {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(24, 28, 36, 0.95);
-            border: 1px solid #434651;
-            padding: 5px 16px;
-            border-radius: 6px;
-            backdrop-filter: blur(6px);
-            box-shadow: 0 4px 16px rgba(0,0,0,0.8);
-            display: flex;
-            flex-direction: row;
-            align-items: center;
-            gap: 12px;
-            z-index: 10;
-            pointer-events: none;
-            white-space: nowrap;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(24, 28, 36, 0.95); border: 1px solid #434651; padding: 5px 16px; border-radius: 6px;
+            backdrop-filter: blur(6px); box-shadow: 0 4px 16px rgba(0,0,0,0.8); display: flex; flex-direction: row; align-items: center; gap: 12px;
+            z-index: 10; pointer-events: none; white-space: nowrap;
         }
         .rr-panel.invalid { border-color: #f6465d; box-shadow: 0 0 12px rgba(246,70,93,0.6); }
+        .rr-panel.wait { border-color: #f0b90b; box-shadow: 0 0 12px rgba(240,185,11,0.4); }
+        .rr-panel.ready { border-color: #0ecb81; box-shadow: 0 0 15px rgba(14,203,129,0.6); }
+        
         .rr-item { display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .rr-label { font-size: 10px; color: #8b95a5; margin-bottom: 3px; white-space: nowrap; }
         .rr-value { font-size: 13px; font-family: monospace; font-weight: bold; white-space: nowrap; }
         .rr-divider { width: 1px; height: 22px; background: #434651; margin: 0 2px; }
         
-        .rr-predict { 
-            font-size: 13px; 
-            padding: 2px 8px; 
-            border-radius: 4px; 
-            font-weight: bold; 
-            white-space: nowrap;
-            display: inline-block;
-            line-height: 1.2;
+        .rr-signal {
+            font-size: 14px; padding: 4px 12px; border-radius: 4px; font-weight: bold; white-space: nowrap;
+            display: inline-block; line-height: 1.2;
         }
-        .rr-predict.bull { color: #0ecb81; background: rgba(14,203,129,0.15); border: 1px solid rgba(14,203,129,0.3); }
-        .rr-predict.bear { color: #f6465d; background: rgba(246,70,93,0.15); border: 1px solid rgba(246,70,93,0.3); }
+        .rr-signal.bull-wait { color: #f0b90b; background: rgba(240,185,11,0.15); border: 1px solid rgba(240,185,11,0.3); }
+        .rr-signal.bull-ready { color: #181a20; background: #0ecb81; border: 1px solid #0ecb81; box-shadow: 0 0 8px #0ecb81; }
+        .rr-signal.bear-wait { color: #f0b90b; background: rgba(240,185,11,0.15); border: 1px solid rgba(240,185,11,0.3); }
+        .rr-signal.bear-ready { color: #fff; background: #f6465d; border: 1px solid #f6465d; box-shadow: 0 0 8px #f6465d; }
+        .rr-signal.fail { color: #848e9c; background: #2b3139; border: 1px solid #434651; }
     </style>
 </head>
 <body>
@@ -140,7 +118,6 @@
 
     <div class="main-content">
         <div class="trade-panel">
-            <!-- 顶部行情区块 -->
             <div class="quote-section">
                 <div class="quote-left">
                     <div class="price-main" id="last-price">--</div>
@@ -153,11 +130,10 @@
                     <div>昨日收盘价 <b id="prev-close">--</b></div>
                 </div>
                 
-                <!-- RR 悬浮面板已移入此处 -->
                 <div class="rr-panel" id="rrPanel">
                     <div class="rr-item">
-                        <span class="rr-label">预测方向</span>
-                        <span class="rr-predict" id="rrPredict">--</span>
+                        <span class="rr-label">当前信号</span>
+                        <span class="rr-signal" id="rrSignal">--</span>
                     </div>
                     <div class="rr-divider"></div>
                     <div class="rr-item">
@@ -178,11 +154,6 @@
                     <div class="rr-item">
                         <span class="rr-label">SL (止损)</span>
                         <span class="rr-value" id="rrSL" style="color:#f6465d">--</span>
-                    </div>
-                    <div class="rr-divider"></div>
-                    <div class="rr-item">
-                        <span class="rr-label">预期盈利 (PnL)</span>
-                        <span class="rr-value" id="rrPnL" style="color:#0ecb81">--</span>
                     </div>
                     <div class="rr-divider"></div>
                     <div class="rr-item">
@@ -278,7 +249,8 @@
     let dailyStats = { open: 0, high: 0, low: 0, prevClose: 0, timestamp: 0 };
 
     const structState = { fvg: true, msb: true, plan: true };
-    const PLAN_CONFIG = { buffer: 5, minRR: 1, msbLookback: 20, fvgScanBack: 60, swingLookback: 2, atrPeriod: 14, atrMultiplier: 1.5 };
+    // 核心配置：强制最小盈亏比 2.0
+    const PLAN_CONFIG = { buffer: 5, minRR: 2.0, msbLookback: 20, fvgScanBack: 60, swingLookback: 2, atrPeriod: 14, atrMultiplier: 1.5 };
     let structResult = { fvg: null, fvgs: [], msb: null, plan: null };
 
     let tickBufferPrice = null;
@@ -286,7 +258,8 @@
     let lastRenderTime = 0;
     const RENDER_THROTTLE_MS = 250; 
 
-    // ---------- Toast ----------
+    let dataZoomTimer = null;
+
     function showToast(msg, type = 'error') {
         const el = document.createElement('div');
         el.textContent = msg;
@@ -389,7 +362,6 @@
         }
     }
 
-    // ============ 专业 FVG 识别（多因子评分） ============
     function detectFVGs(klines, opts = {}) {
         const n = klines.length;
         if (n < 5) return [];
@@ -460,7 +432,6 @@
         return { highs, lows };
     }
 
-    // ============ 专业 MSB 识别（BOS / CHoCH） ============
     function detectMSB(klines) {
         const n = klines.length;
         if (n < PLAN_CONFIG.msbLookback + 5) return null;
@@ -520,6 +491,7 @@
         return result;
     }
 
+    // ====== 核心修改：强制保证 2:1 盈亏比 ======
     function buildPlan(klines, fvg, msb) {
         if (!klines.length) return null;
         const latest = klines[klines.length - 1];
@@ -543,15 +515,16 @@
             sl = Math.min(atrSL, fvgSL);
             risk = entry - sl;
 
-            let nearestResistance = entry + (risk * 1.5); 
+            // 寻找上方最近的天然阻力位作为 TP 候选
+            let naturalTP = entry + (risk * 2); // 默认 2R
             for (let i = highs.length - 1; i >= 0; i--) {
-                if (highs[i].price > entry && highs[i].price < nearestResistance) {
-                    nearestResistance = highs[i].price;
+                if (highs[i].price > entry + (risk * 1.8)) { // 只有阻力位大于1.8R才考虑
+                    naturalTP = highs[i].price;
                     break; 
                 }
             }
-            
-            tp = nearestResistance > entry ? nearestResistance : entry + (risk * 2);
+            // 核心：确保止盈空间至少是风险的 2 倍，否则强制拉大
+            tp = Math.max(naturalTP, entry + (risk * PLAN_CONFIG.minRR));
             reward = tp - entry;
         } else {
             if (fvg && lastClose < fvg.bottom) entry = fvg.bottom;
@@ -563,29 +536,41 @@
             sl = Math.max(atrSL, fvgSL);
             risk = sl - entry;
 
-            let nearestSupport = entry - (risk * 1.5); 
+            // 寻找下方最近的天然支撑位作为 TP 候选
+            let naturalTP = entry - (risk * 2); // 默认 2R
             for (let i = lows.length - 1; i >= 0; i--) {
-                if (lows[i].price < entry && lows[i].price > nearestSupport) {
-                    nearestSupport = lows[i].price;
+                if (lows[i].price < entry - (risk * 1.8)) {
+                    naturalTP = lows[i].price;
                     break;
                 }
             }
-
-            tp = nearestSupport < entry ? nearestSupport : entry - (risk * 2);
+            // 核心：确保止盈空间至少是风险的 2 倍，否则强制拉大
+            tp = Math.min(naturalTP, entry - (risk * PLAN_CONFIG.minRR));
             reward = entry - tp;
         }
 
         const rr = risk > 0 ? +(reward / risk).toFixed(2) : 0;
-        const valid = isBull
-            ? (risk > 0 && entry > sl && tp > entry && rr >= PLAN_CONFIG.minRR)
-            : (risk > 0 && sl > entry && entry > tp && rr >= PLAN_CONFIG.minRR);
+        
+        // 判断当前状态（小白需要的最直观信号）
+        let status = 'invalid';
+        if (rr >= PLAN_CONFIG.minRR) {
+            if (isBull) {
+                if (lastClose < sl) status = 'fail'; // 已跌破止损，失效
+                else if (lastClose <= entry) status = 'ready'; // 到达买点区域，可以买
+                else status = 'wait'; // 价格还在上方，等待回踩
+            } else {
+                if (lastClose > sl) status = 'fail'; // 已突破止损，失效
+                else if (lastClose >= entry) status = 'ready'; // 到达卖点区域，可以卖
+                else status = 'wait'; // 价格还在下方，等待反抽
+            }
+        }
 
         return {
             type: isBull ? 'bull' : 'bear',
             entry: +entry.toFixed(2), sl: +sl.toFixed(2), tp: +tp.toFixed(2),
-            risk: +risk.toFixed(2), reward: +reward.toFixed(2), rr: rr,
+            risk: +risk.toFixed(2), reward: +reward.toFixed(2), rr: rr, status: status,
             pnlPercent: entry > 0 ? +((reward / entry) * 100).toFixed(2) : 0,
-            valid, latest: +lastClose.toFixed(2), fvg, msb
+            valid: status !== 'invalid' && status !== 'fail', latest: +lastClose.toFixed(2), fvg, msb
         };
     }
 
@@ -608,36 +593,61 @@
     function updateRRPanel() {
         const panel = document.getElementById('rrPanel');
         const p = structResult.plan;
-        const predictEl = document.getElementById('rrPredict');
+        const signalEl = document.getElementById('rrSignal');
 
-        if (!p) {
-            ['rrEntry','rrBuy','rrTP','rrSL','rrPnL','rrRatio'].forEach(id => document.getElementById(id).innerText = '--');
-            predictEl.innerText = '--';
-            predictEl.className = 'rr-predict';
-            panel.classList.remove('invalid');
+        if (!p || p.status === 'invalid') {
+            ['rrEntry','rrBuy','rrTP','rrSL','rrRatio'].forEach(id => document.getElementById(id).innerText = '--');
+            signalEl.innerText = '无有效结构';
+            signalEl.className = 'rr-signal fail';
+            panel.className = 'rr-panel invalid';
             return;
         }
         
-        predictEl.innerText = p.type === 'bull' ? '看涨 (做多)' : '看跌 (做空)';
-        predictEl.className = `rr-predict ${p.type}`;
+        panel.className = 'rr-panel';
+        let signalText = '', signalClass = '';
+
+        if (p.type === 'bull') {
+            if (p.status === 'ready') { signalText = '🟢 立即做多 (Buy)'; signalClass = 'bull-ready'; panel.classList.add('ready'); }
+            else if (p.status === 'wait') { signalText = '🟡 等待回踩 (Wait)'; signalClass = 'bull-wait'; panel.classList.add('wait'); }
+            else if (p.status === 'fail') { signalText = '🔴 多单已失效'; signalClass = 'fail'; panel.classList.add('invalid'); }
+        } else {
+            if (p.status === 'ready') { signalText = '🔴 立即做空 (Sell)'; signalClass = 'bear-ready'; panel.classList.add('ready'); }
+            else if (p.status === 'wait') { signalText = '🟡 等待反抽 (Wait)'; signalClass = 'bear-wait'; panel.classList.add('wait'); }
+            else if (p.status === 'fail') { signalText = '🟢 空单已失效'; signalClass = 'fail'; panel.classList.add('invalid'); }
+        }
+
+        signalEl.innerText = signalText;
+        signalEl.className = `rr-signal ${signalClass}`;
 
         document.getElementById('rrEntry').innerText = p.entry.toFixed(2);
         document.getElementById('rrBuy').innerText = p.latest.toFixed(2);
         document.getElementById('rrTP').innerText = `${p.tp.toFixed(2)} (${p.type==='bull'?'+':'-'}${p.reward.toFixed(2)})`;
         document.getElementById('rrSL').innerText = `${p.sl.toFixed(2)} (${p.type==='bull'?'-':'+'}${p.risk.toFixed(2)})`;
-        document.getElementById('rrPnL').innerText = `+${p.reward.toFixed(2)} (+${p.pnlPercent.toFixed(2)}%)`;
         document.getElementById('rrRatio').innerText = `1 : ${p.rr.toFixed(2)}`;
-        
-        panel.classList.toggle('invalid', !p.valid);
     }
 
     function updateOrderDataPanel() {
         const el = document.getElementById('orderDataContent');
         const p = structResult.plan;
         if (!p) { el.innerHTML = '<div style="color:#888;padding:20px;text-align:center;">等待结构识别…</div>'; return; }
-        const dirColor = p.type === 'bull' ? '#0ecb81' : '#f6465d';
-        const dirLabel = p.type === 'bull' ? '看涨（做多）' : '看跌（做空）';
+        
         const rowStyle = 'display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #2b3139;';
+        let actionHtml = '';
+
+        if (p.status === 'ready') {
+            const isBull = p.type === 'bull';
+            actionHtml = `<div style="background:${isBull?'rgba(14,203,129,0.15)':'rgba(246,70,93,0.15)'};color:${isBull?'#0ecb81':'#f6465d'};padding:12px;text-align:center;font-weight:bold;font-size:14px;border-radius:6px;margin-bottom:10px;border:1px solid ${isBull?'#0ecb81':'#f6465d'};">
+                🟢 信号触发！当前处于优质回踩区<br>建议立即${isBull?'做多':'做空'}
+            </div>`;
+        } else if (p.status === 'wait') {
+            actionHtml = `<div style="background:rgba(240,185,11,0.1);color:#f0b90b;padding:12px;text-align:center;font-weight:bold;font-size:13px;border-radius:6px;margin-bottom:10px;border:1px solid #f0b90b;">
+                🟡 耐心等待：价格尚未到达入场区<br>请在 ${p.entry.toFixed(2)} 附近留意
+            </div>`;
+        } else if (p.status === 'fail') {
+            actionHtml = `<div style="background:#2b3139;color:#888;padding:12px;text-align:center;font-weight:bold;font-size:13px;border-radius:6px;margin-bottom:10px;border:1px solid #434651;">
+                🔴 计划失效：价格已破坏结构，禁止入场
+            </div>`;
+        }
 
         const fvgRows = structResult.fvgs.length
             ? structResult.fvgs.map((f, i) =>
@@ -647,22 +657,15 @@
                 </div>`).join('')
             : `<div style="padding:6px 8px;color:#888;">未发现有效缺口</div>`;
 
-        const msbKindColor = p.msb && p.msb.kind === 'CHoCH' ? '#ff9800' : '#2962ff';
-        const msbLabel = p.msb
-            ? `${p.msb.price.toFixed(2)} ${p.msb.broken ? '✓ 已突破' : '✗ 未突破'} [${p.msb.kind}]${p.msb.broken ? ` +${p.msb.strength}ATR` : ''}`
-            : '未发现';
-
         el.innerHTML = `
-            <div style="${rowStyle}"><span style="color:#848e9c;">预测方向</span><b style="color:${dirColor};">${dirLabel}</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">MSB 结构</span><b style="color:${msbKindColor};">${msbLabel}</b></div>
-            ${fvgRows}
+            ${actionHtml}
+            <div style="${rowStyle}"><span style="color:#848e9c;">计划方向</span><b style="color:${p.type==='bull'?'#0ecb81':'#f6465d'};">${p.type==='bull'?'做多 (Long)':'做空 (Short)'}</b></div>
             <div style="${rowStyle}"><span style="color:#848e9c;">入场 (Entry)</span><b style="color:#f0b90b;">${p.entry.toFixed(2)}</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">回踩买点 (Buy)</span><b style="color:#d1d4dc;">${p.latest.toFixed(2)}</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">止盈 (TP)</span><b style="color:#0ecb81;">${p.tp.toFixed(2)} (${p.type==='bull'?'+':'-'}${p.reward.toFixed(1)})</b></div>
             <div style="${rowStyle}"><span style="color:#848e9c;">止损 (SL)</span><b style="color:#f6465d;">${p.sl.toFixed(2)} (${p.type==='bull'?'-':'+'}${p.risk.toFixed(1)})</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">盈亏比</span><b style="color:#f0b90b;">1 : ${p.rr.toFixed(2)}</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">预期收益</span><b style="color:#0ecb81;">+${p.pnlPercent.toFixed(2)}%</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">计划状态</span><b style="color:${p.valid?'#0ecb81':'#f6465d'};">${p.valid?'✓ 参数有效':'✗ 参数无效'}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">止盈 (TP)</span><b style="color:#0ecb81;">${p.tp.toFixed(2)} (${p.type==='bull'?'+':'-'}${p.reward.toFixed(1)})</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">盈亏比 (R:R)</span><b style="color:#f0b90b;">1 : ${p.rr.toFixed(2)}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">MSB 结构</span><b style="color:${p.msb && p.msb.kind==='CHoCH'?'#ff9800':'#2962ff'};">${p.msb ? p.msb.kind : '无'}</b></div>
+            ${fvgRows}
         `;
     }
 
@@ -972,7 +975,7 @@
                         name: `${isBull ? '看涨' : '看跌'} FVG #${rank + 1}`,
                         xAxis: startX, yAxis: f.bottom,
                         itemStyle: { color: fillColor, borderColor: baseColor, borderWidth: isPrimary ? 1.5 : 1, borderType: 'dashed', opacity: isPrimary ? 1 : 0.7 },
-                        label: { show: true, position: 'insideTopLeft', color: baseColor, fontSize: isPrimary ? 10 : 9, fontWeight: isPrimary ? 'bold' : 'normal', formatter: `${isPrimary ? '★ ' : ''}FVG${rank + 1} ${f.bottom.toFixed(1)}~${f.top.toFixed(1)} | 分${f.score}${f.filled > 0 ? ` | 回补${(f.filled * 100).toFixed(0)}%` : ''}` }
+                        label: { show: true, position: 'insideTopLeft', color: baseColor, fontSize: isPrimary ? 10 : 9, fontWeight: isPrimary ? 'bold' : 'normal', formatter: `${isPrimary ? '★ ' : ''}FVG${rank + 1} ${f.bottom.toFixed(1)}~${f.top.toFixed(1)}` }
                     },
                     { xAxis: endX, yAxis: f.top }
                 ]);
@@ -986,20 +989,11 @@
                 name: 'MSB',
                 xAxis: dates[m.index], yAxis: m.price,
                 lineStyle: { color, type: m.broken ? 'solid' : 'dashed', width: m.broken ? 2 : 1.2 },
-                label: { show: true, position: 'insideEndTop', color, fontSize: 10, fontWeight: 'bold', backgroundColor: 'rgba(24,26,32,0.85)', padding: [2, 4], borderRadius: 3, formatter: `MSB ${m.kind} ${m.price.toFixed(1)}${m.broken ? ` ✓ +${m.strength}ATR` : ' ✗'}` }
+                label: { show: true, position: 'insideEndTop', color, fontSize: 10, fontWeight: 'bold', backgroundColor: 'rgba(24,26,32,0.85)', padding: [2, 4], borderRadius: 3, formatter: `MSB ${m.kind}` }
             });
-            if (m.broken) {
-                marks.markPoints.push({
-                    coord: [dates[klines.length - 1], m.price],
-                    symbol: 'triangle',
-                    symbolRotate: m.type === 'bull' ? 0 : 180,
-                    symbolSize: 14,
-                    itemStyle: { color, borderColor: '#181a20', borderWidth: 1 },
-                    label: { show: true, position: 'bottom', color, fontSize: 9, formatter: m.kind }
-                });
-            }
         }
 
+        // 只有有效计划才画计划区域
         if (structState.plan && p.valid) {
             const startIdx = p.fvg ? p.fvg.startIndex : Math.max(0, klines.length - 5);
             const endIdx = klines.length - 1;
@@ -1009,25 +1003,74 @@
 
             marks.markAreas.push([
                 { name: '利润空间', xAxis: startX, yAxis: p.entry, itemStyle: { color: 'rgba(14,203,129,0.10)' },
-                  label: { show: true, position: 'insideTop', color: '#0ecb81', fontSize: 10, formatter: `利润 +${p.reward.toFixed(1)}` } },
+                  label: { show: true, position: 'insideTop', color: '#0ecb81', fontSize: 10, formatter: `目标 +${p.reward.toFixed(1)}` } },
                 { xAxis: endX, yAxis: p.tp }
             ]);
             marks.markAreas.push([
                 { name: '风险空间', xAxis: startX, yAxis: p.sl, itemStyle: { color: 'rgba(246,70,93,0.10)' },
-                  label: { show: true, position: isBull ? 'insideBottom' : 'insideTop', color: '#f6465d', fontSize: 10, formatter: `风险 -${p.risk.toFixed(1)}` } },
+                  label: { show: true, position: isBull ? 'insideBottom' : 'insideTop', color: '#f6465d', fontSize: 10, formatter: `止损 -${p.risk.toFixed(1)}` } },
                 { xAxis: endX, yAxis: p.entry }
             ]);
 
             marks.markLines.push(
                 { name: 'Entry', yAxis: p.entry, lineStyle: { color: '#f0b90b', type: 'dashed', width: 1.5 },
-                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f0b90b', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `E ${p.entry.toFixed(1)}` } },
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f0b90b', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `入场 ${p.entry.toFixed(1)}` } },
                 { name: 'TP', yAxis: p.tp, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1.5 },
-                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#0ecb81', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `TP ${p.tp.toFixed(1)}` } },
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#0ecb81', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `止盈 ${p.tp.toFixed(1)}` } },
                 { name: 'SL', yAxis: p.sl, lineStyle: { color: '#f6465d', type: 'dashed', width: 1.5 },
-                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f6465d', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `SL ${p.sl.toFixed(1)}` } }
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f6465d', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `止损 ${p.sl.toFixed(1)}` } }
             );
+
+            // 只有真正 "ready" 状态才画入场箭头！
+            if (p.status === 'ready') {
+                marks.markPoints.push({
+                    coord: [dates[klines.length - 1], p.entry],
+                    symbol: 'triangle',
+                    symbolRotate: p.type === 'bull' ? 0 : 180,
+                    symbolSize: 16,
+                    itemStyle: { color: '#f0b90b', borderColor: '#181a20', borderWidth: 2 },
+                    label: { show: true, position: 'bottom', color: '#f0b90b', fontSize: 11, fontWeight: 'bold', formatter: p.type === 'bull' ? '🟢 买点触发' : '🔴 卖点触发' }
+                });
+            }
         }
         return marks;
+    }
+
+    function calculateYRange(startIdx, endIdx, klines, series, plan) {
+        let minLow = Infinity, maxHigh = -Infinity;
+        for (let i = startIdx; i <= endIdx; i++) {
+            if (klines[i][0] === '-') continue;
+            if (klines[i][2] < minLow) minLow = klines[i][2];
+            if (klines[i][3] > maxHigh) maxHigh = klines[i][3];
+        }
+        if (plan && plan.valid) {
+            minLow = Math.min(minLow, plan.sl);
+            maxHigh = Math.max(maxHigh, plan.tp);
+        }
+        series.forEach(s => {
+            if (s.type === 'line' && s.yAxisIndex === 1) {
+                for (let i = startIdx; i <= endIdx; i++) {
+                    const v = s.data && s.data[i];
+                    if (v == null) continue;
+                    const num = parseFloat(v);
+                    if (isNaN(num)) continue;
+                    if (num < minLow) minLow = num;
+                    if (num > maxHigh) maxHigh = num;
+                }
+            }
+        });
+        if (currentPrice) { 
+            minLow = Math.min(minLow, currentPrice); 
+            maxHigh = Math.max(maxHigh, currentPrice); 
+        }
+        if (!isFinite(minLow)) minLow = 0;
+        if (!isFinite(maxHigh)) maxHigh = 100;
+        const padding = (maxHigh - minLow) * 0.08 || 5;
+        return {
+            yMin: minLow - padding,
+            yMax: maxHigh + padding,
+            yInterval: (maxHigh + padding - (minLow - padding)) / 23
+        };
     }
 
     function updateChart() {
@@ -1109,19 +1152,6 @@
         structMarks.markLines.forEach(line => klineSeries.markLine.data.push(line));
         series.push(klineSeries);
 
-        if (structState.plan && structResult.plan && structResult.plan.valid) {
-            const p = structResult.plan;
-            const idx = klines.length - 1;
-            series.push({
-                id: 'entryArrow', name: 'Entry箭头', type: 'scatter', xAxisIndex: 1, yAxisIndex: 1, z: 30,
-                symbol: 'triangle', symbolSize: 12,
-                itemStyle: { color: '#f0b90b', borderColor: '#181a20', borderWidth: 1 },
-                data: [[dates[idx], p.entry]],
-                label: { show: true, position: 'bottom', color: '#f0b90b', fontSize: 10, fontWeight: 'bold', formatter: 'Entry' },
-                tooltip: { show: false }
-            });
-        }
-
         const closesForIndicator = alignedCloses;
         const validCloseCount = closesForIndicator.filter(v => v !== null).length;
         const ind = getIndicators(closesForIndicator);
@@ -1179,44 +1209,21 @@
             currentSeriesIndex++;
         }
 
-        let minLow = Infinity, maxHigh = -Infinity;
-        for (let i = zoomStartIdx; i <= zoomEndIdx; i++) {
-            if (klines[i][0] === '-') continue;
-            if (klines[i][2] < minLow) minLow = klines[i][2];
-            if (klines[i][3] > maxHigh) maxHigh = klines[i][3];
-        }
-        if (structResult.plan && structResult.plan.valid) {
-            const p = structResult.plan;
-            minLow = Math.min(minLow, p.sl);
-            maxHigh = Math.max(maxHigh, p.tp);
-        }
-        series.forEach(s => {
-            if (s.type === 'line' && s.yAxisIndex === 1) {
-                for (let i = zoomStartIdx; i <= zoomEndIdx; i++) {
-                    const v = s.data && s.data[i];
-                    if (v == null) continue;
-                    const num = parseFloat(v);
-                    if (isNaN(num)) continue;
-                    if (num < minLow) minLow = num;
-                    if (num > maxHigh) maxHigh = num;
-                }
-            }
-        });
-        if (currentPrice) { minLow = Math.min(minLow, currentPrice); maxHigh = Math.max(maxHigh, currentPrice); }
-        if (!isFinite(minLow)) minLow = 0;
-        if (!isFinite(maxHigh)) maxHigh = 100;
-        const padding = (maxHigh - minLow) * 0.08 || 5;
-        const yMin = minLow - padding, yMax = maxHigh + padding;
-        const yInterval = (yMax - yMin) / 23;
-        yAxes[0].min = yMin; yAxes[0].max = yMax; yAxes[0].interval = yInterval;
-        yAxes[1].min = yMin; yAxes[1].max = yMax; yAxes[1].interval = yInterval;
+        const initYRange = calculateYRange(zoomStartIdx, zoomEndIdx, klines, series, structResult.plan);
+        yAxes[0].min = initYRange.yMin; 
+        yAxes[0].max = initYRange.yMax; 
+        yAxes[0].interval = initYRange.yInterval;
+        yAxes[1].min = initYRange.yMin; 
+        yAxes[1].max = initYRange.yMax; 
+        yAxes[1].interval = initYRange.yInterval;
 
         const dzConfig = {
             type: 'inside',
             xAxisIndex: zoomAxes,
             minValueSpan: MIN_VISIBLE_BARS,
-            moveOnMouseMove: true,
-            moveOnMouseWheel: false,
+            moveOnMouseMove: true, 
+            moveOnMouseWheel: false, 
+            zoomOnMouseWheel: true, 
             start: startPct,
             end: endPct
         };
@@ -1226,8 +1233,9 @@
             yAxisIndex: [0, 1],
             moveOnMouseMove: true,
             moveOnMouseWheel: false,
-            startValue: yMin,
-            endValue: yMax
+            zoomOnMouseWheel: false,
+            startValue: initYRange.yMin,
+            endValue: initYRange.yMax
         };
 
         myChart.setOption({
@@ -1254,15 +1262,6 @@
                     const chg = c - o, pct = o !== 0 ? (chg / o) * 100 : 0, col = chg >= 0 ? '#0ecb81' : '#f6465d';
                     let html = `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>`;
                     if (volumes[idx] !== '-') html += `<div>成交量：${typeof volumes[idx] === 'number' ? volumes[idx].toFixed(1) : volumes[idx]}</div>`;
-                    if (structResult.plan && structResult.plan.valid) {
-                        const p = structResult.plan;
-                        html += `<div style="border-top:1px solid #444;margin-top:4px;padding-top:4px;">`;
-                        html += `<div style="color:#f0b90b;">入场：${p.entry.toFixed(2)}</div>`;
-                        html += `<div style="color:#0ecb81;">止盈：${p.tp.toFixed(2)} (${p.type==='bull'?'+':'-'}${p.reward.toFixed(1)})</div>`;
-                        html += `<div style="color:#f6465d;">止损：${p.sl.toFixed(2)} (${p.type==='bull'?'-':'+'}${p.risk.toFixed(1)})</div>`;
-                        html += `<div style="color:#f0b90b;">盈亏比：1:${p.rr.toFixed(2)}</div>`;
-                        html += `</div>`;
-                    }
                     html += `</div>`;
                     return html;
                 }
@@ -1273,9 +1272,8 @@
         myChart.on('dataZoom', function(params) {
             if (!params.batch || !params.batch[0]) return;
             const dz = params.batch[0];
-            if (dz.startValue !== undefined && dz.endValue !== undefined) {
-                return;
-            }
+            if (dz.startValue !== undefined && dz.endValue !== undefined) return;
+            
             let startIdx = Math.floor(dz.start / 100 * (totalLen - 1));
             let endIdx = Math.ceil(dz.end / 100 * (totalLen - 1));
             if (startIdx < 0) startIdx = 0;
@@ -1287,53 +1285,27 @@
             userZoomStartIdx = startIdx;
             userZoomEndIdx = Math.min(endIdx, totalLen - 1);
             if (userZoomEndIdx < userZoomStartIdx) userZoomEndIdx = userZoomStartIdx;
-            if (userZoomEndIdx - userZoomStartIdx + 1 < MIN_VISIBLE_BARS) {
-                userZoomStartIdx = Math.max(0, userZoomEndIdx - MIN_VISIBLE_BARS + 1);
-            }
-
+            
             isUserZoomed = true;
             followLatest = (realLen - 1 - userZoomEndIdx) <= 2;
 
-            let minL = Infinity, maxH = -Infinity;
-            for (let i = startIdx; i <= endIdx; i++) {
-                if (klines[i][0] === '-') continue;
-                if (klines[i][2] < minL) minL = klines[i][2];
-                if (klines[i][3] > maxH) maxH = klines[i][3];
-            }
-            if (structResult.plan && structResult.plan.valid) {
-                const p = structResult.plan;
-                minL = Math.min(minL, p.sl);
-                maxH = Math.max(maxH, p.tp);
-            }
-            series.forEach(s => {
-                if (s.type === 'line' && s.yAxisIndex === 1) {
-                    for (let i = startIdx; i <= endIdx; i++) {
-                        const v = s.data && s.data[i];
-                        if (v == null) continue;
-                        const num = parseFloat(v);
-                        if (isNaN(num)) continue;
-                        if (num < minL) minL = num;
-                        if (num > maxH) maxH = num;
-                    }
-                }
-            });
-            if (currentPrice) { minL = Math.min(minL, currentPrice); maxH = Math.max(maxH, currentPrice); }
-            if (!isFinite(minL)) minL = 0;
-            if (!isFinite(maxH)) maxH = 100;
-            const pad = (maxH - minL) * 0.08 || 5;
-            const newYMin = minL - pad, newYMax = maxH + pad;
-            const newYInterval = (newYMax - newYMin) / 23;
-            const newXSplitInterval = Math.max(1, Math.floor((endIdx - startIdx) / 25));
+            if (dataZoomTimer) clearTimeout(dataZoomTimer);
+            dataZoomTimer = setTimeout(() => {
+                dataZoomTimer = null;
+                const newYRange = calculateYRange(startIdx, endIdx, klines, series, structResult.plan);
+                const newXSplitInterval = Math.max(1, Math.floor((endIdx - startIdx) / 25));
 
-            const newYAxes = yAxes.map((ax, i) => {
-                if (i === 0 || i === 1) return { min: newYMin, max: newYMax, interval: newYInterval };
-                return {};
-            });
-            const newXAxes = xAxes.map((ax, i) => {
-                if (i === 0 || i === 1) return { interval: newXSplitInterval, axisLabel: i === 1 ? { hideOverlap: true } : {} };
-                return {};
-            });
-            myChart.setOption({ yAxis: newYAxes, xAxis: newXAxes });
+                const newYAxes = yAxes.map((ax, i) => {
+                    if (i === 0 || i === 1) return { min: newYRange.yMin, max: newYRange.yMax, interval: newYRange.yInterval };
+                    return {};
+                });
+                const newXAxes = xAxes.map((ax, i) => {
+                    if (i === 0 || i === 1) return { interval: newXSplitInterval, axisLabel: i === 1 ? { hideOverlap: true } : {} };
+                    return {};
+                });
+                
+                myChart.setOption({ yAxis: newYAxes, xAxis: newXAxes });
+            }, 16);
         });
     }
 
