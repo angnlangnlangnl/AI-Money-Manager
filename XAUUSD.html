@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (小白信号版)</title>
+    <title>XAUUSD 交易界面 (多区间完美版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -249,9 +249,8 @@
     let dailyStats = { open: 0, high: 0, low: 0, prevClose: 0, timestamp: 0 };
 
     const structState = { fvg: true, msb: true, plan: true };
-    // 核心配置：强制最小盈亏比 2.0
     const PLAN_CONFIG = { buffer: 5, minRR: 2.0, msbLookback: 20, fvgScanBack: 60, swingLookback: 2, atrPeriod: 14, atrMultiplier: 1.5 };
-    let structResult = { fvg: null, fvgs: [], msb: null, plan: null };
+    let structResult = { fvg: null, fvgs: [], msb: null, plan: null, support: null, resistance: null };
 
     let tickBufferPrice = null;
     let tickBufferTs = null;
@@ -491,7 +490,6 @@
         return result;
     }
 
-    // ====== 核心修改：强制保证 2:1 盈亏比 ======
     function buildPlan(klines, fvg, msb) {
         if (!klines.length) return null;
         const latest = klines[klines.length - 1];
@@ -515,15 +513,13 @@
             sl = Math.min(atrSL, fvgSL);
             risk = entry - sl;
 
-            // 寻找上方最近的天然阻力位作为 TP 候选
-            let naturalTP = entry + (risk * 2); // 默认 2R
+            let naturalTP = entry + (risk * 2);
             for (let i = highs.length - 1; i >= 0; i--) {
-                if (highs[i].price > entry + (risk * 1.8)) { // 只有阻力位大于1.8R才考虑
+                if (highs[i].price > entry + (risk * 1.8)) {
                     naturalTP = highs[i].price;
                     break; 
                 }
             }
-            // 核心：确保止盈空间至少是风险的 2 倍，否则强制拉大
             tp = Math.max(naturalTP, entry + (risk * PLAN_CONFIG.minRR));
             reward = tp - entry;
         } else {
@@ -536,32 +532,29 @@
             sl = Math.max(atrSL, fvgSL);
             risk = sl - entry;
 
-            // 寻找下方最近的天然支撑位作为 TP 候选
-            let naturalTP = entry - (risk * 2); // 默认 2R
+            let naturalTP = entry - (risk * 2);
             for (let i = lows.length - 1; i >= 0; i--) {
                 if (lows[i].price < entry - (risk * 1.8)) {
                     naturalTP = lows[i].price;
                     break;
                 }
             }
-            // 核心：确保止盈空间至少是风险的 2 倍，否则强制拉大
             tp = Math.min(naturalTP, entry - (risk * PLAN_CONFIG.minRR));
             reward = entry - tp;
         }
 
         const rr = risk > 0 ? +(reward / risk).toFixed(2) : 0;
         
-        // 判断当前状态（小白需要的最直观信号）
         let status = 'invalid';
         if (rr >= PLAN_CONFIG.minRR) {
             if (isBull) {
-                if (lastClose < sl) status = 'fail'; // 已跌破止损，失效
-                else if (lastClose <= entry) status = 'ready'; // 到达买点区域，可以买
-                else status = 'wait'; // 价格还在上方，等待回踩
+                if (lastClose < sl) status = 'fail';
+                else if (lastClose <= entry) status = 'ready';
+                else status = 'wait';
             } else {
-                if (lastClose > sl) status = 'fail'; // 已突破止损，失效
-                else if (lastClose >= entry) status = 'ready'; // 到达卖点区域，可以卖
-                else status = 'wait'; // 价格还在下方，等待反抽
+                if (lastClose > sl) status = 'fail';
+                else if (lastClose >= entry) status = 'ready';
+                else status = 'wait';
             }
         }
 
@@ -574,9 +567,31 @@
         };
     }
 
+    function getLatestSupportResistance(klines) {
+        const { highs, lows } = findSwingPoints(klines, PLAN_CONFIG.swingLookback);
+        const latestPrice = klines[klines.length - 1].c;
+        
+        let resistance = null;
+        for (let i = highs.length - 1; i >= 0; i--) {
+            if (highs[i].price > latestPrice) {
+                resistance = highs[i];
+                break;
+            }
+        }
+        
+        let support = null;
+        for (let i = lows.length - 1; i >= 0; i--) {
+            if (lows[i].price < latestPrice) {
+                support = lows[i];
+                break;
+            }
+        }
+        return { support, resistance };
+    }
+
     function runStructAnalysis() {
         if (!rawKlines.length) {
-            structResult = { fvg: null, fvgs: [], msb: null, plan: null };
+            structResult = { fvg: null, fvgs: [], msb: null, plan: null, support: null, resistance: null };
             updateRRPanel();
             updateOrderDataPanel();
             return;
@@ -585,7 +600,9 @@
         const fvg = fvgs[0] || null;
         const msb = detectMSB(rawKlines);
         const plan = buildPlan(rawKlines, fvg, msb);
-        structResult = { fvg, fvgs, msb, plan };
+        const { support, resistance } = getLatestSupportResistance(rawKlines);
+        
+        structResult = { fvg, fvgs, msb, plan, support, resistance };
         updateRRPanel();
         updateOrderDataPanel();
     }
@@ -864,7 +881,7 @@
     async function loadRealData(interval) {
         try {
             rawKlines = [];
-            structResult = { fvg: null, fvgs: [], msb: null, plan: null };
+            structResult = { fvg: null, fvgs: [], msb: null, plan: null, support: null, resistance: null };
             cachedClosesRef = null;
             cachedIndicators = {};
             updateRRPanel();
@@ -955,21 +972,45 @@
         return cachedIndicators;
     }
 
+    // ====== 核心修改：多等待区 + 固定宽度 FVG ======
     function buildStructMarks(klines, dates) {
         const marks = { markAreas: [], markLines: [], markPoints: [] };
         const p = structResult.plan;
+        
+        if (structResult.support) {
+            marks.markLines.push({
+                name: '支撑结构',
+                xAxis: dates[structResult.support.index], yAxis: structResult.support.price,
+                lineStyle: { color: '#0ecb81', type: 'dashed', width: 1.5, opacity: 0.7 },
+                label: { show: true, position: 'insideEndTop', color: '#0ecb81', fontSize: 10, fontWeight: 'bold', formatter: `支撑结构 ${structResult.support.price.toFixed(1)}` }
+            });
+        }
+        if (structResult.resistance) {
+            marks.markLines.push({
+                name: '阻力结构',
+                xAxis: dates[structResult.resistance.index], yAxis: structResult.resistance.price,
+                lineStyle: { color: '#f6465d', type: 'dashed', width: 1.5, opacity: 0.7 },
+                label: { show: true, position: 'insideEndTop', color: '#f6465d', fontSize: 10, fontWeight: 'bold', formatter: `阻力结构 ${structResult.resistance.price.toFixed(1)}` }
+            });
+        }
+
         if (!p) return marks;
 
+        // 绘制多个 FVG 和 等待区
         if (structState.fvg && structResult.fvgs.length) {
             structResult.fvgs.forEach((f, rank) => {
                 const isBull = f.type === 'bull';
                 const startX = dates[f.startIndex];
-                const endX = dates[klines.length - 1];
+                // 修改：FVG 宽度固定为 7 根 K 线
+                const endIdx = Math.min(klines.length - 1, f.startIndex + 6);
+                const endX = dates[endIdx];
+                
                 const isPrimary = rank === 0;
                 const baseColor = isBull ? '#26a69a' : '#ef5350';
                 const fillAlpha = isPrimary ? 0.18 : 0.08;
                 const fillColor = isBull ? `rgba(38,166,154,${fillAlpha})` : `rgba(239,83,80,${fillAlpha})`;
 
+                // 1. FVG 矩形
                 marks.markAreas.push([
                     {
                         name: `${isBull ? '看涨' : '看跌'} FVG #${rank + 1}`,
@@ -979,22 +1020,53 @@
                     },
                     { xAxis: endX, yAxis: f.top }
                 ]);
+
+                // 2. 等待入场区阴影（为每个有效 FVG 绘制）
+                // 以 FVG 的上沿/下沿为基准，加上一定缓冲画出黄色等待区
+                const entryLevel = isBull ? f.top : f.bottom;
+                const buffer = isBull ? (f.top - f.bottom) * 0.2 : (f.top - f.bottom) * 0.2;
+                
+                marks.markAreas.push([
+                    { 
+                        name: '等待回踩区', 
+                        xAxis: startX, 
+                        yAxis: isBull ? entryLevel - buffer : entryLevel - buffer, 
+                        itemStyle: { color: 'rgba(240,185,11,0.10)', borderColor: '#f0b90b', borderWidth: 1, borderType: 'dotted' },
+                        label: { show: isPrimary, position: 'insideCenter', color: '#f0b90b', fontSize: 10, fontWeight: 'bold', formatter: `等待区` } 
+                    },
+                    { xAxis: endX, yAxis: isBull ? entryLevel + buffer : entryLevel + buffer }
+                ]);
             });
         }
 
+        // MSB 和 整体计划不变
         if (structState.msb && p.msb) {
             const m = p.msb;
+            const isBull = m.type === 'bull';
             const color = m.kind === 'CHoCH' ? '#ff9800' : '#2962ff';
+            
             marks.markLines.push({
                 name: 'MSB',
                 xAxis: dates[m.index], yAxis: m.price,
                 lineStyle: { color, type: m.broken ? 'solid' : 'dashed', width: m.broken ? 2 : 1.2 },
                 label: { show: true, position: 'insideEndTop', color, fontSize: 10, fontWeight: 'bold', backgroundColor: 'rgba(24,26,32,0.85)', padding: [2, 4], borderRadius: 3, formatter: `MSB ${m.kind}` }
             });
+
+            if (m.broken) {
+                marks.markPoints.push({
+                    coord: [dates[m.index], m.price],
+                    symbol: isBull ? 'pin' : 'pin',
+                    symbolRotate: isBull ? 0 : 180,
+                    symbolSize: 45,
+                    symbolOffset: isBull ? [0, '-50%'] : [0, '50%'],
+                    itemStyle: { color: isBull ? '#0ecb81' : '#f6465d', borderColor: '#181a20', borderWidth: 2 },
+                    label: { show: true, position: 'inside', color: '#fff', fontSize: 11, fontWeight: 'bold', formatter: isBull ? '🟢 买涨' : '🔴 买跌' }
+                });
+            }
         }
 
-        // 只有有效计划才画计划区域
         if (structState.plan && p.valid) {
+            // 主计划的色块保留（原有的利润/风险空间）
             const startIdx = p.fvg ? p.fvg.startIndex : Math.max(0, klines.length - 5);
             const endIdx = klines.length - 1;
             const startX = dates[startIdx];
@@ -1002,34 +1074,33 @@
             const isBull = p.type === 'bull';
 
             marks.markAreas.push([
-                { name: '利润空间', xAxis: startX, yAxis: p.entry, itemStyle: { color: 'rgba(14,203,129,0.10)' },
+                { name: '利润空间', xAxis: startX, yAxis: p.entry, itemStyle: { color: 'rgba(14,203,129,0.06)' },
                   label: { show: true, position: 'insideTop', color: '#0ecb81', fontSize: 10, formatter: `目标 +${p.reward.toFixed(1)}` } },
                 { xAxis: endX, yAxis: p.tp }
             ]);
             marks.markAreas.push([
-                { name: '风险空间', xAxis: startX, yAxis: p.sl, itemStyle: { color: 'rgba(246,70,93,0.10)' },
+                { name: '风险空间', xAxis: startX, yAxis: p.sl, itemStyle: { color: 'rgba(246,70,93,0.06)' },
                   label: { show: true, position: isBull ? 'insideBottom' : 'insideTop', color: '#f6465d', fontSize: 10, formatter: `止损 -${p.risk.toFixed(1)}` } },
                 { xAxis: endX, yAxis: p.entry }
             ]);
 
             marks.markLines.push(
-                { name: 'Entry', yAxis: p.entry, lineStyle: { color: '#f0b90b', type: 'dashed', width: 1.5 },
-                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f0b90b', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `入场 ${p.entry.toFixed(1)}` } },
-                { name: 'TP', yAxis: p.tp, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1.5 },
-                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#0ecb81', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `止盈 ${p.tp.toFixed(1)}` } },
-                { name: 'SL', yAxis: p.sl, lineStyle: { color: '#f6465d', type: 'dashed', width: 1.5 },
-                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f6465d', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `止损 ${p.sl.toFixed(1)}` } }
+                { name: '入场', yAxis: p.entry, lineStyle: { color: '#f0b90b', type: 'solid', width: 1.5 },
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f0b90b', padding: [4,6], borderRadius: 2, fontSize: 11, fontWeight: 'bold', formatter: `入场区域 ${p.entry.toFixed(1)}` } },
+                { name: '止损', yAxis: p.sl, lineStyle: { color: '#f6465d', type: 'solid', width: 2 },
+                  label: { show: true, position: 'end', color: '#fff', backgroundColor: '#f6465d', padding: [4,6], borderRadius: 2, fontSize: 11, fontWeight: 'bold', formatter: `🛑 止损 ${p.sl.toFixed(1)}` } },
+                { name: '止盈', yAxis: p.tp, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1.5 },
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#0ecb81', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `止盈 ${p.tp.toFixed(1)}` } }
             );
 
-            // 只有真正 "ready" 状态才画入场箭头！
             if (p.status === 'ready') {
                 marks.markPoints.push({
                     coord: [dates[klines.length - 1], p.entry],
                     symbol: 'triangle',
                     symbolRotate: p.type === 'bull' ? 0 : 180,
-                    symbolSize: 16,
+                    symbolSize: 18,
                     itemStyle: { color: '#f0b90b', borderColor: '#181a20', borderWidth: 2 },
-                    label: { show: true, position: 'bottom', color: '#f0b90b', fontSize: 11, fontWeight: 'bold', formatter: p.type === 'bull' ? '🟢 买点触发' : '🔴 卖点触发' }
+                    label: { show: true, position: isBull ? 'bottom' : 'top', color: '#f0b90b', fontSize: 12, fontWeight: 'bold', formatter: '进场' }
                 });
             }
         }
@@ -1066,10 +1137,18 @@
         if (!isFinite(minLow)) minLow = 0;
         if (!isFinite(maxHigh)) maxHigh = 100;
         const padding = (maxHigh - minLow) * 0.08 || 5;
+        
+        let yInterval;
+        if (['1m', '5m', '15m', '30m'].includes(currentInterval)) {
+            yInterval = 5; 
+        } else {
+            yInterval = (maxHigh + padding - (minLow - padding)) / 23;
+        }
+
         return {
             yMin: minLow - padding,
             yMax: maxHigh + padding,
-            yInterval: (maxHigh + padding - (minLow - padding)) / 23
+            yInterval: yInterval
         };
     }
 
