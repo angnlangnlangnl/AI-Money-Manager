@@ -21,7 +21,6 @@
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        /* 顶部数据区优化对齐 */
         .quote-section { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; flex-shrink: 0; border-bottom: 1px solid #2b3139; }
         .quote-left { display: flex; flex-direction: row; align-items: baseline; gap: 15px; }
         .price-main { font-size: 30px; font-weight: bold; line-height: 1; color: #eaecef; }
@@ -88,7 +87,6 @@
 
     <div class="main-content">
         <div class="trade-panel">
-            <!-- 行情区 -->
             <div class="quote-section">
                 <div class="quote-left">
                     <div class="price-main" id="last-price">--</div>
@@ -172,6 +170,8 @@
     const DEFAULT_VISIBLE_BARS = 70;
     const MIN_VISIBLE_BARS = 10;
     const PADDING_BARS = 10; 
+
+    let dailyStats = { open: 0, high: 0, low: 0, prevClose: 0, timestamp: 0 };
 
     class Indicators {
         static SMA(data, period) {
@@ -301,71 +301,67 @@
         }
     }
 
-    // ★ 重构：严格根据“今日”计算数据，保证数据更新统一
-    function calculateTodayStats() {
-        if (!rawKlines.length) return null;
-        
-        const now = new Date();
-        // 设定今天 0 点的时间戳（本地时间）
-        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        
-        let todayOpen = rawKlines[rawKlines.length - 1].o; // 兜底
-        let todayHigh = -Infinity;
-        let todayLow = Infinity;
-        let prevClose = rawKlines[0].o; // 兜底
-        
-        let foundToday = false;
-
-        for (let i = rawKlines.length - 1; i >= 0; i--) {
-            const k = rawKlines[i];
-            if (k.t >= todayStart) {
-                todayHigh = Math.max(todayHigh, k.h);
-                todayLow = Math.min(todayLow, k.l);
-                todayOpen = k.o; // 最早的今日 K 线开盘价
-                foundToday = true;
-            } else {
-                // 一旦遇到非今天的 K 线，说明上一根就是昨收
-                if (foundToday) {
-                    prevClose = k.c;
+    async function loadDailyStats() {
+        try {
+            const res = await fetch(`${API_BASE}/api/kline?interval=1d&limit=5`);
+            const json = await res.json();
+            if (json.success && json.data && json.data.length > 0) {
+                const data = json.data;
+                const lastK = data[data.length - 1];
+                
+                const now = new Date();
+                const todayStr = now.toDateString();
+                const lastKDate = new Date(lastK.t).toDateString();
+                
+                if (todayStr === lastKDate) {
+                    dailyStats = {
+                        open: parseFloat(lastK.o),
+                        high: parseFloat(lastK.h),
+                        low: parseFloat(lastK.l),
+                        prevClose: data.length > 1 ? parseFloat(data[data.length - 2].c) : parseFloat(lastK.o),
+                        timestamp: lastK.t
+                    };
                 } else {
-                    // 还没遇到今天的，继续找昨收
-                    prevClose = k.c;
+                    const prevK = data[data.length - 1];
+                    dailyStats = {
+                        open: parseFloat(prevK.c),
+                        high: parseFloat(prevK.c),
+                        low: parseFloat(prevK.c),
+                        prevClose: parseFloat(prevK.c),
+                        timestamp: prevK.t
+                    };
                 }
-                break;
             }
+        } catch (e) {
+            console.error('获取日线基准数据失败:', e);
         }
-
-        // 如果数据太短，没有今天的数据，退化为使用最后一根 K 线
-        if (!foundToday) {
-            const last = rawKlines[rawKlines.length - 1];
-            todayOpen = last.o;
-            todayHigh = last.h;
-            todayLow = last.l;
-        }
-
-        if (todayHigh === -Infinity) todayHigh = currentPrice || todayOpen;
-        if (todayLow === Infinity) todayLow = currentPrice || todayOpen;
-
-        return { todayOpen, todayHigh, todayLow, prevClose };
     }
 
-    function updateTickerUI() {
+    function updateHeaderUI(currentTickPrice = null) {
         if (!rawKlines.length) return;
         
-        const stats = calculateTodayStats();
-        if (!stats) return;
+        const last = rawKlines[rawKlines.length - 1];
+        const close = currentTickPrice || last.c;
         
-        const close = rawKlines[rawKlines.length - 1].c;
-        // ★ 统一计算涨跌幅：基于今日开盘价
-        const change = ((close - stats.todayOpen) / stats.todayOpen) * 100;
+        let todayHigh = dailyStats.high;
+        let todayLow = dailyStats.low;
+        if (todayHigh === dailyStats.prevClose || todayLow === dailyStats.prevClose) {
+            todayHigh = Math.max(todayHigh, close);
+            todayLow = Math.min(todayLow, close);
+        } else {
+            todayHigh = Math.max(todayHigh, close);
+            todayLow = Math.min(todayLow, close);
+        }
         
+        const todayOpen = dailyStats.open;
+        const change = ((close - todayOpen) / todayOpen) * 100;
+
         document.getElementById('last-price').innerText = formatNum(close);
-        document.getElementById('open-price').innerText = formatNum(stats.todayOpen);
-        document.getElementById('high-24').innerText = formatNum(stats.todayHigh);
-        document.getElementById('low-24').innerText = formatNum(stats.todayLow);
-        document.getElementById('prev-close').innerText = formatNum(stats.prevClose);
+        document.getElementById('open-price').innerText = formatNum(todayOpen);
+        document.getElementById('high-24').innerText = formatNum(todayHigh);
+        document.getElementById('low-24').innerText = formatNum(todayLow);
+        document.getElementById('prev-close').innerText = formatNum(dailyStats.prevClose);
         
-        // 更新涨跌幅颜色和文字
         const changeHtml = `<span class="${change >= 0 ? 'green' : 'red'}">${change >= 0 ? '+' : ''}${change.toFixed(2)}%</span>`;
         document.getElementById('cn-price').innerHTML = `$${formatNum(close)} ${changeHtml}`;
     }
@@ -386,7 +382,7 @@
         } else return;
 
         rebuildChartDataFromRaw();
-        updateTickerUI(); // 注意：这里必须重新调用计算逻辑
+        updateHeaderUI(price);
         if (chartInitialized) updateChart();
     }
 
@@ -410,9 +406,13 @@
             userZoomStartIdx = 0;
             userZoomEndIdx = 0;
 
+            loadDailyStats().then(() => {
+                updateHeaderUI(); 
+            });
+            
             rebuildChartDataFromRaw();
             chartInitialized = true;
-            updateTickerUI();
+            updateHeaderUI(); 
             updateChart();
         } catch (e) {
             console.error('获取 K 线失败:', e);
@@ -430,18 +430,14 @@
                 const price = parseFloat(tick.last);
                 const tickTimestamp = msg.timestamp || Date.now();
                 
-                // WS 推送只负责更新即时价格和触发局部更新
-                // 所有统计指标（最高/最低/涨跌幅）统一由 updateTickerUI 计算，保证数据一致
                 currentPrice = price;
-                
-                document.getElementById('last-price').innerText = formatNum(price);
                 document.getElementById('sell-bar').innerText = `卖 ${formatNum(tick.ask)}`;
                 document.getElementById('buy-bar').innerText = `买 ${formatNum(tick.bid)}`;
                 
                 if (chartInitialized && rawKlines.length > 0) {
-                    updateKlineFromTick(price, tickTimestamp); // 内部会触发 updateTickerUI
+                    updateKlineFromTick(price, tickTimestamp);
                 } else {
-                    updateTickerUI(); // 如果图表未初始化，也更新头部
+                    updateHeaderUI(price); 
                 }
             }
         };
@@ -493,7 +489,6 @@
         const rightMarginPx = 65; 
         const xSplitInterval = Math.max(1, Math.floor((zoomEndIdx - zoomStartIdx) / 25));
 
-        // 主图 grid0
         grids.push({ left: 10, right: rightMarginPx, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
         xAxes.push({
             type: 'category', data: dates, gridIndex: 0,
@@ -504,10 +499,9 @@
         yAxes.push({
             scale: true, position: 'right', gridIndex: 0,
             splitLine: { show: true, lineStyle: { color: '#2b3139', type: 'dashed', opacity: 0.5 } },
-            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 0, width: 70, align: 'left', formatter: v => formatNum(v, 1), showMinLabel: true, showMaxLabel: true }
+            axisLabel: { color: '#848e9c', fontSize: 10, inside: false, margin: 0, width: 70, align: 'left', formatter: v => formatNum(v, 2), showMinLabel: true, showMaxLabel: true }
         });
 
-        // 主图 grid1
         grids.push({ left: 10, right: rightMarginPx, top: currentTop + '%', height: mainHeight + '%', containLabel: false });
         xAxes.push({
             type: 'category', data: dates, gridIndex: 1,
@@ -516,21 +510,28 @@
         });
         yAxes.push({ scale: true, position: 'right', gridIndex: 1, splitLine: { show: false }, axisLabel: { show: false } });
 
-        // K 线
+        const lastRealIdx = realLen > 0 ? realLen - 1 : 0;
+        const lastKline = klines[lastRealIdx];
+        let isUp = true;
+        if (lastKline && lastKline[0] !== '-') {
+            isUp = lastKline[1] >= lastKline[0];
+        }
+        const activeColor = isUp ? '#0ecb81' : '#f6465d';
+
         const klineSeries = {
             id: 'klineMain', name: 'K线', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             barMaxWidth: 18,
             itemStyle: { color: '#0ecb81', color0: '#f6465d', borderColor: '#0ecb81', borderColor0: '#f6465d' },
             markLine: { 
                 symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
-                label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
+                label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
                 data: [] 
             }
         };
         if (currentPrice) {
             klineSeries.markLine.data.push({
-                yAxis: currentPrice, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1 },
-                label: { formatter: formatNum(currentPrice, 2), color: '#181a20', backgroundColor: '#0ecb81', padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 2 }
+                yAxis: currentPrice, lineStyle: { color: activeColor, type: 'dashed', width: 1 },
+                label: { formatter: formatNum(currentPrice, 2), color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 2 }
             });
         }
         series.push(klineSeries);
@@ -644,8 +645,17 @@
             dataZoom: [dzConfig, dzYConfig],
             tooltip: {
                 trigger: 'axis', triggerOn: 'mousemove|click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
-                textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10],
-                axisPointer: { type: 'cross', lineStyle: { color: '#555', type: 'dashed', width: 1 }, crossStyle: { color: '#555', type: 'dashed', width: 1 } },
+                textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10], hideDelay: 15000,
+                // ★ 核心修改：固定 Tooltip 在左上方
+                position: function (point, params, dom, rect, size) {
+                    return [10, 10]; 
+                },
+                axisPointer: { 
+                    type: 'cross', 
+                    lineStyle: { color: '#555', type: 'dashed', width: 1 }, 
+                    crossStyle: { color: '#555', type: 'dashed', width: 1 },
+                    label: { formatter: function (params) { return formatNum(params.value, 2); } }
+                },
                 formatter: function(params) {
                     if (!params || params.length === 0) return '';
                     const idx = params[0].dataIndex;
