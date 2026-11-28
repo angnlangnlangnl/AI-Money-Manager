@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (结构分析增强版)</title>
+    <title>XAUUSD 交易界面 (结构分析专业版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -378,37 +378,70 @@
         }
     }
 
-    // 修改：FVG 多候选 + 逐根失效回测 + 动能过滤
-    function detectFVGs(klines) {
+    // ============ 专业 FVG 识别（多因子评分） ============
+    function detectFVGs(klines, opts = {}) {
         const n = klines.length;
-        if (n < 3) return [];
+        if (n < 5) return [];
         const atrArr = Indicators.ATR(klines, PLAN_CONFIG.atrPeriod);
-        const currentAtr = atrArr[n - 1] || 1;
-        const start = Math.max(2, n - PLAN_CONFIG.fvgScanBack);
+        const atr = atrArr[n - 1] || 1;
+        const ema20 = Indicators.EMA(klines.map(k => k.c), 20);
+        const emaSlope = (ema20[n - 1] && ema20[Math.max(0, n - 5)])
+            ? (ema20[n - 1] - ema20[Math.max(0, n - 5)]) / atr : 0;
+
+        const scanBack = opts.scanBack || PLAN_CONFIG.fvgScanBack;
+        const start = Math.max(2, n - scanBack);
         const results = [];
 
         for (let i = n - 1; i >= start; i--) {
-            const cur = klines[i];
-            const prev2 = klines[i - 2];
+            const cur = klines[i], prev2 = klines[i - 2];
             if (!prev2 || !cur) continue;
             const mid = klines[i - 1];
-            const bodySize = Math.abs(mid.c - mid.o);
-            if (bodySize <= currentAtr * 0.5) continue; // 动能过滤
+            const body = Math.abs(mid.c - mid.o);
 
-            if (cur.l > prev2.h) {
-                // 看涨缺口：检查 i 之后是否有 K 线收盘跌破下沿（失效）
-                let invalidated = false;
-                for (let j = i + 1; j < n; j++) { if (klines[j].c < prev2.h) { invalidated = true; break; } }
-                if (!invalidated) results.push({ type: 'bull', top: cur.l, bottom: prev2.h, index: i, startIndex: i - 2 });
+            let type = null, top = 0, bottom = 0;
+            if (cur.l > prev2.h) { type = 'bull'; top = cur.l; bottom = prev2.h; }
+            else if (cur.h < prev2.l) { type = 'bear'; top = prev2.l; bottom = cur.h; }
+            if (!type) continue;
+
+            // 1) 位移强度
+            const displacement = Math.min(1, body / (atr * 1.0));
+            if (displacement < 0.3) continue;
+
+            // 2) 回补比例（影线穿透算部分回补，收盘穿透算失效）
+            let filled = 0, invalidated = false;
+            const gapSize = top - bottom;
+            for (let j = i + 1; j < n; j++) {
+                const k = klines[j];
+                if (type === 'bull') {
+                    if (k.c < bottom) { invalidated = true; break; }
+                    if (k.l < top) filled = Math.max(filled, (top - k.l) / gapSize);
+                } else {
+                    if (k.c > top) { invalidated = true; break; }
+                    if (k.h > bottom) filled = Math.max(filled, (k.h - bottom) / gapSize);
+                }
             }
-            if (cur.h < prev2.l) {
-                let invalidated = false;
-                for (let j = i + 1; j < n; j++) { if (klines[j].c > prev2.l) { invalidated = true; break; } }
-                if (!invalidated) results.push({ type: 'bear', top: prev2.l, bottom: cur.h, index: i, startIndex: i - 2 });
-            }
-            if (results.length >= 3) break;
+            if (invalidated) continue;
+
+            // 3) 新鲜度
+            const freshness = 1 - (n - 1 - i) / scanBack;
+
+            // 4) 趋势一致
+            const trendAligned = (type === 'bull' && emaSlope > 0) || (type === 'bear' && emaSlope < 0) ? 1 : 0;
+
+            // 评分
+            const score = Math.round(
+                displacement * 40 + freshness * 25 + (1 - filled) * 20 + trendAligned * 15
+            );
+            if (score < 50) continue;
+
+            results.push({
+                type, top, bottom, index: i, startIndex: i - 2,
+                score, filled: +filled.toFixed(2), displacement: +displacement.toFixed(2),
+                freshness: +freshness.toFixed(2), trendAligned
+            });
         }
-        return results;
+        // 按分数降序，取前 5
+        return results.sort((a, b) => b.score - a.score).slice(0, 5);
     }
 
     function findSwingPoints(klines, lookback = 2) {
@@ -425,32 +458,71 @@
         return { highs, lows };
     }
 
-    // 修改：MSB 恒取最近 swing，broken 标记准确
+    // ============ 专业 MSB 识别（BOS / CHoCH） ============
     function detectMSB(klines) {
         const n = klines.length;
-        if (n < PLAN_CONFIG.msbLookback + 3) return null;
+        if (n < PLAN_CONFIG.msbLookback + 5) return null;
+        const atrArr = Indicators.ATR(klines, PLAN_CONFIG.atrPeriod);
+        const atr = atrArr[n - 1] || 1;
+
+        // 1) 找有效 swing（幅度过滤）
         const { highs, lows } = findSwingPoints(klines, PLAN_CONFIG.swingLookback);
+        const validHighs = highs.filter((h, i) => {
+            const prev = highs[i - 1];
+            return !prev || Math.abs(h.price - prev.price) >= atr * 0.5;
+        });
+        const validLows = lows.filter((l, i) => {
+            const prev = lows[i - 1];
+            return !prev || Math.abs(l.price - prev.price) >= atr * 0.5;
+        });
+
+        if (!validHighs.length && !validLows.length) return null;
+
+        const lastHigh = validHighs[validHighs.length - 1];
+        const lastLow  = validLows[validLows.length - 1];
         const latest = klines[n - 1];
+        const latestBody = Math.abs(latest.c - latest.o);
 
-        const lastHigh = highs.length ? highs[highs.length - 1] : null;
-        const lastLow  = lows.length  ? lows[lows.length - 1]  : null;
+        // 2) 突破有效性：收盘突破 + 实体 >= ATR*0.3
+        const bullBroken = lastHigh && latest.c > lastHigh.price && latestBody >= atr * 0.3;
+        const bearBroken = lastLow  && latest.c < lastLow.price  && latestBody >= atr * 0.3;
 
-        const bullMSB = lastHigh ? {
-            price: lastHigh.price, index: lastHigh.index,
-            broken: latest.c > lastHigh.price, type: 'bull'
-        } : null;
-        const bearMSB = lastLow ? {
-            price: lastLow.price, index: lastLow.index,
-            broken: latest.c < lastLow.price, type: 'bear'
-        } : null;
+        // 3) BOS vs CHoCH：看前一个 swing 趋势
+        function classify(kind, swingArr) {
+            if (swingArr.length < 2) return 'BOS';
+            const a = swingArr[swingArr.length - 2], b = swingArr[swingArr.length - 1];
+            const rising = b.price > a.price;
+            if (kind === 'bull') return rising ? 'BOS' : 'CHoCH';
+            return rising ? 'CHoCH' : 'BOS';
+        }
 
-        if (!bullMSB && !bearMSB) return null;
-        if (!bearMSB) return bullMSB;
-        if (!bullMSB) return bearMSB;
-        return (bullMSB.index > bearMSB.index) ? bullMSB : bearMSB;
+        let result = null;
+        if (bullBroken) {
+            result = {
+                type: 'bull', price: lastHigh.price, index: lastHigh.index,
+                broken: true, kind: classify('bull', validHighs),
+                strength: +((latest.c - lastHigh.price) / atr).toFixed(2)
+            };
+        } else if (bearBroken) {
+            result = {
+                type: 'bear', price: lastLow.price, index: lastLow.index,
+                broken: true, kind: classify('bear', validLows),
+                strength: +((lastLow.price - latest.c) / atr).toFixed(2)
+            };
+        } else {
+            // 未突破，返回最近结构供参考
+            const useHigh = lastHigh && (!lastLow || lastHigh.index > lastLow.index);
+            const sw = useHigh ? lastHigh : lastLow;
+            if (!sw) return null;
+            result = {
+                type: useHigh ? 'bull' : 'bear', price: sw.price, index: sw.index,
+                broken: false, kind: 'BOS', strength: 0
+            };
+        }
+        return result;
     }
 
-    // 修改：ATR 止损取更保守侧（FVG 硬底线 vs ATR 波幅保护，取更远者）
+    // ATR 止损取更保守侧
     function buildPlan(klines, fvg, msb) {
         if (!klines.length) return null;
         const latest = klines[klines.length - 1];
@@ -538,8 +610,8 @@
             updateOrderDataPanel();
             return;
         }
-        const fvgs = detectFVGs(rawKlines);
-        const fvg = fvgs[0] || null;
+        const fvgs = detectFVGs(rawKlines);          // 已按 score 降序
+        const fvg = fvgs[0] || null;                  // 最高分作为主缺口
         const msb = detectMSB(rawKlines);
         const plan = buildPlan(rawKlines, fvg, msb);
         structResult = { fvg, fvgs, msb, plan };
@@ -580,11 +652,24 @@
         const dirColor = p.type === 'bull' ? '#0ecb81' : '#f6465d';
         const dirLabel = p.type === 'bull' ? '看涨（做多）' : '看跌（做空）';
         const rowStyle = 'display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #2b3139;';
+
+        const fvgRows = structResult.fvgs.length
+            ? structResult.fvgs.map((f, i) =>
+                `<div style="display:flex;justify-content:space-between;padding:4px 8px;border-bottom:1px dashed #2b3139;">
+                    <span style="color:#848e9c;">FVG#${i+1} ${f.type==='bull'?'看涨':'看跌'}</span>
+                    <b style="color:${f.type==='bull'?'#26a69a':'#ef5350'};">${f.bottom.toFixed(2)}~${f.top.toFixed(2)} | 分${f.score}</b>
+                </div>`).join('')
+            : `<div style="padding:6px 8px;color:#888;">未发现有效缺口</div>`;
+
+        const msbKindColor = p.msb && p.msb.kind === 'CHoCH' ? '#ff9800' : '#2962ff';
+        const msbLabel = p.msb
+            ? `${p.msb.price.toFixed(2)} ${p.msb.broken ? '✓ 已突破' : '✗ 未突破'} [${p.msb.kind}]${p.msb.broken ? ` +${p.msb.strength}ATR` : ''}`
+            : '未发现';
+
         el.innerHTML = `
             <div style="${rowStyle}"><span style="color:#848e9c;">预测方向</span><b style="color:${dirColor};">${dirLabel}</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">FVG 缺口</span><b style="color:${p.fvg && p.fvg.type==='bull' ? '#26a69a' : '#ef5350'};">${p.fvg ? p.fvg.bottom.toFixed(2)+' ~ '+p.fvg.top.toFixed(2)+(p.fvg.type==='bull'?' (看涨)':' (看跌)') : '未发现'}</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">有效缺口数</span><b style="color:#d1d4dc;">${structResult.fvgs.length}</b></div>
-            <div style="${rowStyle}"><span style="color:#848e9c;">MSB 结构</span><b style="color:#2962ff;">${p.msb ? p.msb.price.toFixed(2)+(p.msb.broken?' ✓ 已突破':' ✗ 未突破')+(p.msb.type==='bull'?' (看涨)':' (看跌)') : '未发现'}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">MSB 结构</span><b style="color:${msbKindColor};">${msbLabel}</b></div>
+            ${fvgRows}
             <div style="${rowStyle}"><span style="color:#848e9c;">入场 (Entry)</span><b style="color:#f0b90b;">${p.entry.toFixed(2)}</b></div>
             <div style="${rowStyle}"><span style="color:#848e9c;">回踩买点 (Buy)</span><b style="color:#d1d4dc;">${p.latest.toFixed(2)}</b></div>
             <div style="${rowStyle}"><span style="color:#848e9c;">止盈 (TP)</span><b style="color:#0ecb81;">${p.tp.toFixed(2)} (${p.type==='bull'?'+':'-'}${p.reward.toFixed(1)})</b></div>
@@ -752,7 +837,7 @@
         updateChartIncremental(price, isNewBar);
     }
 
-    // 修改：非新 K 线只做局部刷新，不再调用 updateChart() 全量重绘
+    // 非新 K 线只做局部刷新
     function updateChartIncremental(price, isNewBar) {
         if (!chartInitialized) return;
         
@@ -823,7 +908,7 @@
         }
     }
 
-    // 修改：WS 指数退避重连
+    // WS 指数退避重连
     let wsRetry = 0;
     function initWebSocket() {
         if (wsConnection) wsConnection.close();
@@ -883,36 +968,77 @@
         return cachedIndicators;
     }
 
+    // 可视化增强：多 FVG + BOS/CHoCH + 突破箭头
     function buildStructMarks(klines, dates) {
-        const marks = { markAreas: [], markLines: [] };
+        const marks = { markAreas: [], markLines: [], markPoints: [] };
         const p = structResult.plan;
         if (!p) return marks;
 
-        if (structState.fvg && p.fvg) {
-            const startIdx = p.fvg.startIndex;
-            const endIdx = klines.length - 1;
-            const isBull = p.fvg.type === 'bull';
-            marks.markAreas.push([
-                {
-                    name: isBull ? '看涨 FVG' : '看跌 FVG',
-                    xAxis: dates[startIdx], yAxis: p.fvg.bottom,
-                    itemStyle: { color: isBull ? 'rgba(38,166,154,0.15)' : 'rgba(239,83,80,0.15)', borderColor: isBull ? '#26a69a' : '#ef5350', borderWidth: 1, borderType: 'dashed' },
-                    label: { show: true, position: 'insideTopLeft', color: isBull ? '#26a69a' : '#ef5350', fontSize: 10, formatter: `FVG ${p.fvg.bottom.toFixed(1)}~${p.fvg.top.toFixed(1)}` }
-                },
-                { xAxis: dates[endIdx], yAxis: p.fvg.top }
-            ]);
-        }
+        // ---------- FVG 多缺口可视化 ----------
+        if (structState.fvg && structResult.fvgs.length) {
+            structResult.fvgs.forEach((f, rank) => {
+                const isBull = f.type === 'bull';
+                const startX = dates[f.startIndex];
+                const endX = dates[klines.length - 1];
+                const isPrimary = rank === 0;
+                const baseColor = isBull ? '#26a69a' : '#ef5350';
+                const fillAlpha = isPrimary ? 0.18 : 0.08;
+                const fillColor = isBull
+                    ? `rgba(38,166,154,${fillAlpha})`
+                    : `rgba(239,83,80,${fillAlpha})`;
 
-        if (structState.msb && p.msb) {
-            const startIdx = p.msb.index;
-            marks.markLines.push({
-                name: 'MSB',
-                xAxis: dates[startIdx], yAxis: p.msb.price,
-                lineStyle: { color: '#2962ff', type: 'dashed', width: 1.5 },
-                label: { show: true, position: 'insideEndTop', color: '#2962ff', fontSize: 10, formatter: `MSB ${p.msb.price.toFixed(1)}${p.msb.broken?' ✓':' ✗'}` }
+                marks.markAreas.push([
+                    {
+                        name: `${isBull ? '看涨' : '看跌'} FVG #${rank + 1}`,
+                        xAxis: startX, yAxis: f.bottom,
+                        itemStyle: {
+                            color: fillColor,
+                            borderColor: baseColor,
+                            borderWidth: isPrimary ? 1.5 : 1,
+                            borderType: 'dashed',
+                            opacity: isPrimary ? 1 : 0.7
+                        },
+                        label: {
+                            show: true, position: 'insideTopLeft',
+                            color: baseColor, fontSize: isPrimary ? 10 : 9,
+                            fontWeight: isPrimary ? 'bold' : 'normal',
+                            formatter: `${isPrimary ? '★ ' : ''}FVG${rank + 1} ${f.bottom.toFixed(1)}~${f.top.toFixed(1)} | 分${f.score}${f.filled > 0 ? ` | 回补${(f.filled * 100).toFixed(0)}%` : ''}`
+                        }
+                    },
+                    { xAxis: endX, yAxis: f.top }
+                ]);
             });
         }
 
+        // ---------- MSB 可视化（BOS / CHoCH） ----------
+        if (structState.msb && p.msb) {
+            const m = p.msb;
+            const color = m.kind === 'CHoCH' ? '#ff9800' : '#2962ff';
+            marks.markLines.push({
+                name: 'MSB',
+                xAxis: dates[m.index], yAxis: m.price,
+                lineStyle: { color, type: m.broken ? 'solid' : 'dashed', width: m.broken ? 2 : 1.2 },
+                label: {
+                    show: true, position: 'insideEndTop',
+                    color, fontSize: 10, fontWeight: 'bold',
+                    backgroundColor: 'rgba(24,26,32,0.85)',
+                    padding: [2, 4], borderRadius: 3,
+                    formatter: `MSB ${m.kind} ${m.price.toFixed(1)}${m.broken ? ` ✓ +${m.strength}ATR` : ' ✗'}`
+                }
+            });
+            if (m.broken) {
+                marks.markPoints.push({
+                    coord: [dates[klines.length - 1], m.price],
+                    symbol: 'triangle',
+                    symbolRotate: m.type === 'bull' ? 0 : 180,
+                    symbolSize: 14,
+                    itemStyle: { color, borderColor: '#181a20', borderWidth: 1 },
+                    label: { show: true, position: 'bottom', color, fontSize: 9, formatter: m.kind }
+                });
+            }
+        }
+
+        // ---------- 交易计划 ----------
         if (structState.plan && p.valid) {
             const startIdx = p.fvg ? p.fvg.startIndex : Math.max(0, klines.length - 5);
             const endIdx = klines.length - 1;
@@ -1010,7 +1136,8 @@
                 label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
                 data: [] 
             },
-            markArea: { silent: true, data: structMarks.markAreas }
+            markArea: { silent: true, data: structMarks.markAreas },
+            markPoint: { silent: true, data: structMarks.markPoints || [] }
         };
         if (currentPrice) {
             klineSeries.markLine.data.push({
