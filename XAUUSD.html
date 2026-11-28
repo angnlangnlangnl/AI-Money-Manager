@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>XAUUSD 交易界面 (全量缩放版)</title>
+    <title>XAUUSD 交易界面 (结构分析增强版)</title>
     <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
@@ -37,9 +37,16 @@
         .timeframes span { cursor: pointer; }
         .chart-container { flex: 1; min-height: 300px; position: relative; background: #181a20; display: flex; flex-direction: column; padding-bottom: 5px; }
         #kline { width: 100%; flex: 1; }
-        .indicators { display: flex; gap: 15px; padding: 8px 20px; font-size: 11px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 10px; }
-        .indicators span { cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; }
+        
+        /* ===== 修改：底部指标栏，融合结构开关 ===== */
+        .indicators { display: flex; gap: 15px; padding: 8px 20px; font-size: 11px; color: #848e9c; border-top: 1px solid #2b3139; flex-shrink: 0; margin-bottom: 10px; align-items: center; }
+        .indicators span { cursor: pointer; padding: 2px 6px; border-radius: 4px; transition: all 0.2s; user-select: none; }
         .indicators span.active { color: #f0b90b; background: rgba(240,185,11,0.1); }
+        
+        .struct-group { display: flex; gap: 8px; margin-left: 15px; padding-left: 15px; border-left: 1px solid #2b3139; }
+        .struct-toggle { cursor: pointer; padding: 2px 8px; border-radius: 4px; border: 1px solid #2b3139; transition: all 0.2s; user-select: none; font-size: 11px; color: #848e9c;}
+        .struct-toggle.active { color: #f0b90b; border-color: #f0b90b; background: rgba(240,185,11,0.1); }
+        
         .right-drawer { width: 300px; background: #1e2329; border-left: 1px solid #2b3139; display: flex; flex-direction: column; flex-shrink: 0; transition: width 0.3s ease; overflow: hidden; position: relative; }
         .right-drawer.collapsed { width: 0; border-left: none; }
         .drawer-content { width: 300px; display: flex; flex-direction: column; height: 100%; }
@@ -67,6 +74,31 @@
         .trade-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .trade-row label { width: 70px; font-size: 12px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 4px; padding: 8px 10px; color: #eaecef; font-size: 13px; outline: none; }
+
+        /* ===== 修改：RR 面板居中悬浮，并补全 PnL ===== */
+        .rr-panel {
+            position: absolute;
+            top: 18px; /* 调整至图表区域顶部适当位置 */
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(24, 28, 36, 0.95);
+            border: 1px solid #434651;
+            padding: 6px 20px;
+            border-radius: 6px;
+            backdrop-filter: blur(6px);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 20px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .rr-panel.invalid { border-color: #f6465d; box-shadow: 0 0 12px rgba(246,70,93,0.6); }
+        .rr-item { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .rr-label { font-size: 10px; color: #8b95a5; margin-bottom: 3px; white-space: nowrap; }
+        .rr-value { font-size: 13px; font-family: monospace; font-weight: bold; white-space: nowrap; }
+        .rr-divider { width: 1px; height: 20px; background: #434651; margin: 0 2px; }
     </style>
 </head>
 <body>
@@ -104,10 +136,57 @@
                 <span data-interval="1m">1分</span><span data-interval="5m">5分</span><span data-interval="15m" class="active">15分</span><span data-interval="30m">30分</span><span data-interval="1h">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">1日</span>
             </div>
             
-            <div class="chart-container"><div id="kline"></div></div>
+            <div class="chart-container">
+                <div id="kline"></div>
+                
+                <!-- 悬浮 RR 面板 -->
+                <div class="rr-panel" id="rrPanel">
+                    <div class="rr-item">
+                        <span class="rr-label">回踩买点 (Buy)</span>
+                        <span class="rr-value" id="rrBuy" style="color:#d1d4dc">--</span>
+                    </div>
+                    <div class="rr-divider"></div>
+                    <div class="rr-item">
+                        <span class="rr-label">入场 (Entry)</span>
+                        <span class="rr-value" id="rrEntry" style="color:#f0b90b">--</span>
+                    </div>
+                    <div class="rr-divider"></div>
+                    <div class="rr-item">
+                        <span class="rr-label">TP (止盈)</span>
+                        <span class="rr-value" id="rrTP" style="color:#0ecb81">--</span>
+                    </div>
+                    <div class="rr-divider"></div>
+                    <div class="rr-item">
+                        <span class="rr-label">SL (止损)</span>
+                        <span class="rr-value" id="rrSL" style="color:#f6465d">--</span>
+                    </div>
+                    <div class="rr-divider"></div>
+                    <div class="rr-item">
+                        <span class="rr-label">预期盈利 (PnL)</span>
+                        <span class="rr-value" id="rrPnL" style="color:#0ecb81">--</span>
+                    </div>
+                    <div class="rr-divider"></div>
+                    <div class="rr-item">
+                        <span class="rr-label">R:R (盈亏比)</span>
+                        <span class="rr-value" id="rrRatio" style="color:#f0b90b">--</span>
+                    </div>
+                </div>
+            </div>
             
+            <!-- 融合后的底部工具栏 -->
             <div class="indicators" id="indicator-buttons">
-                <span class="active" data-indicator="MA">MA</span><span data-indicator="EMA">EMA</span><span data-indicator="BOLL">BOLL</span><span data-indicator="VOL">VOL</span><span data-indicator="MACD">MACD</span>
+                <span class="active" data-indicator="MA">MA</span>
+                <span data-indicator="EMA">EMA</span>
+                <span data-indicator="BOLL">BOLL</span>
+                <span data-indicator="VOL">VOL</span>
+                <span data-indicator="MACD">MACD</span>
+                
+                <!-- 结构开关移动到最后面 -->
+                <div class="struct-group">
+                    <span class="struct-toggle active" id="toggleFVG">FVG 缺口</span>
+                    <span class="struct-toggle active" id="toggleMSB">MSB 结构</span>
+                    <span class="struct-toggle active" id="togglePlan">交易计划</span>
+                </div>
             </div>
         </div>
 
@@ -173,6 +252,10 @@
 
     let dailyStats = { open: 0, high: 0, low: 0, prevClose: 0, timestamp: 0 };
 
+    const structState = { fvg: true, msb: true, plan: true };
+    const PLAN_CONFIG = { buffer: 5, R: 2, msbLookback: 20, fvgScanBack: 60 };
+    let structResult = { fvg: null, msb: null, plan: null };
+
     class Indicators {
         static SMA(data, period) {
             const result = new Array(data.length).fill(null);
@@ -193,9 +276,8 @@
             for (let i = 0; i < data.length; i++) {
                 const v = data[i];
                 if (v === null || v === undefined) { result[i] = null; continue; }
-                if (prev === null) {
-                    result[i] = v; prev = v; count = 1;
-                } else {
+                if (prev === null) { result[i] = v; prev = v; count = 1; }
+                else {
                     count++;
                     if (count <= period) { prev = prev + (v - prev) / count; } else { prev = v * k + prev * (1 - k); }
                     result[i] = prev;
@@ -235,6 +317,104 @@
             }
             return { dif, dea, macd };
         }
+    }
+
+    function detectFVG(klines) {
+        const n = klines.length;
+        const start = Math.max(2, n - PLAN_CONFIG.fvgScanBack);
+        for (let i = n - 1; i >= start; i--) {
+            const cur = klines[i];
+            const prev2 = klines[i - 2];
+            if (cur.l > prev2.h) {
+                return { top: cur.l, bottom: prev2.h, index: i, startIndex: Math.max(0, i - 2) };
+            }
+        }
+        return null;
+    }
+
+    function detectMSB(klines) {
+        const n = klines.length;
+        if (n < PLAN_CONFIG.msbLookback + 1) return null;
+        const latest = klines[n - 1];
+        const windowStart = n - 1 - PLAN_CONFIG.msbLookback;
+        let maxClose = -Infinity, maxCloseIdx = -1;
+        for (let i = windowStart; i < n - 1; i++) {
+            if (klines[i].c > maxClose) { maxClose = klines[i].c; maxCloseIdx = i; }
+        }
+        return { price: maxClose, index: maxCloseIdx, broken: latest.c > maxClose };
+    }
+
+    function buildPlan(klines, fvg, msb) {
+        if (!klines.length) return null;
+        const latest = klines[klines.length - 1];
+        const lastClose = latest.c;
+
+        let entry;
+        if (fvg && lastClose > fvg.top) entry = fvg.top;
+        else if (fvg && lastClose <= fvg.top && lastClose >= fvg.bottom) entry = lastClose;
+        else entry = lastClose;
+
+        const sl = fvg ? fvg.bottom - PLAN_CONFIG.buffer : entry - 20;
+        const risk = entry - sl;
+        const reward = risk * PLAN_CONFIG.R;
+        const tp = entry + reward;
+
+        const valid = risk > 0 && entry > sl && tp > entry;
+
+        return {
+            entry: +entry.toFixed(2), sl: +sl.toFixed(2), tp: +tp.toFixed(2),
+            risk: +risk.toFixed(2), reward: +reward.toFixed(2), rr: risk > 0 ? +(reward / risk).toFixed(2) : 0,
+            pnlPercent: entry > 0 ? +((reward / entry) * 100).toFixed(2) : 0,
+            valid, latest: +lastClose.toFixed(2), fvg, msb
+        };
+    }
+
+    function runStructAnalysis() {
+        if (!rawKlines.length) return;
+        const fvg = detectFVG(rawKlines);
+        const msb = detectMSB(rawKlines);
+        const plan = buildPlan(rawKlines, fvg, msb);
+        structResult = { fvg, msb, plan };
+        updateRRPanel();
+        updateOrderDataPanel();
+    }
+
+    function updateRRPanel() {
+        const panel = document.getElementById('rrPanel');
+        const p = structResult.plan;
+        if (!p) {
+            ['rrEntry','rrBuy','rrTP','rrSL','rrPnL','rrRatio'].forEach(id => document.getElementById(id).innerText = '--');
+            panel.classList.remove('invalid');
+            return;
+        }
+        
+        // 参考图二：格式化补全点数差值及 PnL
+        document.getElementById('rrEntry').innerText = p.entry.toFixed(2);
+        document.getElementById('rrBuy').innerText = p.latest.toFixed(2);
+        document.getElementById('rrTP').innerText = `${p.tp.toFixed(2)} (+${p.reward.toFixed(2)})`;
+        document.getElementById('rrSL').innerText = `${p.sl.toFixed(2)} (-${p.risk.toFixed(2)})`;
+        document.getElementById('rrPnL').innerText = `+${p.reward.toFixed(2)} (+${p.pnlPercent.toFixed(2)}%)`;
+        document.getElementById('rrRatio').innerText = `1 : ${p.rr.toFixed(2)}`;
+        
+        panel.classList.toggle('invalid', !p.valid);
+    }
+
+    function updateOrderDataPanel() {
+        const el = document.getElementById('orderDataContent');
+        const p = structResult.plan;
+        if (!p) { el.innerHTML = '<div style="color:#888;padding:20px;text-align:center;">等待结构识别…</div>'; return; }
+        const rowStyle = 'display:flex;justify-content:space-between;padding:6px 8px;border-bottom:1px solid #2b3139;';
+        el.innerHTML = `
+            <div style="${rowStyle}"><span style="color:#848e9c;">FVG 缺口</span><b style="color:#26a69a;">${p.fvg ? p.fvg.bottom.toFixed(2)+' ~ '+p.fvg.top.toFixed(2) : '未发现'}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">MSB 结构</span><b style="color:#2962ff;">${p.msb ? p.msb.price.toFixed(2)+(p.msb.broken?' ✓ 已突破':' ✗ 未突破') : '未发现'}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">入场 (Entry)</span><b style="color:#f0b90b;">${p.entry.toFixed(2)}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">回踩买点 (Buy)</span><b style="color:#d1d4dc;">${p.latest.toFixed(2)}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">止盈 (TP)</span><b style="color:#0ecb81;">${p.tp.toFixed(2)} (+${p.reward.toFixed(1)})</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">止损 (SL)</span><b style="color:#f6465d;">${p.sl.toFixed(2)} (-${p.risk.toFixed(1)})</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">盈亏比</span><b style="color:#f0b90b;">1 : ${p.rr.toFixed(2)}</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">预期收益</span><b style="color:#0ecb81;">+${p.pnlPercent.toFixed(2)}%</b></div>
+            <div style="${rowStyle}"><span style="color:#848e9c;">计划状态</span><b style="color:${p.valid?'#0ecb81':'#f6465d'};">${p.valid?'✓ 参数有效':'✗ 参数无效'}</b></div>
+        `;
     }
 
     function formatNum(num, decimals = 2) { const n = parseFloat(num); if (isNaN(n)) return '--'; return n.toLocaleString('en-US', { minimumFractionDigits: decimals, maximumFractionDigits: decimals }); }
@@ -308,27 +488,20 @@
             if (json.success && json.data && json.data.length > 0) {
                 const data = json.data;
                 const lastK = data[data.length - 1];
-                
                 const now = new Date();
                 const todayStr = now.toDateString();
                 const lastKDate = new Date(lastK.t).toDateString();
                 
                 if (todayStr === lastKDate) {
                     dailyStats = {
-                        open: parseFloat(lastK.o),
-                        high: parseFloat(lastK.h),
-                        low: parseFloat(lastK.l),
-                        prevClose: data.length > 1 ? parseFloat(data[data.length - 2].c) : parseFloat(lastK.o),
-                        timestamp: lastK.t
+                        open: parseFloat(lastK.o), high: parseFloat(lastK.h), low: parseFloat(lastK.l),
+                        prevClose: data.length > 1 ? parseFloat(data[data.length - 2].c) : parseFloat(lastK.o), timestamp: lastK.t
                     };
                 } else {
                     const prevK = data[data.length - 1];
                     dailyStats = {
-                        open: parseFloat(prevK.c),
-                        high: parseFloat(prevK.c),
-                        low: parseFloat(prevK.c),
-                        prevClose: parseFloat(prevK.c),
-                        timestamp: prevK.t
+                        open: parseFloat(prevK.c), high: parseFloat(prevK.c), low: parseFloat(prevK.c),
+                        prevClose: parseFloat(prevK.c), timestamp: prevK.t
                     };
                 }
             }
@@ -339,7 +512,6 @@
 
     function updateHeaderUI(currentTickPrice = null) {
         if (!rawKlines.length) return;
-        
         const last = rawKlines[rawKlines.length - 1];
         const close = currentTickPrice || last.c;
         
@@ -382,6 +554,7 @@
         } else return;
 
         rebuildChartDataFromRaw();
+        runStructAnalysis();
         updateHeaderUI(price);
         if (chartInitialized) updateChart();
     }
@@ -392,12 +565,7 @@
             const json = await res.json();
             if (!json.success || !json.data) throw new Error('K线获取失败');
             rawKlines = json.data.map(item => ({
-                t: item.t,
-                o: parseFloat(item.o),
-                h: parseFloat(item.h),
-                l: parseFloat(item.l),
-                c: parseFloat(item.c),
-                v: item.v != null ? parseFloat(item.v) : null
+                t: item.t, o: parseFloat(item.o), h: parseFloat(item.h), l: parseFloat(item.l), c: parseFloat(item.c), v: item.v != null ? parseFloat(item.v) : null
             }));
             currentPrice = rawKlines[rawKlines.length - 1].c;
 
@@ -406,11 +574,10 @@
             userZoomStartIdx = 0;
             userZoomEndIdx = 0;
 
-            loadDailyStats().then(() => {
-                updateHeaderUI(); 
-            });
+            loadDailyStats().then(() => { updateHeaderUI(); });
             
             rebuildChartDataFromRaw();
+            runStructAnalysis();
             chartInitialized = true;
             updateHeaderUI(); 
             updateChart();
@@ -460,6 +627,65 @@
             macd: Indicators.MACD(closesForIndicator)
         };
         return cachedIndicators;
+    }
+
+    function buildStructMarks(klines, dates) {
+        const marks = { markAreas: [], markLines: [] };
+        const p = structResult.plan;
+        if (!p) return marks;
+
+        if (structState.fvg && p.fvg) {
+            const startIdx = p.fvg.startIndex;
+            const endIdx = klines.length - 1;
+            marks.markAreas.push([
+                {
+                    name: '看涨 FVG',
+                    xAxis: dates[startIdx], yAxis: p.fvg.bottom,
+                    itemStyle: { color: 'rgba(38,166,154,0.15)', borderColor: '#26a69a', borderWidth: 1, borderType: 'dashed' },
+                    label: { show: true, position: 'insideTopLeft', color: '#26a69a', fontSize: 10, formatter: `FVG ${p.fvg.bottom.toFixed(1)}~${p.fvg.top.toFixed(1)}` }
+                },
+                { xAxis: dates[endIdx], yAxis: p.fvg.top }
+            ]);
+        }
+
+        if (structState.msb && p.msb) {
+            const startIdx = p.msb.index;
+            const endIdx = klines.length - 1;
+            marks.markLines.push({
+                name: 'MSB',
+                xAxis: dates[startIdx], yAxis: p.msb.price,
+                lineStyle: { color: '#2962ff', type: 'dashed', width: 1.5 },
+                label: { show: true, position: 'insideEndTop', color: '#2962ff', fontSize: 10, formatter: `MSB ${p.msb.price.toFixed(1)}${p.msb.broken?' ✓':' ✗'}` }
+            });
+        }
+
+        if (structState.plan && p.valid) {
+            const startIdx = Math.max(0, klines.length - 1 - 5);
+            const endIdx = klines.length - 1;
+            const startX = dates[startIdx];
+            const endX = dates[endIdx];
+
+            marks.markAreas.push([
+                { name: '利润空间', xAxis: startX, yAxis: p.entry, itemStyle: { color: 'rgba(14,203,129,0.10)' },
+                  label: { show: true, position: 'insideTop', color: '#0ecb81', fontSize: 10, formatter: `利润 +${p.reward.toFixed(1)}` } },
+                { xAxis: endX, yAxis: p.tp }
+            ]);
+            marks.markAreas.push([
+                { name: '风险空间', xAxis: startX, yAxis: p.sl, itemStyle: { color: 'rgba(246,70,93,0.10)' },
+                  label: { show: true, position: 'insideBottom', color: '#f6465d', fontSize: 10, formatter: `风险 -${p.risk.toFixed(1)}` } },
+                { xAxis: endX, yAxis: p.entry }
+            ]);
+
+            marks.markLines.push(
+                { name: 'Entry', yAxis: p.entry, lineStyle: { color: '#f0b90b', type: 'dashed', width: 1.5 },
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f0b90b', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `E ${p.entry.toFixed(1)}` } },
+                { name: 'TP', yAxis: p.tp, lineStyle: { color: '#0ecb81', type: 'dashed', width: 1.5 },
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#0ecb81', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `TP ${p.tp.toFixed(1)}` } },
+                { name: 'SL', yAxis: p.sl, lineStyle: { color: '#f6465d', type: 'dashed', width: 1.5 },
+                  label: { show: true, position: 'end', color: '#181a20', backgroundColor: '#f6465d', padding: [2,4], borderRadius: 2, fontSize: 10, formatter: `SL ${p.sl.toFixed(1)}` } }
+            );
+        }
+        return marks;
     }
 
     function updateChart() {
@@ -518,6 +744,8 @@
         }
         const activeColor = isUp ? '#0ecb81' : '#f6465d';
 
+        const structMarks = buildStructMarks(klines, dates);
+
         const klineSeries = {
             id: 'klineMain', name: 'K线', type: 'candlestick', data: klines, xAxisIndex: 1, yAxisIndex: 1, z: 10,
             barMaxWidth: 18,
@@ -526,7 +754,8 @@
                 symbol: 'none', animation: false, lineStyle: { type: 'dashed', width: 1 }, 
                 label: { position: 'end', distance: 2, color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, formatter: function(params) { return formatNum(params.value, 2); } }, 
                 data: [] 
-            }
+            },
+            markArea: { silent: true, data: structMarks.markAreas }
         };
         if (currentPrice) {
             klineSeries.markLine.data.push({
@@ -534,7 +763,21 @@
                 label: { formatter: formatNum(currentPrice, 2), color: '#181a20', backgroundColor: activeColor, padding: [2, 4], borderRadius: 2, fontSize: 11, distance: 2 }
             });
         }
+        structMarks.markLines.forEach(line => klineSeries.markLine.data.push(line));
         series.push(klineSeries);
+
+        if (structState.plan && structResult.plan && structResult.plan.valid) {
+            const p = structResult.plan;
+            const idx = klines.length - 1;
+            series.push({
+                id: 'entryArrow', name: 'Entry箭头', type: 'scatter', xAxisIndex: 1, yAxisIndex: 1, z: 30,
+                symbol: 'triangle', symbolSize: 12,
+                itemStyle: { color: '#f0b90b', borderColor: '#181a20', borderWidth: 1 },
+                data: [[dates[idx], p.entry]],
+                label: { show: true, position: 'bottom', color: '#f0b90b', fontSize: 10, fontWeight: 'bold', formatter: 'Entry' },
+                tooltip: { show: false }
+            });
+        }
 
         const closesForIndicator = alignedCloses;
         const validCloseCount = closesForIndicator.filter(v => v !== null).length;
@@ -599,6 +842,11 @@
             if (klines[i][2] < minLow) minLow = klines[i][2];
             if (klines[i][3] > maxHigh) maxHigh = klines[i][3];
         }
+        if (structResult.plan && structResult.plan.valid) {
+            const p = structResult.plan;
+            minLow = Math.min(minLow, p.sl);
+            maxHigh = Math.max(maxHigh, p.tp);
+        }
         series.forEach(s => {
             if (s.type === 'line' && s.yAxisIndex === 1) {
                 for (let i = zoomStartIdx; i <= zoomEndIdx; i++) {
@@ -646,10 +894,7 @@
             tooltip: {
                 trigger: 'axis', triggerOn: 'mousemove|click', confine: true, backgroundColor: 'rgba(0,0,0,0.8)', borderColor: '#333', borderWidth: 1,
                 textStyle: { color: '#fff', fontSize: 10 }, padding: [8, 10], hideDelay: 15000,
-                // ★ 核心修改：固定 Tooltip 在左上方
-                position: function (point, params, dom, rect, size) {
-                    return [10, 10]; 
-                },
+                position: function (point, params, dom, rect, size) { return [10, 10]; },
                 axisPointer: { 
                     type: 'cross', 
                     lineStyle: { color: '#555', type: 'dashed', width: 1 }, 
@@ -666,6 +911,15 @@
                     const chg = c - o, pct = o !== 0 ? (chg / o) * 100 : 0, col = chg >= 0 ? '#0ecb81' : '#f6465d';
                     let html = `<div style="font-size:10px;line-height:1.6;"><div style="color:#aaa;">时间：${d}</div><div>开：${formatNum(o)}</div><div>高：${formatNum(h)}</div><div>低：${formatNum(l)}</div><div>收：${formatNum(c)}</div><div style="color:${col};">涨跌幅：${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%</div>`;
                     if (volumes[idx] !== '-') html += `<div>成交量：${volumes[idx]}</div>`;
+                    if (structResult.plan && structResult.plan.valid) {
+                        const p = structResult.plan;
+                        html += `<div style="border-top:1px solid #444;margin-top:4px;padding-top:4px;">`;
+                        html += `<div style="color:#f0b90b;">入场：${p.entry.toFixed(2)}</div>`;
+                        html += `<div style="color:#0ecb81;">止盈：${p.tp.toFixed(2)} (+${p.reward.toFixed(1)})</div>`;
+                        html += `<div style="color:#f6465d;">止损：${p.sl.toFixed(2)} (-${p.risk.toFixed(1)})</div>`;
+                        html += `<div style="color:#f0b90b;">盈亏比：1:${p.rr.toFixed(2)}</div>`;
+                        html += `</div>`;
+                    }
                     html += `</div>`;
                     return html;
                 }
@@ -702,6 +956,11 @@
                 if (klines[i][0] === '-') continue;
                 if (klines[i][2] < minL) minL = klines[i][2];
                 if (klines[i][3] > maxH) maxH = klines[i][3];
+            }
+            if (structResult.plan && structResult.plan.valid) {
+                const p = structResult.plan;
+                minL = Math.min(minL, p.sl);
+                maxH = Math.max(maxH, p.tp);
             }
             series.forEach(s => {
                 if (s.type === 'line' && s.yAxisIndex === 1) {
@@ -748,6 +1007,7 @@
         document.getElementById('orderDataContent').innerHTML = tab === 'depth'
             ? '<div style="color:#888;padding:20px;text-align:center;">盘口深度（演示占位）</div>'
             : '<div style="color:#888;padding:20px;text-align:center;">最新成交（演示占位）</div>';
+        if (tab === 'depth') updateOrderDataPanel();
     }
     function openTradeModal(side) {
         document.getElementById('tradeModalTitle').innerText = (side === 'buy' ? '买入' : '卖出') + ' XAUUSD';
@@ -756,6 +1016,7 @@
     function closeTradeModal() { document.getElementById('tradeModalOverlay').classList.remove('show'); }
     function confirmTrade() { alert('模拟下单已提交（演示环境）'); closeTradeModal(); }
 
+    // 指标开关（不含结构按钮）
     document.getElementById('indicator-buttons').addEventListener('click', function(e) {
         const span = e.target.closest('span[data-indicator]');
         if (!span) return;
@@ -773,6 +1034,23 @@
         chartInitialized = false;
         cachedClosesRef = null;
         loadRealData(currentInterval);
+    });
+
+    // 结构开关
+    document.getElementById('toggleFVG').addEventListener('click', function() {
+        structState.fvg = !structState.fvg;
+        this.classList.toggle('active', structState.fvg);
+        updateChart();
+    });
+    document.getElementById('toggleMSB').addEventListener('click', function() {
+        structState.msb = !structState.msb;
+        this.classList.toggle('active', structState.msb);
+        updateChart();
+    });
+    document.getElementById('togglePlan').addEventListener('click', function() {
+        structState.plan = !structState.plan;
+        this.classList.toggle('active', structState.plan);
+        updateChart();
     });
 
     loadRealData(currentInterval);
