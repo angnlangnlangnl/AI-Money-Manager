@@ -21,7 +21,16 @@
         .main-content { display: flex; flex: 1; overflow: hidden; }
         .trade-panel { flex: 1; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
         
-        .quote-section { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; flex-shrink: 0; border-bottom: 1px solid #2b3139; }
+        /* 修改点 1：给行情板块添加相对定位，作为定位基准 */
+        .quote-section { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 12px 20px; 
+            flex-shrink: 0; 
+            border-bottom: 1px solid #2b3139; 
+            position: relative; 
+        }
         .quote-left { display: flex; flex-direction: row; align-items: baseline; gap: 15px; }
         .price-main { font-size: 30px; font-weight: bold; line-height: 1; color: #eaecef; }
         .price-sub { font-size: 14px; font-weight: bold; color: #848e9c; }
@@ -74,21 +83,22 @@
         .trade-row label { width: 70px; font-size: 12px; color: #848e9c; }
         .trade-row input, .trade-row select { flex: 1; background: #0a0a12; border: 1px solid #2a2a3a; border-radius: 4px; padding: 8px 10px; color: #eaecef; font-size: 13px; outline: none; }
 
+        /* 修改点 2：调整悬浮面板位置与样式，使其在 quote-section 居中 */
         .rr-panel {
             position: absolute;
-            top: 18px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
+            transform: translate(-50%, -50%);
             background: rgba(24, 28, 36, 0.95);
             border: 1px solid #434651;
-            padding: 6px 20px;
+            padding: 5px 16px;
             border-radius: 6px;
             backdrop-filter: blur(6px);
             box-shadow: 0 4px 16px rgba(0,0,0,0.8);
             display: flex;
             flex-direction: row;
             align-items: center;
-            gap: 16px;
+            gap: 12px;
             z-index: 10;
             pointer-events: none;
             white-space: nowrap;
@@ -130,6 +140,7 @@
 
     <div class="main-content">
         <div class="trade-panel">
+            <!-- 顶部行情区块 -->
             <div class="quote-section">
                 <div class="quote-left">
                     <div class="price-main" id="last-price">--</div>
@@ -141,16 +152,8 @@
                     <div>今日开盘价 <b id="open-price">--</b></div>
                     <div>昨日收盘价 <b id="prev-close">--</b></div>
                 </div>
-            </div>
-
-            <div class="timeframes" id="timeframes">
-                <span data-interval="1m">1分</span><span data-interval="5m">5分</span><span data-interval="15m" class="active">15分</span><span data-interval="30m">30分</span><span data-interval="1h">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">1日</span>
-            </div>
-            
-            <div class="chart-container">
-                <div id="kline"></div>
                 
-                <!-- 悬浮 RR 面板 -->
+                <!-- RR 悬浮面板已移入此处 -->
                 <div class="rr-panel" id="rrPanel">
                     <div class="rr-item">
                         <span class="rr-label">预测方向</span>
@@ -187,6 +190,14 @@
                         <span class="rr-value" id="rrRatio" style="color:#f0b90b">--</span>
                     </div>
                 </div>
+            </div>
+
+            <div class="timeframes" id="timeframes">
+                <span data-interval="1m">1分</span><span data-interval="5m">5分</span><span data-interval="15m" class="active">15分</span><span data-interval="30m">30分</span><span data-interval="1h">1小时</span><span data-interval="4h">4小时</span><span data-interval="1d">1日</span>
+            </div>
+            
+            <div class="chart-container">
+                <div id="kline"></div>
             </div>
             
             <div class="indicators" id="indicator-buttons">
@@ -403,11 +414,9 @@
             else if (cur.h < prev2.l) { type = 'bear'; top = prev2.l; bottom = cur.h; }
             if (!type) continue;
 
-            // 1) 位移强度
             const displacement = Math.min(1, body / (atr * 1.0));
             if (displacement < 0.3) continue;
 
-            // 2) 回补比例（影线穿透算部分回补，收盘穿透算失效）
             let filled = 0, invalidated = false;
             const gapSize = top - bottom;
             for (let j = i + 1; j < n; j++) {
@@ -422,16 +431,10 @@
             }
             if (invalidated) continue;
 
-            // 3) 新鲜度
             const freshness = 1 - (n - 1 - i) / scanBack;
-
-            // 4) 趋势一致
             const trendAligned = (type === 'bull' && emaSlope > 0) || (type === 'bear' && emaSlope < 0) ? 1 : 0;
 
-            // 评分
-            const score = Math.round(
-                displacement * 40 + freshness * 25 + (1 - filled) * 20 + trendAligned * 15
-            );
+            const score = Math.round(displacement * 40 + freshness * 25 + (1 - filled) * 20 + trendAligned * 15);
             if (score < 50) continue;
 
             results.push({
@@ -440,7 +443,6 @@
                 freshness: +freshness.toFixed(2), trendAligned
             });
         }
-        // 按分数降序，取前 5
         return results.sort((a, b) => b.score - a.score).slice(0, 5);
     }
 
@@ -465,7 +467,6 @@
         const atrArr = Indicators.ATR(klines, PLAN_CONFIG.atrPeriod);
         const atr = atrArr[n - 1] || 1;
 
-        // 1) 找有效 swing（幅度过滤）
         const { highs, lows } = findSwingPoints(klines, PLAN_CONFIG.swingLookback);
         const validHighs = highs.filter((h, i) => {
             const prev = highs[i - 1];
@@ -483,11 +484,9 @@
         const latest = klines[n - 1];
         const latestBody = Math.abs(latest.c - latest.o);
 
-        // 2) 突破有效性：收盘突破 + 实体 >= ATR*0.3
         const bullBroken = lastHigh && latest.c > lastHigh.price && latestBody >= atr * 0.3;
         const bearBroken = lastLow  && latest.c < lastLow.price  && latestBody >= atr * 0.3;
 
-        // 3) BOS vs CHoCH：看前一个 swing 趋势
         function classify(kind, swingArr) {
             if (swingArr.length < 2) return 'BOS';
             const a = swingArr[swingArr.length - 2], b = swingArr[swingArr.length - 1];
@@ -510,7 +509,6 @@
                 strength: +((lastLow.price - latest.c) / atr).toFixed(2)
             };
         } else {
-            // 未突破，返回最近结构供参考
             const useHigh = lastHigh && (!lastLow || lastHigh.index > lastLow.index);
             const sw = useHigh ? lastHigh : lastLow;
             if (!sw) return null;
@@ -522,7 +520,6 @@
         return result;
     }
 
-    // ATR 止损取更保守侧
     function buildPlan(klines, fvg, msb) {
         if (!klines.length) return null;
         const latest = klines[klines.length - 1];
@@ -543,7 +540,7 @@
             
             const atrSL = entry - currentAtr * PLAN_CONFIG.atrMultiplier;
             const fvgSL = fvg ? fvg.bottom - PLAN_CONFIG.buffer : atrSL;
-            sl = Math.min(atrSL, fvgSL);   // 取更远（更低）者
+            sl = Math.min(atrSL, fvgSL);
             risk = entry - sl;
 
             let nearestResistance = entry + (risk * 1.5); 
@@ -554,12 +551,7 @@
                 }
             }
             
-            if (nearestResistance > entry) {
-                tp = nearestResistance;
-            } else {
-                tp = entry + (risk * 2);
-            }
-            
+            tp = nearestResistance > entry ? nearestResistance : entry + (risk * 2);
             reward = tp - entry;
         } else {
             if (fvg && lastClose < fvg.bottom) entry = fvg.bottom;
@@ -568,7 +560,7 @@
             
             const atrSL = entry + currentAtr * PLAN_CONFIG.atrMultiplier;
             const fvgSL = fvg ? fvg.top + PLAN_CONFIG.buffer : atrSL;
-            sl = Math.max(atrSL, fvgSL);   // 取更远（更高）者
+            sl = Math.max(atrSL, fvgSL);
             risk = sl - entry;
 
             let nearestSupport = entry - (risk * 1.5); 
@@ -579,17 +571,11 @@
                 }
             }
 
-            if (nearestSupport < entry) {
-                tp = nearestSupport;
-            } else {
-                tp = entry - (risk * 2);
-            }
-            
+            tp = nearestSupport < entry ? nearestSupport : entry - (risk * 2);
             reward = entry - tp;
         }
 
         const rr = risk > 0 ? +(reward / risk).toFixed(2) : 0;
-        
         const valid = isBull
             ? (risk > 0 && entry > sl && tp > entry && rr >= PLAN_CONFIG.minRR)
             : (risk > 0 && sl > entry && entry > tp && rr >= PLAN_CONFIG.minRR);
@@ -610,8 +596,8 @@
             updateOrderDataPanel();
             return;
         }
-        const fvgs = detectFVGs(rawKlines);          // 已按 score 降序
-        const fvg = fvgs[0] || null;                  // 最高分作为主缺口
+        const fvgs = detectFVGs(rawKlines);
+        const fvg = fvgs[0] || null;
         const msb = detectMSB(rawKlines);
         const plan = buildPlan(rawKlines, fvg, msb);
         structResult = { fvg, fvgs, msb, plan };
@@ -837,7 +823,6 @@
         updateChartIncremental(price, isNewBar);
     }
 
-    // 非新 K 线只做局部刷新
     function updateChartIncremental(price, isNewBar) {
         if (!chartInitialized) return;
         
@@ -908,7 +893,6 @@
         }
     }
 
-    // WS 指数退避重连
     let wsRetry = 0;
     function initWebSocket() {
         if (wsConnection) wsConnection.close();
@@ -968,13 +952,11 @@
         return cachedIndicators;
     }
 
-    // 可视化增强：多 FVG + BOS/CHoCH + 突破箭头
     function buildStructMarks(klines, dates) {
         const marks = { markAreas: [], markLines: [], markPoints: [] };
         const p = structResult.plan;
         if (!p) return marks;
 
-        // ---------- FVG 多缺口可视化 ----------
         if (structState.fvg && structResult.fvgs.length) {
             structResult.fvgs.forEach((f, rank) => {
                 const isBull = f.type === 'bull';
@@ -983,34 +965,20 @@
                 const isPrimary = rank === 0;
                 const baseColor = isBull ? '#26a69a' : '#ef5350';
                 const fillAlpha = isPrimary ? 0.18 : 0.08;
-                const fillColor = isBull
-                    ? `rgba(38,166,154,${fillAlpha})`
-                    : `rgba(239,83,80,${fillAlpha})`;
+                const fillColor = isBull ? `rgba(38,166,154,${fillAlpha})` : `rgba(239,83,80,${fillAlpha})`;
 
                 marks.markAreas.push([
                     {
                         name: `${isBull ? '看涨' : '看跌'} FVG #${rank + 1}`,
                         xAxis: startX, yAxis: f.bottom,
-                        itemStyle: {
-                            color: fillColor,
-                            borderColor: baseColor,
-                            borderWidth: isPrimary ? 1.5 : 1,
-                            borderType: 'dashed',
-                            opacity: isPrimary ? 1 : 0.7
-                        },
-                        label: {
-                            show: true, position: 'insideTopLeft',
-                            color: baseColor, fontSize: isPrimary ? 10 : 9,
-                            fontWeight: isPrimary ? 'bold' : 'normal',
-                            formatter: `${isPrimary ? '★ ' : ''}FVG${rank + 1} ${f.bottom.toFixed(1)}~${f.top.toFixed(1)} | 分${f.score}${f.filled > 0 ? ` | 回补${(f.filled * 100).toFixed(0)}%` : ''}`
-                        }
+                        itemStyle: { color: fillColor, borderColor: baseColor, borderWidth: isPrimary ? 1.5 : 1, borderType: 'dashed', opacity: isPrimary ? 1 : 0.7 },
+                        label: { show: true, position: 'insideTopLeft', color: baseColor, fontSize: isPrimary ? 10 : 9, fontWeight: isPrimary ? 'bold' : 'normal', formatter: `${isPrimary ? '★ ' : ''}FVG${rank + 1} ${f.bottom.toFixed(1)}~${f.top.toFixed(1)} | 分${f.score}${f.filled > 0 ? ` | 回补${(f.filled * 100).toFixed(0)}%` : ''}` }
                     },
                     { xAxis: endX, yAxis: f.top }
                 ]);
             });
         }
 
-        // ---------- MSB 可视化（BOS / CHoCH） ----------
         if (structState.msb && p.msb) {
             const m = p.msb;
             const color = m.kind === 'CHoCH' ? '#ff9800' : '#2962ff';
@@ -1018,13 +986,7 @@
                 name: 'MSB',
                 xAxis: dates[m.index], yAxis: m.price,
                 lineStyle: { color, type: m.broken ? 'solid' : 'dashed', width: m.broken ? 2 : 1.2 },
-                label: {
-                    show: true, position: 'insideEndTop',
-                    color, fontSize: 10, fontWeight: 'bold',
-                    backgroundColor: 'rgba(24,26,32,0.85)',
-                    padding: [2, 4], borderRadius: 3,
-                    formatter: `MSB ${m.kind} ${m.price.toFixed(1)}${m.broken ? ` ✓ +${m.strength}ATR` : ' ✗'}`
-                }
+                label: { show: true, position: 'insideEndTop', color, fontSize: 10, fontWeight: 'bold', backgroundColor: 'rgba(24,26,32,0.85)', padding: [2, 4], borderRadius: 3, formatter: `MSB ${m.kind} ${m.price.toFixed(1)}${m.broken ? ` ✓ +${m.strength}ATR` : ' ✗'}` }
             });
             if (m.broken) {
                 marks.markPoints.push({
@@ -1038,7 +1000,6 @@
             }
         }
 
-        // ---------- 交易计划 ----------
         if (structState.plan && p.valid) {
             const startIdx = p.fvg ? p.fvg.startIndex : Math.max(0, klines.length - 5);
             const endIdx = klines.length - 1;
